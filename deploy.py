@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+"""
+Deployement script for MCP servers
+This script finds all server.py files in subdirectories of mcp_servers and starts them as API servers.
+"""
+
 import os
 import subprocess
 import sys
@@ -54,7 +61,8 @@ def main():
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    root_dir = os.path.dirname(os.path.join(os.path.abspath(__file__), "api_servers"))
+    root_dir = "./mcp_servers"
+    print("Looking for api.py files in subdirectories of:", root_dir)
     api_files = find_api_files(root_dir)
 
     if not api_files:
