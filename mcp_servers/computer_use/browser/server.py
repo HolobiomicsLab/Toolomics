@@ -255,6 +255,10 @@ if __name__ == '__main__':
     if not os.path.exists(screenshots_dir):
         os.makedirs(screenshots_dir)
 
-    print("Starting browser tools MCP server")
+    if len(os.argv) > 1 and os.argv[1].isdigit():
+        port = int(os.argv[1])
+    else:
+        port = int(input("Enter port number (default 5003): ") or 5003)
+    print(f"Running browser MCP server on port {port}")
     init_browser()
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=5003, path="/mcp")
+    mcp.run(transport="streamable-http", host="127.0.0.1", port=port, path="/mcp")

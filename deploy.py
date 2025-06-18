@@ -2,7 +2,7 @@
 
 """
 Deployement script for MCP servers
-This script finds all server.py files in subdirectories of mcp_servers and starts them as API servers.
+This script finds all server.py files in subdirectories of mcp_servers and starts them as server servers.
 """
 
 import os
@@ -15,19 +15,19 @@ import select
 # Global list to keep track of running processes and their info
 processes = []
 
-def find_api_files(root_dir):
-    """Find all api.py files in subdirectories"""
-    api_files = []
+def find_server_files(root_dir):
+    """Find all server.py files in subdirectories"""
+    server_files = []
     for root, _, files in os.walk(root_dir):
-        if 'api.py' in files:
-            api_files.append(Path(root) / 'api.py')
-    return api_files
+        if 'server.py' in files:
+            server_files.append(Path(root) / 'server.py')
+    return server_files
 
-def start_api_server(api_path, port):
-    """Start an API server on specified port"""
-    cmd = [sys.executable, str(api_path), str(port)]
+def start_server_server(server_path, port):
+    """Start an server server on specified port"""
+    cmd = [sys.executable, str(server_path), str(port)]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    processes.append({'proc': proc, 'api_path': api_path, 'port': port})
+    processes.append({'proc': proc, 'server_path': server_path, 'port': port})
     return proc
 
 def cleanup(_signum, _frame):
@@ -47,11 +47,11 @@ def monitor_processes():
                     line = proc.stdout.readline()
                     if not line:
                         break
-                    print(f"[{p['api_path']}:{p['port']}] {line}", end='')
+                    print(f"[{p['server_path']}:{p['port']}] {line}", end='')
             except:
                 pass
             if proc.poll() is not None:
-                print(f"\nProcess {p['api_path']} on port {p['port']} exited.")
+                print(f"\nProcess {p['server_path']} on port {p['port']} exited.")
                 processes.remove(p)
     
     print("All processes exited.")
@@ -62,20 +62,20 @@ def main():
     signal.signal(signal.SIGTERM, cleanup)
 
     root_dir = "./mcp_servers"
-    print("Looking for api.py files in subdirectories of:", root_dir)
-    api_files = find_api_files(root_dir)
+    print("Looking for server.py files in subdirectories of:", root_dir)
+    server_files = find_server_files(root_dir)
 
-    if not api_files:
-        print("No api.py files found in subdirectories")
+    if not server_files:
+        print("No server.py files found in subdirectories")
         return
 
-    print(f"Found {len(api_files)} API servers to start:")
-    for i, api_file in enumerate(api_files):
+    print(f"Found {len(server_files)} server.py files to start:")
+    for i, server_file in enumerate(server_files):
         port = 5000 + i
-        print(f"Starting {api_file} on port {port}")
-        start_api_server(api_file, port)
+        print(f"Starting {server_file} on port {port}")
+        start_server_server(server_file, port)
 
-    print("\nAll APIs running. Press Ctrl+C to stop.\n")
+    print("\nAll servers running. Press Ctrl+C to stop.\n")
     monitor_processes()
 
 if __name__ == "__main__":

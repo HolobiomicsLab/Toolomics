@@ -358,4 +358,10 @@ def get_csv_stats(name: str) -> Dict[str, Any]:
         return {"error": str(e)}
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=5001, path="/mcp")
+    import os
+    if len(os.argv) > 1 and os.argv[1].isdigit():
+        port = int(os.argv[1])
+    else:
+        port = int(input("Enter port number (default 5003): ") or 5003)
+    print(f"Starting CSV MCP server on port {port}...")
+    mcp.run(transport="streamable-http", host="127.0.0.1", port=port, path="/mcp")
