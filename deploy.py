@@ -72,7 +72,7 @@ def get_ports_config(file_path):
         return json.load(f)
 
 def find_largest_port(ports_config):
-    """Find the smallest port number in the configuration"""
+    """Find the largest port number in the configuration"""
     if not ports_config:
         return 5000
     
