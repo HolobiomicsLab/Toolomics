@@ -6,12 +6,16 @@ This script finds all server.py files in subdirectories of mcp_servers and start
 """
 
 import os
+import sys
 import json
 import subprocess
 import sys
 import signal
 from pathlib import Path
 import select
+
+DEFAULT_FOLDER = "mcp_servers"
+STARTING_PORT = 5000
 
 # Global list to keep track of running processes and their info
 processes = []
@@ -74,19 +78,19 @@ def get_ports_config(file_path):
 def find_largest_port(ports_config):
     """Find the largest port number in the configuration"""
     if not ports_config:
-        return 5000
+        return STARTING_PORT
     
     ports = []
     for config_dict in ports_config:
         port = list(config_dict.values())[0]
         ports.append(int(port))
-    return max(ports) if ports else 5000
+    return max(ports) if ports else STARTING_PORT
 
 def port_attribution(config, server_files):
     """Find and assign ports to server files"""
     if config == []:
-        print("No ports configuration found, using default ports starting from 5000")
-        return [{file_path: 5000 + i} for i, file_path in enumerate(server_files)]
+        print(f"No ports configuration found, using default ports starting from {STARTING_PORT} ")
+        return [{file_path: STARTING_PORT + i} for i, file_path in enumerate(server_files)]
     elif len(config) < len(server_files):
         start_port = find_largest_port(config)+1
         config_files = [list(d.keys())[0] for d in config]
@@ -96,8 +100,16 @@ def port_attribution(config, server_files):
         config.extend(new_files_config)
     return config
 
+def get_mcp_folder():
+    folder = DEFAULT_FOLDER 
+    if len(sys.argv) > 1:
+        folder = sys.argv[1]
+    if not os.path.exists(folder):
+        raise FileNotFoundError(f"Directory {folder} does not exist.")
+    return folder
+
 def main():
-    root_dir = "./mcp_servers"
+    root_dir = get_mcp_folder()
     config_path = "./ports_config.json"
     ports_config = get_ports_config(config_path)
     signal.signal(signal.SIGINT, cleanup)
