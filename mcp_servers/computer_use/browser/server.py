@@ -10,12 +10,14 @@ Author: Martin Legrand - HolobiomicsLab, CNRS
 
 
 from fastmcp import FastMCP
-from browser import Browser, create_driver
 import threading
 import time
 import os
 import sys
 from typing import List, Dict, Any, Optional
+
+from browser import Browser, create_driver
+from searxng import search_searx
 
 # Initialize the FastMCP server
 mcp = FastMCP("Browser Tools Server 🌐")
@@ -39,6 +41,20 @@ def init_browser():
                 print(f"Failed to initialize browser: {e}")
                 return False
     return True
+
+@mcp.tool
+def search(query: str) -> Dict[str, str]:
+    """Search for a query using SearxNG"""
+    print(f"Searching for query: {query}")
+    try:
+        search_result = search_searx(query)
+        return {
+            "status": "success",
+            "result": search_result
+        }
+    except Exception as e:
+        print(f"Error searching: {e}")
+        return {"status": "error", "message": str(e)}
 
 @mcp.tool
 def browser_init() -> Dict[str, str]:
@@ -74,12 +90,16 @@ def navigate(url: str) -> Dict[str, str]:
     
     with browser_lock:
         try:
+            if not browser_instance.is_link_valid(url):
+                print(f"Invalid URL: {url}")
+                return {"status": "error", "message": "Invalid URL"}
             success = browser_instance.go_to(url)
             print(f"Navigation {'succeeded' if success else 'failed'} for URL: {url}")
             return {
                 "status": "success" if success else "failed",
                 "current_url": browser_instance.get_current_url(),
-                "title": browser_instance.get_page_title()
+                "title": browser_instance.get_page_title(),
+                "content": browser_instance.get_text()
             }
         except Exception as e:
             print(f"Error navigating to URL {url}: {e}")

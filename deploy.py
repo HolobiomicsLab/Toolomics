@@ -7,12 +7,15 @@ This script finds all server.py files in subdirectories of mcp_servers and start
 
 import os
 import sys
+import time
 import json
 import subprocess
 import sys
 import signal
 from pathlib import Path
 import select
+
+# TODO use https://slurm.schedmd.com/overview.html ????
 
 DEFAULT_FOLDER = "mcp_servers"
 STARTING_PORT = 5000
@@ -45,12 +48,22 @@ def monitor_processes():
             proc = p['proc']
             if proc.poll() is not None:
                 stdout, stderr = proc.communicate()
-                if stdout:
-                    print(f"[{p['server_path']}:{p['port']}] {stdout}")
-                if stderr:
-                    print(f"[{p['server_path']}:{p['port']}] ERROR: {stderr}")
-                print(f"Process {p['server_path']} on port {p['port']} exited with code {proc.returncode}")
-                processes.remove(p)
+                print(stdout)
+                print(stderr)
+
+def find_docker_compose_files(root_dir):
+    """Find all docker-compose.yml files in subdirectories"""
+    compose_files = []
+    for root, _, files in os.walk(root_dir):
+        if 'docker-compose.yml' in files:
+            compose_files.append(str(Path(root) / 'docker-compose.yml'))
+    return compose_files
+
+def run_docker_compose(compose_file):
+    """Run docker-compose in background"""
+    cmd = ['docker-compose', '-f', compose_file, 'up', '-d']
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    return proc
 
 def find_server_files(root_dir):
     """Find all server.py files in subdirectories"""
@@ -103,7 +116,7 @@ def port_attribution(config, server_files):
 def get_mcp_folder():
     folder = DEFAULT_FOLDER 
     if len(sys.argv) > 1:
-        folder = sys.argv[1]
+        folder = os.path.join(DEFAULT_FOLDER, sys.argv[1])
     if not os.path.exists(folder):
         raise FileNotFoundError(f"Directory {folder} does not exist.")
     return folder
@@ -114,6 +127,17 @@ def main():
     ports_config = get_ports_config(config_path)
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
+
+    # First run any docker-compose files
+    print("Looking for docker-compose.yml files in subdirectories of:", root_dir)
+    compose_files = find_docker_compose_files(root_dir)
+    if compose_files:
+        print(f"Found {len(compose_files)} docker-compose.yml files to start:")
+        for compose_file in compose_files:
+            print(f"Starting {compose_file}")
+            run_docker_compose(compose_file)
+        print("Waiting 5 seconds for docker containers to start...")
+        time.sleep(5)
 
     print("Looking for server.py files in subdirectories of:", root_dir)
     server_files = find_server_files(root_dir)
