@@ -1,0 +1,11 @@
+[
+    {
+        "mcp_servers/instruments/server.py": 5000
+    },
+    {
+        "mcp_servers/files/csv/server.py": 5001
+    },
+    {
+        "mcp_servers/computer_use/browser/server.py": 5002
+    }
+]

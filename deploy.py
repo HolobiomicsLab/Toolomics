@@ -6,6 +6,7 @@ This script finds all server.py files in subdirectories of mcp_servers and start
 """
 
 import os
+import json
 import subprocess
 import sys
 import signal
@@ -15,16 +16,10 @@ import select
 # Global list to keep track of running processes and their info
 processes = []
 
-def find_server_files(root_dir):
-    """Find all server.py files in subdirectories"""
-    server_files = []
-    for root, _, files in os.walk(root_dir):
-        if 'server.py' in files:
-            server_files.append(Path(root) / 'server.py')
-    return server_files
-
 def start_server_server(server_path, port):
     """Start an server server on specified port"""
+    if not os.path.exists(server_path):
+        raise FileNotFoundError(f"Server file not found: {server_path}")
     cmd = [sys.executable, str(server_path), str(port)]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     processes.append({'proc': proc, 'server_path': server_path, 'port': port})
@@ -37,31 +32,77 @@ def cleanup(_signum, _frame):
     sys.exit(0)
 
 def monitor_processes():
-    """Monitor all running processes and print their stdout to stdout"""
+    """Monitor all running processes using non-blocking I/O"""
     import time
+    
     while processes:
+        time.sleep(0.1)
         for p in processes[:]:
             proc = p['proc']
-            try:
-                while True:
-                    line = proc.stdout.readline()
-                    if not line:
-                        break
-                    print(f"[{p['server_path']}:{p['port']}] {line}", end='')
-            except:
-                pass
             if proc.poll() is not None:
-                print(f"\nProcess {p['server_path']} on port {p['port']} exited.")
+                stdout, stderr = proc.communicate()
+                if stdout:
+                    print(f"[{p['server_path']}:{p['port']}] {stdout}")
+                if stderr:
+                    print(f"[{p['server_path']}:{p['port']}] ERROR: {stderr}")
+                print(f"Process {p['server_path']} on port {p['port']} exited with code {proc.returncode}")
                 processes.remove(p)
+
+def find_server_files(root_dir):
+    """Find all server.py files in subdirectories"""
+    server_files = []
+    for root, _, files in os.walk(root_dir):
+        if 'server.py' in files:
+            server_files.append(str(Path(root) / 'server.py'))
+    return server_files
+
+def create_server_config_file(file_path, config=[]):
+    """Create or update configuration file"""
+    with open(file_path, 'w') as f:
+        print(f"Creating configuration file at {file_path}")
+        json.dump(config, f, indent=4)
+
+def get_ports_config(file_path):
+    """Read ports configuration from json file"""
+    import json
+    if not os.path.exists(file_path):
+        print(f"Configuration file {file_path} does not exist. Returning empty config.")
+        return []
+    with open(file_path, 'r') as f:
+        return json.load(f)
+
+def find_largest_port(ports_config):
+    """Find the smallest port number in the configuration"""
+    if not ports_config:
+        return 5000
     
-    print("All processes exited.")
+    ports = []
+    for config_dict in ports_config:
+        port = list(config_dict.values())[0]
+        ports.append(int(port))
+    return max(ports) if ports else 5000
+
+def port_attribution(config, server_files):
+    """Find and assign ports to server files"""
+    if config == []:
+        print("No ports configuration found, using default ports starting from 5000")
+        return [{file_path: 5000 + i} for i, file_path in enumerate(server_files)]
+    elif len(config) < len(server_files):
+        start_port = find_largest_port(config)+1
+        config_files = [list(d.keys())[0] for d in config]
+        new_files = [f for f in server_files if f not in config_files]
+        print(f"Not enough ports configured, starting from port {start_port}")
+        new_files_config = [{server: start_port + i} for i, server in enumerate(new_files)]
+        config.extend(new_files_config)
+    return config
 
 def main():
-    # Register signal handlers for clean exit
+    root_dir = "./mcp_servers"
+    config_path = "./ports_config.json"
+    ports_config = get_ports_config(config_path)
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    root_dir = "./mcp_servers"
     print("Looking for server.py files in subdirectories of:", root_dir)
     server_files = find_server_files(root_dir)
 
@@ -70,8 +111,12 @@ def main():
         return
 
     print(f"Found {len(server_files)} server.py files to start:")
-    for i, server_file in enumerate(server_files):
-        port = 5000 + i
+    ports_config = port_attribution(ports_config, server_files)
+    create_server_config_file(config_path, ports_config)
+    print("Using ports configuration:", ports_config)
+    for server in ports_config:
+        server_file = list(server.keys())[0]
+        port = server[server_file]
         print(f"Starting {server_file} on port {port}")
         start_server_server(server_file, port)
 
