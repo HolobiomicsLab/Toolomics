@@ -20,6 +20,18 @@ import select
 DEFAULT_FOLDER = "mcp_servers"
 STARTING_PORT = 5000
 
+class process:
+    """Class to represent a running process"""
+    def __init__(self, proc, file=None, port=None, compose_file=None, type='python', status='running'):
+        self.proc = proc
+        self.file = file
+        self.port = port
+        self.type = type
+        self.status = status
+
+    def __repr__(self):
+        return f"Process(file={self.file}, port={self.port}, type={self.type}, status={self.status})"
+
 # Global list to keep track of running processes and their info
 processes = []
 
@@ -29,13 +41,13 @@ def start_server_server(server_path, port):
         raise FileNotFoundError(f"Server file not found: {server_path}")
     cmd = [sys.executable, str(server_path), str(port)]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    processes.append({'proc': proc, 'server_path': server_path, 'port': port, 'type': 'python'})
+    processes.append(process(proc, file=server_path, port=port, type='python'))
     return proc
 
 def cleanup(_signum, _frame):
     """Cleanup all running processes on exit"""
     for p in processes:
-        p['proc'].terminate()
+        p.proc.terminate()
     sys.exit(0)
 
 def monitor_processes():
@@ -45,22 +57,23 @@ def monitor_processes():
     while processes:
         time.sleep(0.1)
         for p in processes[:]:
-            proc = p['proc']
+            proc = p.proc
             return_code = proc.poll()
             if return_code is not None:
                 stdout, stderr = proc.communicate()
-                if p['type'] == 'python':
-                    print(f"Process {p['server_path']}:", stdout or stderr)
+                if p.type == 'python':
+                    print(f"Process {p.file}:", stdout or stderr)
                     if return_code != 0:
-                        print(f"ERROR: Python server {p['server_path']} exited with code {return_code}")
-                elif p['type'] == 'docker':
+                        print(f"ERROR: Python server {p.file} exited with code {return_code}")
+                        p.status = 'failed'
+                elif p.type == 'docker':
                     if return_code != 0:
                         error_msg = stderr or stdout or f"Exit code: {return_code}"
-                        raise RuntimeError(f"Docker compose process for {p['compose_file']} failed: {error_msg}")
-                    else:
-                        print(f"Docker {p['compose_file']} completed successfully")
-            else:
-                raise RuntimeError(f"Process {p['server_path']} not responding, on hang or deadlock.")
+                        p.status = 'failed'
+                        raise RuntimeError(f"Docker compose process for {p.file} failed: {error_msg}")
+                    elif p.status == 'running':
+                        print(f"Docker {p.file} successfully run.")
+                        p.status = 'completed'
 
 def find_docker_compose_files(root_dir):
     """Find all docker-compose.yml files in subdirectories"""
@@ -74,7 +87,7 @@ def run_docker_compose(compose_file):
     """Run docker-compose in background"""
     cmd = ['docker-compose', '-f', compose_file, 'up', '-d']
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    processes.append({'proc': proc, 'compose_file': compose_file, 'type': 'docker'})
+    processes.append(process(proc, file=compose_file, type='docker'))
 
 def find_server_files(root_dir):
     """Find all server.py files in subdirectories"""
@@ -87,7 +100,6 @@ def find_server_files(root_dir):
 def create_server_config_file(file_path, config=[]):
     """Create or update configuration file"""
     with open(file_path, 'w') as f:
-        print(f"Creating configuration file at {file_path}")
         json.dump(config, f, indent=4)
 
 def get_ports_config(file_path):
@@ -146,7 +158,7 @@ def main():
         print(f"Found {len(compose_files)} docker-compose.yml files to start:")
         for compose_file in compose_files:
             print(f"Starting {compose_file}")
-            proc = run_docker_compose(compose_file)
+            run_docker_compose(compose_file)
         print("Waiting 5 seconds for docker containers to start...")
         time.sleep(5)
 
@@ -157,10 +169,10 @@ def main():
         print("No server.py files found in subdirectories")
         return
 
-    print(f"Found {len(server_files)} server.py files to start:")
+    print(f"Found {len(server_files)} MCP servers to start.")
     ports_config = port_attribution(ports_config, server_files)
     create_server_config_file(config_path, ports_config)
-    print("Using ports configuration:", ports_config)
+    print("Using ports configuration at:", config_path)
     for server in ports_config:
         server_file = list(server.keys())[0]
         port = server[server_file]
