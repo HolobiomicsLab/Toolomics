@@ -108,12 +108,6 @@ def load_csv_from_path(source_path: str, name: str) -> Dict[str, Any]:
 def get_csv_info(name: str) -> Dict[str, Any]:
     """
     Get information about a CSV dataset.
-    
-    Args:
-        name: Name of the dataset
-    
-    Returns:
-        Dictionary with dataset info
     """
     try:
         df = _load_dataframe(name)
@@ -357,11 +351,10 @@ def get_csv_stats(name: str) -> Dict[str, Any]:
     except Exception as e:
         return {"error": str(e)}
 
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1].isdigit():
-        port = int(sys.argv[1])
-    else:
-        port = int(input("Enter port number: "))
-    print(f"Starting CSV MCP server on port {port}...")
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=port, path="/mcp")
+import sys
+if len(sys.argv) > 1 and sys.argv[1].isdigit():
+    port = int(sys.argv[1])
+else:
+    port = int(input("Enter port number: "))
+print(f"Starting CSV MCP server on port {port}...")
+mcp.run(transport="streamable-http", host="127.0.0.1", port=port, path="/mcp")

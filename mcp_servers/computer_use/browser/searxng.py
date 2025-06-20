@@ -56,7 +56,7 @@ def search_searx(query):
         return "\n\n".join(results)
         
     except requests.exceptions.RequestException as e:
-        return f"Error: SearxNG search failed. {str(e)}\nDid you run start_services.sh? Is docker still running?"
+        return f"Error: SearxNG search failed. {str(e)}\n"
 
 
 def check_link_validity(link):

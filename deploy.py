@@ -29,7 +29,7 @@ def start_server_server(server_path, port):
         raise FileNotFoundError(f"Server file not found: {server_path}")
     cmd = [sys.executable, str(server_path), str(port)]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    processes.append({'proc': proc, 'server_path': server_path, 'port': port})
+    processes.append({'proc': proc, 'server_path': server_path, 'port': port, 'type': 'python'})
     return proc
 
 def cleanup(_signum, _frame):
@@ -46,10 +46,21 @@ def monitor_processes():
         time.sleep(0.1)
         for p in processes[:]:
             proc = p['proc']
-            if proc.poll() is not None:
+            return_code = proc.poll()
+            if return_code is not None:
                 stdout, stderr = proc.communicate()
-                print(stdout)
-                print(stderr)
+                if p['type'] == 'python':
+                    print(f"Process {p['server_path']}:", stdout or stderr)
+                    if return_code != 0:
+                        print(f"ERROR: Python server {p['server_path']} exited with code {return_code}")
+                elif p['type'] == 'docker':
+                    if return_code != 0:
+                        error_msg = stderr or stdout or f"Exit code: {return_code}"
+                        raise RuntimeError(f"Docker compose process for {p['compose_file']} failed: {error_msg}")
+                    else:
+                        print(f"Docker {p['compose_file']} completed successfully")
+            else:
+                raise RuntimeError(f"Process {p['server_path']} not responding, on hang or deadlock.")
 
 def find_docker_compose_files(root_dir):
     """Find all docker-compose.yml files in subdirectories"""
@@ -63,7 +74,7 @@ def run_docker_compose(compose_file):
     """Run docker-compose in background"""
     cmd = ['docker-compose', '-f', compose_file, 'up', '-d']
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    return proc
+    processes.append({'proc': proc, 'compose_file': compose_file, 'type': 'docker'})
 
 def find_server_files(root_dir):
     """Find all server.py files in subdirectories"""
@@ -135,7 +146,7 @@ def main():
         print(f"Found {len(compose_files)} docker-compose.yml files to start:")
         for compose_file in compose_files:
             print(f"Starting {compose_file}")
-            run_docker_compose(compose_file)
+            proc = run_docker_compose(compose_file)
         print("Waiting 5 seconds for docker containers to start...")
         time.sleep(5)
 

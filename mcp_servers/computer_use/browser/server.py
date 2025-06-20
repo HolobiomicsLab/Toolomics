@@ -270,16 +270,13 @@ def get_form_inputs() -> Dict[str, Any]:
             print(f"Error fetching form inputs: {e}")
             return {"status": "error", "message": str(e)}
 
-if __name__ == '__main__':
-    # Create screenshots directory
-    screenshots_dir = os.path.join(os.path.dirname(__file__), '.screenshots')
-    if not os.path.exists(screenshots_dir):
-        os.makedirs(screenshots_dir)
-
-    if len(sys.argv) > 1 and sys.argv[1].isdigit():
-        port = int(sys.argv[1])
-    else:
-        port = int(input("Enter port number: "))
-    print(f"Running browser MCP server on port {port}")
-    init_browser()
-    mcp.run(transport="streamable-http", host="127.0.0.1", port=port, path="/mcp")
+screenshots_dir = os.path.join(os.path.dirname(__file__), '.screenshots')
+if not os.path.exists(screenshots_dir):
+    os.makedirs(screenshots_dir)
+if len(sys.argv) > 1 and sys.argv[1].isdigit():
+    port = int(sys.argv[1])
+else:
+    port = int(input("Enter port number: "))
+print(f"Running browser MCP server on port {port}")
+init_browser()
+mcp.run(transport="streamable-http", host="127.0.0.1", port=port, path="/mcp")
