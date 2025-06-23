@@ -381,7 +381,7 @@ class Browser:
                 if href and href.startswith(("http", "https")):
                     links.append({
                         "url": href,
-                        "text": element.text.strip(),
+                        "text": element.text,
                         "is_displayed": element.is_displayed()
                     })
             

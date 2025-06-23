@@ -33,7 +33,7 @@ def init_browser():
         if browser_instance is None:
             try:
                 print("Initializing browser instance")
-                driver = create_driver(headless=True)
+                driver = create_driver(headless=False)
                 browser_instance = Browser(driver)
                 print("Browser instance created successfully")
                 return True
@@ -139,7 +139,7 @@ def get_links() -> Dict[str, Any]:
             print(f"Fetched {len(links)} links from page")
             return {
                 "status": "success",
-                "links": links
+                "links": '\n'.join(links) if links else "No links found"
             }
         except Exception as e:
             print(f"Error fetching links: {e}")

@@ -69,10 +69,11 @@ def create_csv(name: str, columns: Optional[List[str]] = None, rows: Optional[Li
             "name": name,
             "shape": list(df.shape),
             "columns": df.columns.tolist(),
-            "message": f"Dataset '{name}' created successfully"
+            "message": f"Dataset '{name}' created successfully",
+            "status": "success"
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 @mcp.tool
 def load_csv_from_path(source_path: str, name: str) -> Dict[str, Any]:
@@ -99,27 +100,11 @@ def load_csv_from_path(source_path: str, name: str) -> Dict[str, Any]:
             "shape": list(df.shape),
             "columns": df.columns.tolist(),
             "preview": df.head(5).to_dict('records'),
-            "message": f"Dataset '{name}' loaded from '{source_path}'"
+            "message": f"Dataset '{name}' loaded from '{source_path}'",
+            "status": "success"
         }
     except Exception as e:
-        return {"error": str(e)}
-
-@mcp.tool
-def get_csv_info(name: str) -> Dict[str, Any]:
-    """
-    Get information about a CSV dataset.
-    """
-    try:
-        df = _load_dataframe(name)
-        return {
-            "name": name,
-            "shape": list(df.shape),
-            "columns": df.columns.tolist(),
-            "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
-            "memory_usage": df.memory_usage(deep=True).sum()
-        }
-    except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 @mcp.tool
 def get_csv_data(name: str, limit: Optional[int] = None, offset: int = 0) -> Dict[str, Any]:
@@ -146,10 +131,11 @@ def get_csv_data(name: str, limit: Optional[int] = None, offset: int = 0) -> Dic
             "data": data,
             "total_rows": len(df),
             "returned_rows": len(data),
-            "offset": offset
+            "offset": offset,
+            "status": "success"
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 @mcp.tool
 def add_csv_row(name: str, row: Dict[str, Any]) -> Dict[str, Any]:
@@ -172,10 +158,11 @@ def add_csv_row(name: str, row: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "name": name,
             "shape": list(df.shape),
-            "message": f"Row added to dataset '{name}'"
+            "message": f"Row added to dataset '{name}'",
+            "status": "success"
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 @mcp.tool
 def update_csv_row(name: str, index: int, row: Dict[str, Any]) -> Dict[str, Any]:
@@ -205,10 +192,11 @@ def update_csv_row(name: str, index: int, row: Dict[str, Any]) -> Dict[str, Any]
         return {
             "name": name,
             "updated_row": df.iloc[index].to_dict(),
-            "message": f"Row {index} updated in dataset '{name}'"
+            "message": f"Row {index} updated in dataset '{name}'",
+            "status": "success"
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 @mcp.tool
 def delete_csv_row(name: str, index: int) -> Dict[str, Any]:
@@ -234,10 +222,11 @@ def delete_csv_row(name: str, index: int) -> Dict[str, Any]:
         return {
             "name": name,
             "shape": list(df.shape),
-            "message": f"Row {index} deleted from dataset '{name}'"
+            "message": f"Row {index} deleted from dataset '{name}'",
+            "status": "success"
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 @mcp.tool
 def list_csv_datasets() -> Dict[str, Any]:
@@ -266,10 +255,11 @@ def list_csv_datasets() -> Dict[str, Any]:
         
         return {
             "datasets": datasets,
-            "total_count": len(datasets)
+            "total_count": len(datasets),
+            "status": "success"
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 @mcp.tool
 def delete_csv_dataset(name: str) -> Dict[str, Any]:
@@ -286,9 +276,9 @@ def delete_csv_dataset(name: str) -> Dict[str, Any]:
         csv_path = _get_csv_path(name)
         if csv_path.exists():
             csv_path.unlink()
-            return {"message": f"Dataset '{name}' deleted successfully"}
+            return {"message": f"Dataset '{name}' deleted successfully", "status": "success"}
         else:
-            return {"error": f"Dataset '{name}' not found"}
+            return {"status": f"Dataset '{name}' not found"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -313,10 +303,11 @@ def query_csv(name: str, query: str) -> Dict[str, Any]:
             "query": query,
             "results": result.to_dict('records'),
             "result_count": len(result),
-            "total_rows": len(df)
+            "total_rows": len(df),
+            "status": "success"
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 @mcp.tool
 def get_csv_stats(name: str) -> Dict[str, Any]:
@@ -349,7 +340,7 @@ def get_csv_stats(name: str) -> Dict[str, Any]:
         
         return stats
     except Exception as e:
-        return {"error": str(e)}
+        return {"status": str(e)}
 
 import sys
 if len(sys.argv) > 1 and sys.argv[1].isdigit():
