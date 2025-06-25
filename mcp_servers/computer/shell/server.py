@@ -18,7 +18,7 @@ from typing import List, Dict, Any, Optional
 import subprocess
 import shlex
 
-mcp = FastMCP("Shell Tools Server 🐚")
+mcp = FastMCP("Shell Tools Server")
 
 def run_bash_subprocess(command: str, timeout: int = 30, cwd: Optional[str] = None) -> subprocess.CompletedProcess:
     return subprocess.run(
@@ -66,7 +66,7 @@ def execute_command(command: str, timeout: int = 30, working_directory: Optional
     print(f"Executing command: {command}")
     
     dangerous_commands = [
-        'rm', 'sudo', 'reboot', 'shutdown', 'halt', 'poweroff',
+        'rm -r', 'sudo', 'reboot', 'shutdown', 'halt', 'poweroff',
         'mkfs', 'fdisk', 'parted', 'dd', 'format',
         'chmod 777', 'chown', 'passwd', 'useradd', 'userdel',
         'kill -9', 'killall', 'pkill',
@@ -81,7 +81,7 @@ def execute_command(command: str, timeout: int = 30, working_directory: Optional
         return create_return_dict(
             status="error",
             stdout="Command blocked for security reasons",
-            stderr="",
+            stderr="Command blocked for security reasons",
             exit_code=-1,
             working_directory=working_directory or os.getcwd()
         )

@@ -40,7 +40,7 @@ def start_server_server(server_path, port):
     if not os.path.exists(server_path):
         raise FileNotFoundError(f"Server file not found: {server_path}")
     cmd = [sys.executable, str(server_path), str(port)]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     processes.append(process(proc, file=server_path, port=port, type='python'))
     return proc
 
@@ -58,22 +58,46 @@ def monitor_processes():
         time.sleep(0.1)
         for p in processes[:]:
             proc = p.proc
+            
+            if proc.stdout and proc.stdout.readable():
+                try:
+                    if hasattr(select, 'select'):
+                        ready, _, _ = select.select([proc.stdout], [], [], 0)
+                        if ready:
+                            line = proc.stdout.readline()
+                            if line:
+                                print(f"[{p.file}:{p.port}] {line.strip()}")
+                    else:
+                        line = proc.stdout.readline()
+                        if line:
+                            print(f"[{p.file}:{p.port}] {line.strip()}")
+                except:
+                    pass
+            
             return_code = proc.poll()
             if return_code is not None:
-                stdout, stderr = proc.communicate()
+                remaining_output, _ = proc.communicate()
+                if remaining_output:
+                    for line in remaining_output.split('\n'):
+                        if line.strip():
+                            print(f"[{p.file}:{p.port}] {line.strip()}")
+                
                 if p.type == 'python':
-                    print(f"Process {p.file}:", stdout or stderr)
                     if return_code != 0:
                         print(f"ERROR: Python server {p.file} exited with code {return_code}")
                         p.status = 'failed'
+                    else:
+                        print(f"Python server {p.file} completed successfully")
+                        p.status = 'completed'
                 elif p.type == 'docker':
                     if return_code != 0:
-                        error_msg = stderr or stdout or f"Exit code: {return_code}"
                         p.status = 'failed'
-                        raise RuntimeError(f"Docker compose process for {p.file} failed: {error_msg}")
+                        raise RuntimeError(f"Docker compose process for {p.file} failed with exit code: {return_code}")
                     elif p.status == 'running':
                         print(f"Docker {p.file} successfully run.")
                         p.status = 'completed'
+                
+                processes.remove(p)
 
 def find_docker_compose_files(root_dir):
     """Find all docker-compose.yml files in subdirectories"""
@@ -86,7 +110,7 @@ def find_docker_compose_files(root_dir):
 def run_docker_compose(compose_file):
     """Run docker-compose in background"""
     cmd = ['docker-compose', '-f', compose_file, 'up', '-d']
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     processes.append(process(proc, file=compose_file, type='docker'))
 
 def find_server_files(root_dir):

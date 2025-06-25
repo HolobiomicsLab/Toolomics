@@ -38,27 +38,8 @@ def init_browser():
                 print("Browser instance created successfully")
                 return True
             except Exception as e:
-                print(f"Failed to initialize browser: {e}")
-                return False
+                raise e
     return True
-
-@mcp.tool
-def restart() -> Dict[str, str]:
-    """Terminate the browser server"""
-    print("Terminating browser server")
-    global browser_instance
-    with browser_lock:
-        if browser_instance is not None:
-            try:
-                print("Quitting existing browser instance")
-                browser_instance.driver.quit()
-                browser_instance = None
-            except Exception as e:
-                print(f"Error quitting browser: {e}")
-            browser_instance = None
-    time.sleep(1)  # Allow time for cleanup
-    init_browser()
-    return {"status": "success", "message": "Browser server terminated successfully"}
 
 @mcp.tool
 def search(query: str) -> Dict[str, str]:
@@ -75,7 +56,7 @@ def search(query: str) -> Dict[str, str]:
         return {"status": "error", "message": str(e)}
 
 @mcp.tool
-def browser_init() -> Dict[str, str]:
+def restart() -> Dict[str, str]:
     """Initialize or reinitialize the browser"""
     global browser_instance
     print("Initializing browser")
@@ -102,10 +83,14 @@ def browser_init() -> Dict[str, str]:
 def navigate(url: str) -> Dict[str, str]:
     """Navigate to a URL"""
     print(f"Navigating to URL: {url}")
-    if not init_browser():
-        print("Failed to initialize browser")
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
+    try:
+        if not init_browser():
+            print("Failed to initialize browser")
+            return {"status": "error", "message": "Failed to initialize browser"}
+    except Exception as e:
+        print(f"Error initializing browser: {e}")
+        return {"status": "error", "message":  "Error in browser initialization: " + str(e)}
+
     with browser_lock:
         try:
             if not browser_instance.is_link_valid(url):

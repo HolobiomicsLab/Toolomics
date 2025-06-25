@@ -171,19 +171,6 @@ def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx
     chromedriver_path = install_chromedriver()
 
     service = Service(chromedriver_path)
-    if stealth_mode:
-        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        driver = create_undetected_chromedriver(service, chrome_options)
-        chrome_version = driver.capabilities['browserVersion']
-        stealth(driver,
-            languages=["en-US", "en"],
-            vendor=user_agent["vendor"],
-            platform="Win64" if "windows" in user_agent["ua"].lower() else "MacIntel" if "mac" in user_agent["ua"].lower() else "Linux x86_64",
-            webgl_vendor="Intel Inc.",
-            renderer="Intel Iris OpenGL Engine",
-            fix_hairline=True,
-        )
-        return driver
     security_prefs = {
         "profile.default_content_setting_values.geolocation": 0,
         "profile.default_content_setting_values.notifications": 0,
