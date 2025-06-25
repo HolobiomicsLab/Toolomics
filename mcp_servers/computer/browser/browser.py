@@ -356,12 +356,10 @@ class Browser:
     
     def is_link_valid(self, url:str) -> bool:
         """Check if a URL is a valid link (page, not related to icon or metadata)."""
-        if len(url) > 72:
+        if len(url) > 128:
             return False
         parsed_url = urlparse(url)
         if not parsed_url.scheme or not parsed_url.netloc:
-            return False
-        if re.search(r'/\d+$', parsed_url.path):
             return False
         image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']
         metadata_extensions = ['.ico', '.xml', '.json', '.rss', '.atom']

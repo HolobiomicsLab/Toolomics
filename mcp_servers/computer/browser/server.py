@@ -43,6 +43,24 @@ def init_browser():
     return True
 
 @mcp.tool
+def restart() -> Dict[str, str]:
+    """Terminate the browser server"""
+    print("Terminating browser server")
+    global browser_instance
+    with browser_lock:
+        if browser_instance is not None:
+            try:
+                print("Quitting existing browser instance")
+                browser_instance.driver.quit()
+                browser_instance = None
+            except Exception as e:
+                print(f"Error quitting browser: {e}")
+            browser_instance = None
+    time.sleep(1)  # Allow time for cleanup
+    init_browser()
+    return {"status": "success", "message": "Browser server terminated successfully"}
+
+@mcp.tool
 def search(query: str) -> Dict[str, str]:
     """Search for a query using SearxNG"""
     print(f"Searching for query: {query}")
