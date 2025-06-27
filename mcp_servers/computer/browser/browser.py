@@ -133,7 +133,7 @@ def create_undetected_chromedriver(service, chrome_options) -> webdriver.Chrome:
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") 
     return driver
 
-def create_driver(headless=False, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en") -> webdriver.Chrome:
+def create_driver(headless=True, stealth_mode=True, crx_path="./crx/nopecha.crx", lang="en") -> webdriver.Chrome:
     """Create a Chrome WebDriver with specified options."""
     chrome_options = Options()
     chrome_path = get_chrome_path()

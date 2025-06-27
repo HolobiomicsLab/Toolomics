@@ -1,5 +1,5 @@
 flask
-fastmcp==2.8.1
+fastmcp
 pandas>=2.3.0
 selenium>=4.27.0
 selenium_stealth>=1.0.6

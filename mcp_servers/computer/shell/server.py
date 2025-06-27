@@ -65,26 +65,28 @@ def execute_command(command: str, timeout: int = 30, working_directory: Optional
     
     print(f"Executing command: {command}")
     
-    dangerous_commands = [
-        'rm -r', 'sudo', 'reboot', 'shutdown', 'halt', 'poweroff',
-        'mkfs', 'fdisk', 'parted', 'dd', 'format',
-        'chmod 777', 'chown', 'passwd', 'useradd', 'userdel',
-        'kill -9', 'killall', 'pkill',
-        'mv /etc', 'cp /etc', 'rm /etc', 'rm /usr', 'rm /var',
-        'rm -rf /', 'rm -rf *', ':(){ :|:& };:',
-        'wget', 'curl', 'nc', 'netcat', 'telnet',
-        'iptables', 'ufw', 'firewall-cmd',
-        'crontab', 'at', 'systemctl', 'service',
-        'mount', 'umount', 'fsck', 'badblocks'
+    dangerous_patterns = [
+        ['rm', '-r'], ['rm', '-rf'], ['rm', '-f'],
+        ['kill', '-9'], ['chmod', '777'],
+        ['mv', '/etc'], ['cp', '/etc'], ['rm', '/etc'], 
+        ['rm', '/usr'], ['rm', '/var'], ['rm', '/'],
+        [':()', '{', ':|:&', '};:']  # Fork bomb pattern
     ]
-    if any(dangerous in command.lower() for dangerous in dangerous_commands):
-        return create_return_dict(
-            status="error",
-            stdout="Command blocked for security reasons",
-            stderr="Command blocked for security reasons",
-            exit_code=-1,
-            working_directory=working_directory or os.getcwd()
-        )
+    try:
+        command_words = shlex.split(command.lower())
+    except ValueError:
+        command_words = command.lower().split()
+    
+    # Check for dangerous command patterns
+    for pattern in dangerous_patterns:
+        if all(word in command_words for word in pattern):
+            return create_return_dict(
+                status="error",
+                stdout="Command blocked for security reasons",
+                stderr="Command blocked for security reasons",
+                exit_code=-1,
+                working_directory=working_directory or os.getcwd()
+            )
     
     try:
         cwd = working_directory if working_directory and os.path.exists(working_directory) else None
