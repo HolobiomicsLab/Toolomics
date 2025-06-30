@@ -53,7 +53,7 @@ def create_return_dict(status: str,
     }
 
 @mcp.tool
-def execute_command(command: str, timeout: int = 30, working_directory: Optional[str] = None) -> Dict[str, Any]:
+def execute_command(command: str, timeout: int = 30, working_directory: Optional[str] = "workspace") -> Dict[str, Any]:
     """
     Execute a shell command and return the output with better error handling and security.
     
