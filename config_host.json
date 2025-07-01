@@ -1,14 +1,5 @@
 [
     {
-        "mcp_servers/health/server.py": 5000
-    },
-    {
         "mcp_servers/computer/browser/server.py": 5002
-    },
-    {
-        "mcp_servers/files/csv/server.py": 5003
-    },
-    {
-        "mcp_servers/computer/shell/server.py": 5004
     }
 ]
