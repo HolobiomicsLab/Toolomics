@@ -16,7 +16,7 @@ import os
 import sys
 from typing import List, Dict, Any, Optional
 
-from browser import Browser, create_driver
+from browser import Browser
 from searxng import search_searx
 
 # Initialize the FastMCP server
@@ -33,8 +33,7 @@ def init_browser():
         if browser_instance is None:
             try:
                 print("Initializing browser instance")
-                driver = create_driver(headless=False)
-                browser_instance = Browser(driver)
+                browser_instance = Browser()
                 print("Browser instance created successfully")
                 return True
             except Exception as e:
@@ -54,30 +53,6 @@ def search(query: str) -> Dict[str, str]:
     except Exception as e:
         print(f"Error searching: {e}")
         return {"status": "error", "message": str(e)}
-
-@mcp.tool
-def restart() -> Dict[str, str]:
-    """Initialize or reinitialize the browser"""
-    global browser_instance
-    print("Initializing browser")
-    with browser_lock:
-        if browser_instance is not None:
-            try:
-                print("Quitting existing browser instance")
-                browser_instance.driver.quit()
-            except Exception as e:
-                print(f"Error quitting browser: {e}")
-            browser_instance = None
-        
-        try:
-            print("Creating new browser instance")
-            driver = create_driver(headless=True)
-            browser_instance = Browser(driver)
-            print("Browser instance reinitialized successfully")
-            return {"status": "success"}
-        except Exception as e:
-            print(f"Failed to reinitialize browser: {e}")
-            return {"status": "error", "message": str(e)}
 
 @mcp.tool
 def navigate(url: str) -> Dict[str, str]:
@@ -149,46 +124,6 @@ def get_links() -> Dict[str, Any]:
             return {"status": "error", "message": str(e)}
 
 @mcp.tool
-def click_element(xpath: str) -> Dict[str, str]:
-    """Click an element by XPath"""
-    print(f"Clicking element with XPath: {xpath}")
-    if not init_browser():
-        print("Failed to initialize browser")
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
-    with browser_lock:
-        try:
-            success = browser_instance.click_element(xpath)
-            print(f"Click {'succeeded' if success else 'failed'} for XPath: {xpath}")
-            return {
-                "status": "success" if success else "failed",
-                "current_url": browser_instance.get_current_url()
-            }
-        except Exception as e:
-            print(f"Error clicking element {xpath}: {e}")
-            return {"status": "error", "message": str(e)}
-
-@mcp.tool
-def fill_form(inputs: List[Dict[str, str]]) -> Dict[str, str]:
-    """Fill form inputs"""
-    print(f"Filling form with inputs: {inputs}")
-    if not init_browser():
-        print("Failed to initialize browser")
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
-    with browser_lock:
-        try:
-            success = browser_instance.fill_form(inputs)
-            print(f"Form fill {'succeeded' if success else 'failed'}")
-            return {
-                "status": "success" if success else "failed",
-                "current_url": browser_instance.get_current_url()
-            }
-        except Exception as e:
-            print(f"Error filling form: {e}")
-            return {"status": "error", "message": str(e)}
-
-@mcp.tool
 def take_screenshot() -> Dict[str, str]:
     """Take and return screenshot"""
     print("Taking screenshot")
@@ -251,26 +186,6 @@ def is_link_valid(url: str) -> Dict[str, Any]:
             }
         except Exception as e:
             print(f"Error checking link validity: {e}")
-            return {"status": "error", "message": str(e)}
-
-@mcp.tool
-def get_form_inputs() -> Dict[str, Any]:
-    """Get all form inputs from current page"""
-    print("Fetching form inputs")
-    if not init_browser():
-        print("Failed to initialize browser")
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
-    with browser_lock:
-        try:
-            inputs = browser_instance.get_form_inputs()
-            print(f"Fetched {len(inputs)} form inputs from page")
-            return {
-                "status": "success",
-                "inputs": inputs
-            }
-        except Exception as e:
-            print(f"Error fetching form inputs: {e}")
             return {"status": "error", "message": str(e)}
 
 screenshots_dir = os.path.join(os.path.dirname(__file__), '.screenshots')

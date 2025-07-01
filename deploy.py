@@ -6,6 +6,7 @@ This script finds all server.py files in subdirectories of mcp_servers and start
 """
 
 import os
+import argparse
 import sys
 import time
 import json
@@ -99,10 +100,10 @@ def monitor_processes():
                 
                 processes.remove(p)
 
-def find_docker_compose_files(root_dir):
+def find_docker_compose_files(mcp_dir):
     """Find all docker-compose.yml files in subdirectories"""
     compose_files = []
-    for root, _, files in os.walk(root_dir):
+    for root, _, files in os.walk(mcp_dir):
         if 'docker-compose.yml' in files:
             compose_files.append(str(Path(root) / 'docker-compose.yml'))
     return compose_files
@@ -113,10 +114,10 @@ def run_docker_compose(compose_file):
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     processes.append(process(proc, file=compose_file, type='docker'))
 
-def find_server_files(root_dir):
+def find_server_files(mcp_dir):
     """Find all server.py files in subdirectories"""
     server_files = []
-    for root, _, files in os.walk(root_dir):
+    for root, _, files in os.walk(mcp_dir):
         if 'server.py' in files:
             server_files.append(str(Path(root) / 'server.py'))
     return server_files
@@ -162,37 +163,24 @@ def port_attribution(config, server_files):
 
 def get_mcp_folder():
     folder = DEFAULT_FOLDER 
-    if len(sys.argv) > 1:
-        folder = os.path.join(DEFAULT_FOLDER, sys.argv[1])
     if not os.path.exists(folder):
         raise FileNotFoundError(f"Directory {folder} does not exist.")
     return folder
 
-def main():
-    root_dir = get_mcp_folder()
-    config_path = "./ports_config.json"
-    ports_config = get_ports_config(config_path)
-    signal.signal(signal.SIGINT, cleanup)
-    signal.signal(signal.SIGTERM, cleanup)
 
-    # First run any docker-compose files
-    print("Looking for docker-compose.yml files in subdirectories of:", root_dir)
-    compose_files = find_docker_compose_files(root_dir)
+def run_dockers(compose_files):
     if compose_files:
         print(f"Found {len(compose_files)} docker-compose.yml files to start:")
-        for compose_file in compose_files:
-            print(f"Starting {compose_file}")
-            run_docker_compose(compose_file)
+        for cmpf in compose_files:
+            print(f"Starting {cmpf}")
+            run_docker_compose(cmpf)
         print("Waiting 5 seconds for docker containers to start...")
         time.sleep(5)
 
-    print("Looking for server.py files in subdirectories of:", root_dir)
-    server_files = find_server_files(root_dir)
-
+def run_mcp_servers(server_files, config_path, ports_config):
     if not server_files:
         print("No server.py files found in subdirectories")
         return
-
     print(f"Found {len(server_files)} MCP servers to start.")
     ports_config = port_attribution(ports_config, server_files)
     create_server_config_file(config_path, ports_config)
@@ -202,6 +190,37 @@ def main():
         port = server[server_file]
         print(f"Starting {server_file} on port {port}")
         start_server_server(server_file, port)
+
+def get_argument_config():
+    """Get command line arguments"""
+    parser = argparse.ArgumentParser(description="Deploy MCP servers")
+    parser.add_argument("--config", help="Path to the ports configuration file", default="config_host.json")
+    parser.add_argument("--mcp-dir", default=DEFAULT_FOLDER, help=f"Directory containing MCP servers (default: {DEFAULT_FOLDER})")
+    parser.add_argument("--starting-port", type=int, default=STARTING_PORT, help=f"Starting port number (default: {STARTING_PORT})")
+    parser.add_argument("--no-docker", action="store_true", help="Skip docker-compose files")
+    args = parser.parse_args()
+    return args
+
+def main():
+    args = get_argument_config()
+    mcp_dir = args.mcp_dir
+    config_path = args.config
+    
+    if not os.path.exists(mcp_dir):
+        raise FileNotFoundError(f"Directory {mcp_dir} does not exist.")
+    
+    ports_config = get_ports_config(config_path)
+    signal.signal(signal.SIGINT, cleanup)
+    signal.signal(signal.SIGTERM, cleanup)
+
+    if not args.no_docker:
+        print("Looking for docker-compose.yml files in subdirectories of:", mcp_dir)
+        compose_files = find_docker_compose_files(mcp_dir)
+        run_dockers(compose_files)
+
+    print("Looking for server.py files in subdirectories of:", mcp_dir)
+    server_files = find_server_files(mcp_dir)
+    run_mcp_servers(server_files, config_path, ports_config)
 
     print("\nAll servers running. Press Ctrl+C to stop.\n")
     monitor_processes()

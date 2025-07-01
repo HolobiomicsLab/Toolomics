@@ -18,7 +18,13 @@ python3.10 -m pip install -r requirements.txt
 To deploy all tools, use the following command:
 
 ```bash
-python3.10 deploy.py
+python3.10 deploy.py <config path>
+```
+
+For example : 
+
+```bash
+python3.10 deploy.py config_host.json 
 ```
 
 ### Deploy Specific Tools
