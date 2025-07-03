@@ -11,5 +11,5 @@ HOST_PID=$!
 tail -f mcp_host.log &
 TAIL_PID=$!
 # start the MCP server in docker
-docker run -d -it -p 5100-5200:5100-5200 toolomics
+docker run -it -p 5100-5200:5100-5200 toolomics
 sleep 5

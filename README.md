@@ -13,7 +13,20 @@ python3.10 -m pip install -r requirements.txt
 
 ## Deploying Tools
 
-### Deploy All Tools
+### Deploy all tools automatically
+
+```bash
+./start.sh
+```
+
+### Deploy Tools on Docker
+
+```bash
+docker build -t toolomics .
+docker run -it -p 5100-5200:5100-5200 toolomics
+```
+
+### Deploy Tools on Host
 
 To deploy all tools, use the following command:
 
@@ -27,12 +40,12 @@ For example :
 python3.10 deploy.py --config config.json 
 ```
 
-### Deploy Specific Tools
+### Deploy Specific Tools on Host
 
 To deploy tools within a specific subfolder of the `mcp_servers` directory, pass the subfolder name as an argument:
 
 ```bash
-python3.10 deploy.py metabolomics
+python3.10 deploy.py  --config config.json --mcp-dir metabolomics
 ```
 
 For example, the above command will start all MCP servers within the `metabolomics` subfolder.
@@ -48,13 +61,13 @@ Each MCP server is assigned a port, which is recorded in the `ports_config.json`
 ```json
 [
     {
-        "mcp_servers/instruments/server.py": 5000
+        "mcp_host/instruments/server.py": 5000
     },
     {
-        "mcp_servers/files/csv/server.py": 5001
+        "mcp_host/files/csv/server.py": 5001
     },
     {
-        "mcp_servers/computer_use/browser/server.py": 5002
+        "mcp_host/computer_use/browser/server.py": 5002
     }
 ]
 ```
