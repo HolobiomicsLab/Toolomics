@@ -26,19 +26,54 @@ mcp = FastMCP("Browser Tools Server 🌐")
 browser_lock = threading.Lock()
 browser_instance = None
 
-def init_browser():
-    """Initialize the browser instance if not already created"""
+def is_session_valid():
+    """Check if browser session is still valid"""
+    global browser_instance
+    if browser_instance is None:
+        return False
+    try:
+        # Simple check to verify session is alive
+        return browser_instance.is_session_valid()
+    except:
+        return False
+
+def restart_browser():
+    """Restart browser instance"""
     global browser_instance
     with browser_lock:
-        if browser_instance is None:
+        try:
+            if browser_instance:
+                try:
+                    browser_instance.quit()
+                except:
+                    pass
+            print("Restarting browser instance")
+            browser_instance = Browser()
+            print("Browser instance restarted successfully")
+            return True
+        except Exception as e:
+            print(f"Error restarting browser: {e}")
+            return False
+
+def init_browser():
+    """Initialize or recover browser instance"""
+    global browser_instance
+    with browser_lock:
+        if browser_instance is None or not is_session_valid():
             try:
+                if browser_instance:
+                    try:
+                        browser_instance.quit()
+                    except:
+                        pass
                 print("Initializing browser instance")
                 browser_instance = Browser()
                 print("Browser instance created successfully")
                 return True
             except Exception as e:
-                raise e
-    return True
+                print(f"Error initializing browser: {e}")
+                return False
+        return True
 
 @mcp.tool
 def search(query: str) -> Dict[str, str]:
@@ -68,9 +103,14 @@ def navigate(url: str) -> Dict[str, str]:
 
     with browser_lock:
         try:
+            if not init_browser():
+                print("Failed to initialize browser")
+                return {"status": "error", "message": "Failed to initialize browser"}
+
             if not browser_instance.is_link_valid(url):
                 print(f"Invalid URL: {url}")
                 return {"status": "error", "message": "Invalid URL"}
+
             success = browser_instance.go_to(url)
             print(f"Navigation {'succeeded' if success else 'failed'} for URL: {url}")
             return {
@@ -81,7 +121,8 @@ def navigate(url: str) -> Dict[str, str]:
             }
         except Exception as e:
             print(f"Error navigating to URL {url}: {e}")
-            return {"status": "error", "message": str(e)}
+            restart_browser()
+            return {"status": "error", "message": f"Navigation failed: {str(e)}"}
 
 @mcp.tool
 def get_content() -> Dict[str, str]:
