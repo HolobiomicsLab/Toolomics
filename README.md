@@ -26,6 +26,8 @@ docker build -t toolomics .
 docker run -it -p 5100-5200:5100-5200 toolomics
 ```
 
+By default we use port 5100 to 5200 for MCPs running **in docker**.
+
 ### Deploy Tools on Host
 
 To deploy all tools, use the following command:
@@ -34,21 +36,13 @@ To deploy all tools, use the following command:
 python3.10 deploy.py --config <config path>
 ```
 
+By default we use port 5000 to 5100 for MCPs running **on host**.
+
 For example : 
 
 ```bash
 python3.10 deploy.py --config config.json 
 ```
-
-### Deploy Specific Tools on Host
-
-To deploy tools within a specific subfolder of the `mcp_servers` directory, pass the subfolder name as an argument:
-
-```bash
-python3.10 deploy.py  --config config.json --mcp-dir metabolomics
-```
-
-For example, the above command will start all MCP servers within the `metabolomics` subfolder.
 
 ## Using MCP with Your Client
 
