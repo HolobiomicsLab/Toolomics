@@ -1,0 +1,11 @@
+[
+    {
+        "mcp_host/browser/server.py": 5000
+    },
+    {
+        "mcp_docker/files/csv/server.py": 5101
+    },
+    {
+        "mcp_docker/computer/shell/server.py": 5102
+    }
+]

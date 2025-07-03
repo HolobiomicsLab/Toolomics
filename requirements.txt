@@ -1,7 +1,7 @@
 flask
 fastmcp
+helium==5.1.1
 pandas>=2.3.0
-helium>=5.1.1
 requests>=2.31.0
 markdownify>=1.1.0
 matplotlib>=3.9.0

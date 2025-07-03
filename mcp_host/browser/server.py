@@ -197,4 +197,4 @@ else:
     port = int(input("Enter port number: "))
 print(f"Running browser MCP server on port {port}")
 init_browser()
-mcp.run(transport="streamable-http", host="127.0.0.1", port=port, path="/mcp")
+mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")

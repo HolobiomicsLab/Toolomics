@@ -8,9 +8,9 @@ from fastmcp import Client
 
 async def discover_mcp_servers():
     """Discover MCP servers on ports 5000-5050 and list their tools."""
-    print("🔍 Discovering MCP servers on ports 5000-5050...")
-    
-    for port in range(5000, 5051):
+    print("🔍 Discovering MCP servers on ports 5000-5200...")
+
+    for port in range(5000, 5201):
         try:
             async with Client(f"http://localhost:{port}/mcp") as client:
                 tools = await client.list_tools()

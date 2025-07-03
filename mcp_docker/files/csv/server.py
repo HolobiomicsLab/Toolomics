@@ -348,4 +348,4 @@ if len(sys.argv) > 1 and sys.argv[1].isdigit():
 else:
     port = int(input("Enter port number: "))
 print(f"Starting CSV MCP server on port {port}...")
-mcp.run(transport="streamable-http", host="127.0.0.1", port=port, path="/mcp")
+mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")

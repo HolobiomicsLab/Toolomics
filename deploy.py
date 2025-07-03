@@ -18,7 +18,7 @@ import select
 
 # TODO use https://slurm.schedmd.com/overview.html ????
 
-DEFAULT_FOLDER = "mcp_servers"
+DEFAULT_FOLDER = "mcp_host"
 STARTING_PORT = 5000
 
 class process:
@@ -36,7 +36,7 @@ class process:
 # Global list to keep track of running processes and their info
 processes = []
 
-def start_server_server(server_path, port):
+def start_servers(server_path, port):
     """Start an server server on specified port"""
     if not os.path.exists(server_path):
         raise FileNotFoundError(f"Server file not found: {server_path}")
@@ -167,7 +167,6 @@ def get_mcp_folder():
         raise FileNotFoundError(f"Directory {folder} does not exist.")
     return folder
 
-
 def run_dockers(compose_files):
     if compose_files:
         print(f"Found {len(compose_files)} docker-compose.yml files to start:")
@@ -177,24 +176,26 @@ def run_dockers(compose_files):
         print("Waiting 5 seconds for docker containers to start...")
         time.sleep(5)
 
-def run_mcp_servers(server_files, config_path, ports_config):
+def run_mcp_servers(server_files, config_path, config_json):
     if not server_files:
         print("No server.py files found in subdirectories")
         return
     print(f"Found {len(server_files)} MCP servers to start.")
-    ports_config = port_attribution(ports_config, server_files)
+    ports_config = port_attribution(config_json, server_files)
     create_server_config_file(config_path, ports_config)
     print("Using ports configuration at:", config_path)
     for server in ports_config:
         server_file = list(server.keys())[0]
         port = server[server_file]
-        print(f"Starting {server_file} on port {port}")
-        start_server_server(server_file, port)
+        if server_file in server_files:
+            print(f"Starting {server_file} on port {port}")
+            if os.path.exists(server_file):
+                start_servers(server_file, port)
 
 def get_argument_config():
     """Get command line arguments"""
     parser = argparse.ArgumentParser(description="Deploy MCP servers")
-    parser.add_argument("--config", help="Path to the ports configuration file", default="config_host.json")
+    parser.add_argument("--config", help="Path to the ports configuration file", default="config.json")
     parser.add_argument("--mcp-dir", default=DEFAULT_FOLDER, help=f"Directory containing MCP servers (default: {DEFAULT_FOLDER})")
     parser.add_argument("--starting-port", type=int, default=STARTING_PORT, help=f"Starting port number (default: {STARTING_PORT})")
     parser.add_argument("--no-docker", action="store_true", help="Skip docker-compose files")
@@ -209,7 +210,7 @@ def main():
     if not os.path.exists(mcp_dir):
         raise FileNotFoundError(f"Directory {mcp_dir} does not exist.")
     
-    ports_config = get_ports_config(config_path)
+    config_json = get_ports_config(config_path)
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
@@ -220,7 +221,7 @@ def main():
 
     print("Looking for server.py files in subdirectories of:", mcp_dir)
     server_files = find_server_files(mcp_dir)
-    run_mcp_servers(server_files, config_path, ports_config)
+    run_mcp_servers(server_files, config_path, config_json)
 
     print("\nAll servers running. Press Ctrl+C to stop.\n")
     monitor_processes()

@@ -14,7 +14,7 @@ def search_searx(query):
     Returns:
         str: Formatted search results or error message
     """
-    base_url = "http://127.0.0.1:8080"
+    base_url = "http://0.0.0.0:8080"
     if not base_url:
         return "Error: SearxNG base URL must be provided either as an argument or via the SEARXNG_BASE_URL environment variable."
     

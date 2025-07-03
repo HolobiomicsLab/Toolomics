@@ -15,8 +15,8 @@ COPY . /app
 # Install Python dependencies
 RUN pip3 install -r /app/requirements.txt
 
-# Expose ports, from 5000 to 5100 as MCP might use all this range depending on number of tools deployed
-EXPOSE 5000-5100
+# Expose ports, from 5100 to 5200 as MCP might use all this range depending on number of tools deployed
+EXPOSE 5100-5200
 
 # Command to run the application
-CMD ["python3", "deploy.py", "--config", "config_docker.json", "--mcp-dir", "mcp_servers", "--starting-port", "5000", "--no-docker"]
+CMD ["python3", "deploy.py", "--config", "config.json", "--mcp-dir", "mcp_docker", "--starting-port", "5100"]
