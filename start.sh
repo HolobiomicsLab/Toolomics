@@ -33,6 +33,8 @@ if [ "$PROCESSES_FOUND" = true ]; then
     fi
 fi
 
+sleep 1
+
 echo "Starting on-host MCP..."
 # Start MCP server on host
 python3.10 deploy.py --config config.json --mcp-dir mcp_host > mcp_host.log 2>&1 &
