@@ -1,7 +1,18 @@
 #!/bin/bash
 echo "Building docker for Toolomics..."
 
-docker build -t toolomics .
+REBUILD=false
+if [[ "$1" == "--rebuild" || "$1" == "-r" ]]; then
+    REBUILD=true
+else
+    echo "Use --rebuild or -r to force rebuild of the docker image."
+fi
+
+if ! docker images toolomics --format "table {{.Repository}}" | grep -q toolomics || [ "$REBUILD" = true ]; then
+    docker build -t toolomics .
+else
+    echo "Docker image 'toolomics' already exists. Use --rebuild or -r to force rebuild."
+fi
 
 echo "Starting dockerized MCP servers..."
 
