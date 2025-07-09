@@ -44,14 +44,13 @@ if [ "$PROCESSES_FOUND" = true ]; then
     fi
 fi
 
-sleep 1
-
 echo "Starting on-host MCP..."
 # Start MCP server on host
-python3.10 deploy.py --config config.json --mcp-dir mcp_host > mcp_host.log 2>&1 &
+python3.10 deploy.py --config config.json --mcp-dir mcp_host &
 HOST_PID=$!
-tail -f mcp_host.log &
-TAIL_PID=$!
+
 # start the MCP server in docker
-docker run -it -p 5100-5200:5100-5200 toolomics
-sleep 5
+docker run -t -p 5100-5200:5100-5200 toolomics &
+DOCKER_PID=$!
+
+wait $HOST_PID $DOCKER_PID

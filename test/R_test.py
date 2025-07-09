@@ -12,7 +12,7 @@ from fastmcp import Client
 async def test_r():
     """Test all Shell operations comprehensively."""
     
-    port = 5103
+    port = 5001
     # Connect to the MCP server
     async with Client(f"http://localhost:{port}/mcp") as client:
         print("🚀 Connected to Rscript MCP Server")
