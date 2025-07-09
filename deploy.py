@@ -47,8 +47,10 @@ def start_servers(server_path, port):
 
 def cleanup(_signum, _frame):
     """Cleanup all running processes on exit"""
+    print(f"\nCleaning up before exit (Signal: {_signum})")
     for p in processes:
-        p.proc.terminate()
+        p.proc.kill()
+        #p.proc.terminate()
     sys.exit(0)
 
 def monitor_processes():
@@ -110,7 +112,12 @@ def find_docker_compose_files(mcp_dir):
 
 def run_docker_compose(compose_file):
     """Run docker-compose in background"""
-    cmd = ['docker-compose', '-f', compose_file, 'up', '-d']
+    print(f"Running docker-compose for {compose_file}")
+    platform = sys.platform
+    if platform == "linux":
+        cmd = ['docker', 'compose','-f', compose_file, 'up', '-d']
+    else: # for macOS or Windows
+        cmd = ['docker-compose', '-f', compose_file, 'up', '-d']
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
     processes.append(process(proc, file=compose_file, type='docker'))
 
@@ -173,8 +180,8 @@ def run_dockers(compose_files):
         for cmpf in compose_files:
             print(f"Starting {cmpf}")
             run_docker_compose(cmpf)
-        print("Waiting 5 seconds for docker containers to start...")
-        time.sleep(5)
+        print("Waiting 3 seconds for docker containers to start...")
+        time.sleep(3)
 
 def run_mcp_servers(server_files, config_path, config_json):
     if not server_files:
