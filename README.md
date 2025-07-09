@@ -96,9 +96,12 @@ You can easily add a new tool as an MCP server.
 ### Steps to Add a New MCP
 
 1. Create a `server.py` file with your MCP implementation, it should take the port number as first argument (eg: `server.py 5003`).
-2. Place the file in a subfolder of the `mcp_servers` directory. For example, to add a metabolomics-related tool, create a subfolder like `mcp_servers/metabolomics/your_tool_name_folder`.
+2. Place the file in a subfolder of the `mcp_host` directory. For example, to add a metabolomics-related tool, create a subfolder like `mcp_host/metabolomics/your_tool_name`.
+
+**Put your `server.py` in mcp_docker if your tool need to run in docker for safety.**
 
 The `deploy.py` script will look for new `server.py` file, attribute a port for your script and add it to `config.json` (unless you manually did by modifying the config.json), finally it will run your script with the assigned port as first argument.
+
 
 ### Example MCP Implementation
 
