@@ -58,7 +58,7 @@ def monitor_processes():
     import time
     
     while processes:
-        time.sleep(0.1)
+        time.sleep(0.01)
         for p in processes[:]:
             proc = p.proc
             

@@ -3,21 +3,17 @@
 """
 CSV Management MCP Server
 
-Provides tools for creating, reading, and manipulating CSV files.
-
-Author: Martin Legrand - HolobiomicsLab, CNRS
+Provides tools for creating, reading, and manipulating R script.
 """
 
-import os
-import subprocess
-import tempfile
-import pandas as pd
-import json
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List
 from fastmcp import FastMCP
-import shutil
 from datetime import datetime
+import sys
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from shared.shared import return_as_dict, run_bash_subprocess, CommandResult
 
 mcp = FastMCP("Rscript manager")
 
@@ -30,75 +26,33 @@ SCRIPT_DIR.mkdir(exist_ok=True)
 
 print(f"Using storage directory: {STORAGE_DIR}")
 print(f"Using script directory: {SCRIPT_DIR}")
-def create_return_dict(
-    status: str,
-    stdout: str = "",
-    stderr: str = "",
-    exit_code: int = 0,
-    working_directory: Optional[str] = None,
-) -> Dict[str, Any]:
+
+def run_rscript(script_path: str) -> CommandResult:
     """
-    Create a standardized return dictionary for MCP shell tools.
+    Run an R script using the xcmsrocker Docker container.
+
     Args:
-        status: Status of the operation (success/error)
-        stdout: Standard output from the command
-        stderr: Standard error from the command
-        exit_code: Exit code of the command
-        working_directory: Directory where the command was executed
+        script_name: The name of the R script file to execute.
+
+    Returns:
+        CommandResult containing the status, stdout, stderr, and exit code.
     """
-    return {
-        "status": status or "success",
-        "stdout": stdout,
-        "stderr": stderr,
-        "exit_code": exit_code,
-    }
-
-def run_r_docker(script_name:str,timeout:int=120) -> Dict[str, Any]:
-    try:
-        # Run the R script inside the xcmsrocker container
-        docker_cmd = [
-            "docker",
-            "exec",
-            "xcmsrocker",
-            "Rscript",
-            f"/home/script/{script_name}",
-        ]
-        result = subprocess.run(
-            docker_cmd, capture_output=True, text=True, timeout=timeout
-        )
-
-        return create_return_dict(
-            status="success" if result.returncode == 0 else "error",
-            stdout=result.stdout,
-            stderr=result.stderr,
-            exit_code=result.returncode,
-        )
-    except subprocess.TimeoutExpired:
-        return create_return_dict(
-            status="error",
-            stderr=f"Command timed out after {timeout} seconds",
-            exit_code=-1,
-        )
-    except Exception as e:
-        return create_return_dict(
-            status="error",
-            stderr=str(e),
-            exit_code=-1,
-        )
-
+    cmd = f"docker exec xcmsrocker Rscript {script_path}"
+    return run_bash_subprocess(cmd, timeout=60)
     
 
 @mcp.tool
-def execute_r_code(r_code: str) -> str:
-    """
-    Execute R code inside the xcmsrocker Docker container and return the output or error.
+@return_as_dict
+def execute_r_code(r_code: str) -> Dict[str,Any]:
+    f"""
+    Execute R code.
     Also saves the executed R script in the storage directory.
 
     Args:
         r_code: The R code to execute as a string.
 
     Returns:
-        The standard output or error message from the containerized Rscript.
+        dict: {CommandResult.__doc__}
     """
     try:
         # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
@@ -106,15 +60,37 @@ def execute_r_code(r_code: str) -> str:
         script_path = SCRIPT_DIR / script_name
         with open(script_path, "w") as f:
             f.write(r_code)
-
-        return run_r_docker(script_name)
-
     except Exception as e:
-        return create_return_dict(
+        return CommandResult(
             status="error",
-            stderr=str(e),
+            stderr=f"Error saving R script: {str(e)}",
             exit_code=-1,
         )
+    
+    res = run_rscript(script_path)
+    print(f"Executed R script: {script_name} with result: {res}")
+    return res
+
+@mcp.tool
+def write_r_script(r_code: str, filename:str) -> str:
+    f"""
+    Write the R script in the script directory.
+
+    Args:
+        r_code: The R code to write as a string.
+
+    Returns:
+        str: A message indicating success or failure.
+    """
+    try:
+        # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
+        #script_name = f"rscript_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.R"
+        script_path = SCRIPT_DIR / filename
+        with open(script_path, "w") as f:
+            f.write(r_code)
+        return "Script written successfully: " + str(script_path)
+    except Exception as e:
+        return "Script writing failed: " + str(e)
 
 
 @mcp.tool
@@ -127,26 +103,36 @@ def list_storage_files() -> List[str]:
     """
     return [f.name for f in STORAGE_DIR.iterdir() if f.is_file()]
 
-
 @mcp.tool
-def execute_r_script_file(filename: str) -> str:
+def list_script_files() -> List[str]:
     """
-    Execute an existing R script file from the storage directory using Rscript.
-
-    Args:
-        filename: The name of the R script file in the storage directory.
+    List all files in the script directory.
 
     Returns:
-        The standard output or error message from Rscript.
+        A list of filenames in the script directory.
+    """
+    return [f.name for f in SCRIPT_DIR.iterdir() if f.is_file()]
+
+
+@mcp.tool
+@return_as_dict
+def execute_r_script_file(filename: str) -> Dict[str,Any]:
+    f"""
+    Execute an existing R script file from the script directory using Rscript.
+
+    Args:
+        filename: The name of the R script file in the script directory.
+
+    Returns:
+        dict: {CommandResult.__doc__}
     """
     script_path = SCRIPT_DIR / filename
     if not script_path.exists() or not script_path.is_file():
-        return f"File '{filename}' does not exist in storage."
+        return f"File '{filename}' does not exist in script dir."
     
-    return run_r_docker()
+    return run_rscript(script_path)
 
 
-import sys
 
 if len(sys.argv) > 1 and sys.argv[1].isdigit():
     port = int(sys.argv[1])

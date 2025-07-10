@@ -45,6 +45,18 @@ async def test_shell():
 
         dict_result = json.loads(result[0].text) if result else {}
         print(f"📋 Command output: {dict_result['stdout']}")
+
+        # Test 3
+        print("=" * 50)
+        print("TEST 3: try remove file")
+        print("=" * 50)
+        
+        result = await client.call_tool("execute_command", {
+            "command": "rm -f storage/QC_0_adducts.csv",
+        })
+
+        dict_result = json.loads(result[0].text) if result else {}
+        print(f"📋 Command output: {dict_result['stdout']}")
         
 
 
