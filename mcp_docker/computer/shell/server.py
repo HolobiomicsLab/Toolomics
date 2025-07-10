@@ -56,6 +56,7 @@ def create_return_dict(status: str,
 def execute_command(command: str, timeout: int = 30, working_directory: Optional[str] = "workspace") -> Dict[str, Any]:
     """
     Execute a shell command and return the output with better error handling and security.
+    You should not use this tool to execute Rscript, use the dedicated Rscript tool instead.
     
     Args:
         command: The shell command to execute

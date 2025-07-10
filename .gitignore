@@ -196,3 +196,5 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 .aider*
+
+mcp_host/Rscript/script/*

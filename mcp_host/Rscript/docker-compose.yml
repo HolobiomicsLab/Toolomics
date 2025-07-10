@@ -1,0 +1,13 @@
+services:
+  xcmsrocker:
+    image: yufree/xcmsrocker:latest
+    container_name: xcmsrocker
+    environment:
+      - PASSWORD=xcmsrocker  # Set the password for RStudio Server
+    ports:
+      - "8787:8787"         # Map host port 8787 to container port 8787
+    volumes:
+      - ./rstudio_data:/home/rstudio  # Persist RStudio data (optional)
+      - ../../storage:/storage
+      - ./script:/home/script
+    restart: unless-stopped  # Auto-restart unless manually stopped
