@@ -18,7 +18,16 @@ from typing import List, Dict, Any, Optional
 import subprocess
 import shlex
 
-mcp = FastMCP("Shell Tools Server")
+description = """
+Shell Tools MCP Server provides tools for shell navigation and interaction.
+It execute command in bash in a docker container, allowing users to run shell commands securely.
+It should not be used to execute Rscript commands; use the dedicated Rscript tool instead.
+"""
+
+mcp = FastMCP(
+    name="Bash command MCP",
+    instructions=description,
+)
 
 def run_bash_subprocess(command: str, timeout: int = 30, cwd: Optional[str] = None) -> subprocess.CompletedProcess:
     return subprocess.run(
@@ -51,6 +60,7 @@ def create_return_dict(status: str,
         "exit_code": exit_code,
         "working_directory": working_directory or os.getcwd()
     }
+
 
 @mcp.tool
 def execute_command(command: str, timeout: int = 30, working_directory: Optional[str] = "workspace") -> Dict[str, Any]:

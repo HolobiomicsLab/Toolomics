@@ -21,8 +21,15 @@ from contextlib import contextmanager
 from browser import Browser
 from searxng import search_searx
 
-# Initialize the FastMCP server
-mcp = FastMCP("Browser Tools Server 🌐")
+description = """
+Browser Tools MCP Server provides tools for web browsing, navigation, and interaction using a headless browser.
+It allows to search the web, navigate to URLs, retrieve page content, take screenshots, and manage browser sessions.
+"""
+
+mcp = FastMCP(
+    name="Web Browsing MCP",
+    instructions=description,
+)
 
 # Global browser instance with thread safety
 browser_lock = threading.Lock()

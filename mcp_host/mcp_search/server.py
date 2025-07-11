@@ -15,7 +15,15 @@ from typing import Dict, Any, List, Optional
 from urllib.parse import urljoin
 from fastmcp import FastMCP
 
-mcp = FastMCP("MCP search Server")
+description = """
+Search MCP Server allows to search for existing MCP servers registered in the Smithery registry.
+It provides tools to search for servers by name, or keywords, and retrieve detailed information about specific servers.
+"""
+
+mcp = FastMCP(
+    name="Search MCP",
+    instructions=description,
+)
 
 class MCPRegistryClient:
     """Client for interacting with the Smithery MCP registry."""

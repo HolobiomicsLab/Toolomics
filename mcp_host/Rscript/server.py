@@ -19,7 +19,16 @@ from fastmcp import FastMCP
 import shutil
 from datetime import datetime
 
-mcp = FastMCP("Rscript manager")
+description = """
+R script MCP Server provides tools for executing R scripts and managing R environments.
+The tools allow for executing R code / scripts, save R scripts, and listing files in specific directories.
+This tool should not be used for installing software or packages, as it is not designed for that purpose.
+"""
+
+mcp = FastMCP(
+    name="R script MCP",
+    instructions=description,
+)
 
 # Ensure storage directory exists
 STORAGE_DIR = Path("./storage")

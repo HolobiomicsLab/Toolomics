@@ -14,7 +14,14 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from fastmcp import FastMCP
 
-mcp = FastMCP("CSV Manager")
+description = """CSV Management MCP Server provides tools for creating, reading, and manipulating CSV files.
+It allows users to create new CSV datasets, load existing CSV files, and perform various operations on them such as adding, updating, deleting rows, and querying data.
+"""
+
+mcp = FastMCP(
+    name="CSV Management MCP",
+    instructions=description,
+)
 
 # Default working directory for CSV files
 CSV_DIR = Path("./csv_data")
