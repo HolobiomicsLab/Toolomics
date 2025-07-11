@@ -23,6 +23,10 @@ mcp = FastMCP(
     instructions=description,
 )
 
+@mcp.tool
+def get_mcp_name() -> str:
+    return "CSV Management"
+
 # Default working directory for CSV files
 CSV_DIR = Path("./csv_data")
 CSV_DIR.mkdir(exist_ok=True)

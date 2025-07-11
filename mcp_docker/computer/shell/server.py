@@ -34,6 +34,10 @@ mcp = FastMCP(
 )
 
 @mcp.tool
+def get_mcp_name() -> str:
+    return "Bash command MCP"
+
+@mcp.tool
 @return_as_dict
 def execute_command(command: str, timeout: int = 30) -> dict:
     f"""

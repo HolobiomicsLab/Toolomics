@@ -31,6 +31,10 @@ mcp = FastMCP(
     instructions=description,
 )
 
+@mcp.tool
+def get_mcp_name() -> str:
+    return "Web Browser MCP"
+
 # Global browser instance with thread safety
 browser_lock = threading.Lock()
 browser_instance = None

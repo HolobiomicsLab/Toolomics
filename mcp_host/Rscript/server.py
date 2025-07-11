@@ -26,6 +26,10 @@ mcp = FastMCP(
     instructions=description,
 )
 
+@mcp.tool
+def get_mcp_name() -> str:
+    return "R command MCP"
+
 # Ensure storage directory exists
 STORAGE_DIR = Path("./storage")
 STORAGE_DIR.mkdir(exist_ok=True)

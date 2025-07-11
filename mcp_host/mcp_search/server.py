@@ -21,9 +21,13 @@ It provides tools to search for servers by name, or keywords, and retrieve detai
 """
 
 mcp = FastMCP(
-    name="Search MCP",
+    name="discover MCP",
     instructions=description,
 )
+
+@mcp.tool
+def get_mcp_name() -> str:
+    return "discover MCP"
 
 class MCPRegistryClient:
     """Client for interacting with the Smithery MCP registry."""
