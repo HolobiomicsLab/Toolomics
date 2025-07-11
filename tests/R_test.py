@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Test client for Shell MCP Server
+Test client for R MCP Server
 Demonstrates all functionality with realistic test scenarios.
 """
 
@@ -10,7 +10,7 @@ import json
 from fastmcp import Client
 
 async def test_r():
-    """Test all Shell operations comprehensively."""
+    """Test all R operations comprehensively."""
     
     port = 5001
     # Connect to the MCP server
@@ -22,7 +22,6 @@ async def test_r():
         print(f"📋 Available tools: {[tool.name for tool in tools]}")
         print()
         
-        # Test 1
         print("=" * 50)
         print("TEST 1: calling simple code execution tool")
         print("=" * 50)
@@ -41,7 +40,12 @@ xs <- xcmsSet(path, method="centWave", ppm=30, peakwidth=c(5,10))
 
 print("xcmsSet completed successfully")'''
 
-        # Test 2
+        result = await client.call_tool("execute_r_code", {
+            "r_code": r_code,
+        })
+
+        print(f"📋 Command output: {result[0].text}")
+
         print("=" * 50)
         print("TEST 2: write find adduct csv")
         print("=" * 50)
@@ -67,8 +71,28 @@ write.csv(adducts, file="storage/QC_0_adducts.csv", row.names=FALSE)
 # Print summary                                                                                                                                                                       
 print(paste("Adduct detection completed. Found", nrow(adducts), "features.")) '''
         
-        result = await client.call_tool("execute_r_code", {
+        result = await client.call_tool("write_r_script", {
             "r_code": r_code,
+            "filename" : 'adduct_detection.R'
+        })
+
+        print(f"📋 Command output: {result[0].text}")
+
+        print("=" * 50)
+        print("TEST 3: list script folder")
+        print("=" * 50)
+
+        result = await client.call_tool("list_script_files", {
+        })
+
+        print(f"📋 Command output: {result[0].text}")
+
+        print("=" * 50)
+        print("TEST 4: execute adduct_detection.R")
+        print("=" * 50)
+
+        result = await client.call_tool("execute_r_script_file", {
+            "filename" : 'adduct_detection.R'
         })
 
         print(f"📋 Command output: {result[0].text}")

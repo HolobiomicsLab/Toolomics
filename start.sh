@@ -50,7 +50,7 @@ python3.10 deploy.py --config config.json --mcp-dir mcp_host &
 HOST_PID=$!
 
 # start the MCP server in docker
-docker run -t -p 5100-5200:5100-5200 toolomics &
+docker run -t -p 5100-5200:5100-5200 -v $(pwd):/app toolomics  & # Using volumne for development
 DOCKER_PID=$!
 
 wait $HOST_PID $DOCKER_PID

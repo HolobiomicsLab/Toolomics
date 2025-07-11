@@ -10,7 +10,8 @@ FROM python:3.10
 WORKDIR /app
 
 # Copy the application code
-COPY . /app
+COPY requirements.txt /app/requirements.txt
+#COPY . /app
 
 # Install Python dependencies
 RUN pip3 install -r /app/requirements.txt
