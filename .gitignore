@@ -9,6 +9,7 @@ config.ini
 */.env
 .venv
 */.venv
+storage/
 
 ### react ###
 .DS_*
