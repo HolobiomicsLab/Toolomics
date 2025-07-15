@@ -171,31 +171,6 @@ def navigate(url: str) -> Dict[str, str]:
         browser_lock.release()
 
 @mcp.tool
-def get_content() -> Dict[str, str]:
-    """Get page content as text"""
-    print("Fetching page content")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-    
-    try:
-        content = safe_browser_operation("get_content", browser_instance.get_text)
-        if content is None:
-            return {"status": "error", "message": "Failed to get content"}
-        
-        return {
-            "status": "success",
-            "content": content
-        }
-    except Exception as e:
-        print(f"Error fetching page content: {e}")
-        return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
-
-@mcp.tool
 def get_links() -> Dict[str, Any]:
     """Get all navigable links on page"""
     print("Fetching page links")
