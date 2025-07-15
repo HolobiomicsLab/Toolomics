@@ -1,5 +1,6 @@
 services:
   xcmsrocker:
+    platform: linux/amd64 # Force platform compatibility (mac os and arm architecture ...)
     image: yufree/xcmsrocker:latest
     container_name: xcmsrocker
     environment:
