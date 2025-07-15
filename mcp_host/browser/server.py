@@ -21,8 +21,19 @@ from contextlib import contextmanager
 from browser import Browser
 from searxng import search_searx
 
-# Initialize the FastMCP server
-mcp = FastMCP("Browser Tools Server 🌐")
+description = """
+Browser Tools MCP Server provides tools for web browsing, navigation, and interaction using a headless browser.
+It allows to search the web, navigate to URLs, retrieve page content, take screenshots, and manage browser sessions.
+"""
+
+mcp = FastMCP(
+    name="Web Browsing MCP",
+    instructions=description,
+)
+
+@mcp.tool
+def get_mcp_name() -> str:
+    return "Web Browser MCP"
 
 # Global browser instance with thread safety
 browser_lock = threading.Lock()
@@ -156,31 +167,6 @@ def navigate(url: str) -> Dict[str, str]:
     except Exception as e:
         print(f"Error navigating to URL {url}: {e}")
         return {"status": "error", "message": f"Navigation failed: {str(e)}"}
-    finally:
-        browser_lock.release()
-
-@mcp.tool
-def get_content() -> Dict[str, str]:
-    """Get page content as text"""
-    print("Fetching page content")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-    
-    try:
-        content = safe_browser_operation("get_content", browser_instance.get_text)
-        if content is None:
-            return {"status": "error", "message": "Failed to get content"}
-        
-        return {
-            "status": "success",
-            "content": content
-        }
-    except Exception as e:
-        print(f"Error fetching page content: {e}")
-        return {"status": "error", "message": str(e)}
     finally:
         browser_lock.release()
 

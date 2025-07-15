@@ -22,7 +22,20 @@ sys.path.append(str(project_root))  # Add 'a/' to Python's search path
 from shared.shared import CommandResult, run_bash_subprocess, return_as_dict
 
 
-mcp = FastMCP("Shell Tools Server")
+description = """
+Shell Tools MCP Server provides tools for shell navigation and interaction.
+It execute command in bash in a docker container, allowing users to run shell commands securely.
+It should not be used to execute Rscript commands; use the dedicated Rscript tool instead.
+"""
+
+mcp = FastMCP(
+    name="Bash command MCP",
+    instructions=description,
+)
+
+@mcp.tool
+def get_mcp_name() -> str:
+    return "Bash command MCP"
 
 @mcp.tool
 @return_as_dict

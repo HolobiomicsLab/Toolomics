@@ -15,7 +15,20 @@ project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
 from shared.shared import return_as_dict, run_bash_subprocess, CommandResult
 
-mcp = FastMCP("Rscript manager")
+description = """
+R script MCP Server provides tools for executing R scripts and managing R environments.
+The tools allow for executing R code / scripts, save R scripts, and listing files in specific directories.
+This tool should not be used for installing software or packages, as it is not designed for that purpose.
+"""
+
+mcp = FastMCP(
+    name="R script MCP",
+    instructions=description,
+)
+
+@mcp.tool
+def get_mcp_name() -> str:
+    return "R command MCP"
 
 # Ensure storage directory exists
 STORAGE_DIR = Path("./storage")
