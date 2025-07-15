@@ -33,6 +33,15 @@ mcp = FastMCP(
 
 @mcp.tool
 def get_mcp_name() -> str:
+    """Get the name of this MCP server
+    
+    Returns:
+        str: The name of this MCP server ("Web Browser MCP")
+        
+    Example:
+        >>> get_mcp_name()
+        "Web Browser MCP"
+    """
     return "Web Browser MCP"
 
 # Global browser instance with thread safety
@@ -119,7 +128,31 @@ def init_browser():
 
 @mcp.tool
 def search(query: str) -> Dict[str, str]:
-    """Search for a query using SearxNG"""
+    """Perform a web search using SearxNG search engine
+    
+    Args:
+        query (str): The search query string
+        
+    Returns:
+        Dict[str, str]: Dictionary containing:
+            - status: "success" or "error"
+            - result: List of search results (if successful)
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> search("latest AI research papers")
+        {
+            "status": "success",
+            "result": [
+                "Title: Recent Advances in AI...",
+                "Title: New Machine Learning Techniques..."
+            ]
+        }
+        
+    Notes:
+        - This doesn't use the browser, just the SearxNG search API
+        - Results are returned as plain text snippets
+    """
     print(f"Searching for query: {query}")
     try:
         # Search doesn't use browser, so no timeout needed
@@ -134,7 +167,33 @@ def search(query: str) -> Dict[str, str]:
 
 @mcp.tool
 def navigate(url: str) -> Dict[str, str]:
-    """Navigate to a URL"""
+    """Navigate to a specified URL in the browser
+    
+    Args:
+        url (str): The URL to navigate to (must include http:// or https://)
+        
+    Returns:
+        Dict[str, str]: Dictionary containing:
+            - status: "success", "failed", or "error"
+            - current_url: The final URL after navigation
+            - title: Page title
+            - content: Main page text content
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> navigate("https://example.com")
+        {
+            "status": "success",
+            "current_url": "https://example.com",
+            "title": "Example Domain",
+            "content": "This domain is for use in illustrative examples..."
+        }
+        
+    Notes:
+        - Will automatically initialize browser if not already running
+        - Has 30 second timeout for navigation
+        - Returns simplified text content (no HTML markup)
+    """
     print(f"Navigating to URL: {url}")
     
     if not init_browser():
@@ -172,7 +231,26 @@ def navigate(url: str) -> Dict[str, str]:
 
 @mcp.tool
 def get_links() -> Dict[str, Any]:
-    """Get all navigable links on page"""
+    """Get all clickable links from the current page
+    
+    Returns:
+        Dict[str, Any]: Dictionary containing:
+            - status: "success" or "error"
+            - links: Newline-separated list of URLs
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> get_links()
+        {
+            "status": "success",
+            "links": "https://example.com/page1\nhttps://example.com/page2"
+        }
+        
+    Notes:
+        - Requires an active browser session
+        - Only returns navigable links (not all hrefs)
+        - Links are returned as plain text
+    """
     print("Fetching page links")
     if not init_browser():
         return {"status": "error", "message": "Failed to initialize browser"}
@@ -197,7 +275,26 @@ def get_links() -> Dict[str, Any]:
 
 @mcp.tool
 def take_screenshot() -> Dict[str, str]:
-    """Take and return screenshot"""
+    """Capture a screenshot of the current page
+    
+    Returns:
+        Dict[str, str]: Dictionary containing:
+            - status: "success" or "error"
+            - filename: Path to saved screenshot image
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> take_screenshot()
+        {
+            "status": "success",
+            "filename": "screenshot_1234567890.png"
+        }
+        
+    Notes:
+        - Screenshots are saved in .screenshots/ directory
+        - Filename contains timestamp when taken
+        - PNG format is used
+    """
     print("Taking screenshot")
     if not init_browser():
         return {"status": "error", "message": "Failed to initialize browser"}
@@ -223,7 +320,27 @@ def take_screenshot() -> Dict[str, str]:
 
 @mcp.tool
 def get_page_info() -> Dict[str, str]:
-    """Get current page info"""
+    """Get basic information about the current page
+    
+    Returns:
+        Dict[str, str]: Dictionary containing:
+            - status: "success" or "error"
+            - current_url: The page URL
+            - title: The page title
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> get_page_info()
+        {
+            "status": "success",
+            "current_url": "https://example.com",
+            "title": "Example Domain"
+        }
+        
+    Notes:
+        - Simpler alternative to navigate() when already on page
+        - Doesn't return page content
+    """
     print("Fetching current page info")
     if not init_browser():
         return {"status": "error", "message": "Failed to initialize browser"}
@@ -248,7 +365,28 @@ def get_page_info() -> Dict[str, str]:
 
 @mcp.tool
 def is_link_valid(url: str) -> Dict[str, Any]:
-    """Check if a link is valid for navigation"""
+    """Validate if a URL can be safely navigated to
+    
+    Args:
+        url (str): The URL to validate
+        
+    Returns:
+        Dict[str, Any]: Dictionary containing:
+            - status: "success" or "error"
+            - valid: True/False if URL is navigable
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> is_link_valid("https://example.com")
+        {
+            "status": "success",
+            "valid": True
+        }
+        
+    Notes:
+        - Checks both URL format and accessibility
+        - Useful before calling navigate()
+    """
     print(f"Checking if link is valid: {url}")
     if not init_browser():
         return {"status": "error", "message": "Failed to initialize browser"}
