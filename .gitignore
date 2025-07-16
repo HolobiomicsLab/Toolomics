@@ -490,6 +490,10 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+
+
+uv.lock
+
 # debug information files
 *.dwo
 

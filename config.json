@@ -1,6 +1,6 @@
 [
     {
-        "mcp_host/browser/server.py": 5000
+        "mcp_host/browser/server.py": 5002
     },
     {
         "mcp_docker/files/csv/server.py": 5101
