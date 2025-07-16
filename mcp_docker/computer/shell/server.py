@@ -39,7 +39,7 @@ def get_mcp_name() -> str:
 
 @mcp.tool
 @return_as_dict
-def execute_command(command: str, timeout: int = 30) -> dict:
+def execute_command(command: str) -> dict:
     f"""
     Execute a shell command and return the output with better error handling and security.
     You should NEVER use this tool to execute Rscript, use the dedicated Rscript tool instead.
@@ -47,17 +47,16 @@ def execute_command(command: str, timeout: int = 30) -> dict:
     
     Args:
         command (str): The shell command to execute
-        timeout (int): Command timeout in seconds (default: 30)
-        working_directory (str): Optional directory to execute the command in
 
     Returns:
         dict : {CommandResult.__doc__}
+        
+    Example:
+        execute_command(command="ls -la /tmp")
     """
     
     print(f"Executing command: {command}")
 
-    working_directory = None
-    
     dangerous_patterns = [
         ['rm', '-r'], ['rm', '-rf'], ['rm', '-f'],
         ['kill', '-9'], ['chmod', '777'],
@@ -80,7 +79,7 @@ def execute_command(command: str, timeout: int = 30) -> dict:
                 exit_code=-1
             )
     
-    return run_bash_subprocess(command, timeout=timeout)
+    return run_bash_subprocess(command, timeout=1800)
 
 if len(sys.argv) > 1 and sys.argv[1].isdigit():
     port = int(sys.argv[1])

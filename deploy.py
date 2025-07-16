@@ -15,11 +15,14 @@ import sys
 import signal
 from pathlib import Path
 import select
+import shutil
+from collections import defaultdict
 
 # TODO use https://slurm.schedmd.com/overview.html ????
 
 DEFAULT_FOLDER = "mcp_host"
 STARTING_PORT = 5000
+WORKSPACE_FOLDER = "workspace"
 
 class process:
     """Class to represent a running process"""
@@ -35,6 +38,82 @@ class process:
 
 # Global list to keep track of running processes and their info
 processes = []
+
+# Global dictionary to track files before execution
+initial_files = {}
+workspace_path = None
+
+def get_all_files_recursive(directory):
+    """Get all files in directory and subdirectories with their modification times"""
+    files_dict = {}
+    if not os.path.exists(directory):
+        return files_dict
+    
+    for root, _, files in os.walk(directory):
+        for file in files:
+            full_path = os.path.join(root, file)
+            try:
+                stat_info = os.stat(full_path)
+                files_dict[full_path] = {
+                    'mtime': stat_info.st_mtime,
+                    'size': stat_info.st_size
+                }
+            except (OSError, IOError):
+                # Skip files that can't be accessed
+                continue
+    return files_dict
+
+def initialize_file_tracking(mcp_dir):
+    """Initialize file tracking by recording all existing files"""
+    global initial_files, workspace_path
+    
+    # Create workspace folder if it doesn't exist
+    workspace_path = os.path.join(os.getcwd(), WORKSPACE_FOLDER)
+    os.makedirs(workspace_path, exist_ok=True)
+    
+    print(f"Initializing file tracking for directory: {mcp_dir}")
+    print(f"Workspace folder: {workspace_path}")
+    
+    initial_files = get_all_files_recursive(mcp_dir)
+    print(f"Tracking {len(initial_files)} initial files")
+
+def check_for_new_files(mcp_dir):
+    """Check for new files and move them to workspace"""
+    global initial_files, workspace_path
+    
+    current_files = get_all_files_recursive(mcp_dir)
+    new_files = []
+    
+    for file_path, file_info in current_files.items():
+        if file_path not in initial_files:
+            # This is a new file
+            new_files.append(file_path)
+        elif (initial_files[file_path]['mtime'] != file_info['mtime'] or 
+              initial_files[file_path]['size'] != file_info['size']):
+            # This file has been modified
+            new_files.append(file_path)
+    
+    # Move new/modified files to workspace
+    for file_path in new_files:
+        try:
+            # Create relative path structure in workspace
+            rel_path = os.path.relpath(file_path, mcp_dir)
+            dest_path = os.path.join(workspace_path, rel_path)
+            
+            # Create destination directory if it doesn't exist
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            
+            # Copy the file to workspace
+            shutil.copy2(file_path, dest_path)
+            print(f"Moved new/modified file to workspace: {rel_path}")
+            
+        except (IOError, OSError) as e:
+            print(f"Error moving file {file_path}: {e}")
+    
+    # Update initial_files with current state
+    initial_files.update(current_files)
+    
+    return len(new_files)
 
 def start_servers(server_path, port):
     """Start an server server on specified port"""
@@ -54,11 +133,24 @@ def cleanup(_signum, _frame):
     sys.exit(0)
 
 def monitor_processes():
-    """Monitor all running processes using non-blocking I/O"""
+    """Monitor all running processes using non-blocking I/O and track new files"""
     import time
+    
+    file_check_interval = 5.0  # Check for new files every 5 seconds
+    last_file_check = time.time()
     
     while processes:
         time.sleep(0.01)
+        
+        # Check for new files periodically
+        current_time = time.time()
+        if current_time - last_file_check >= file_check_interval:
+            mcp_dir = get_mcp_folder()  # Get the current MCP directory
+            new_file_count = check_for_new_files(mcp_dir)
+            if new_file_count > 0:
+                print(f"Found and moved {new_file_count} new/modified files to workspace")
+            last_file_check = current_time
+        
         for p in processes[:]:
             proc = p.proc
             
@@ -206,16 +298,23 @@ def get_argument_config():
     parser.add_argument("--mcp-dir", default=DEFAULT_FOLDER, help=f"Directory containing MCP servers (default: {DEFAULT_FOLDER})")
     parser.add_argument("--starting-port", type=int, default=STARTING_PORT, help=f"Starting port number (default: {STARTING_PORT})")
     parser.add_argument("--no-docker", action="store_true", help="Skip docker-compose files")
+    parser.add_argument("--workspace", default=WORKSPACE_FOLDER, help=f"Workspace folder for new files (default: {WORKSPACE_FOLDER})")
     args = parser.parse_args()
     return args
 
 def main():
+    global WORKSPACE_FOLDER
+    
     args = get_argument_config()
     mcp_dir = args.mcp_dir
     config_path = args.config
+    WORKSPACE_FOLDER = args.workspace
     
     if not os.path.exists(mcp_dir):
         raise FileNotFoundError(f"Directory {mcp_dir} does not exist.")
+    
+    # Initialize file tracking before starting any processes
+    initialize_file_tracking(mcp_dir)
     
     config_json = get_ports_config(config_path)
     signal.signal(signal.SIGINT, cleanup)
@@ -230,7 +329,8 @@ def main():
     server_files = find_server_files(mcp_dir)
     run_mcp_servers(server_files, config_path, config_json)
 
-    print("\nAll servers running. Press Ctrl+C to stop.\n")
+    print("\nAll servers running. Press Ctrl+C to stop.")
+    print(f"Monitoring for new files and moving them to: {workspace_path}\n")
     monitor_processes()
 
 if __name__ == "__main__":
