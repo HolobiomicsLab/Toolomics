@@ -115,7 +115,14 @@ class Browser:
         if not parsed_url.scheme or not parsed_url.netloc:
             return False
             
-        invalid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.ico', '.xml', '.json', '.pdf']
+        invalid_extensions = [
+            '.pdf', '.mp4', '.mp3', '.avi', '.mov', '.wmv', '.flv',
+            '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+            '.zip', '.rar', '.gz', '.tar', '.7z',
+            '.csv', '.json', '.xml', '.txt',
+            '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff',
+            '.exe', '.dmg', '.pkg', '.deb', '.rpm'
+        ] # use get_downloadable() to get these links
         return not any(url.lower().endswith(ext) for ext in invalid_extensions)
 
     def get_navigable(self) -> List[str]:
@@ -132,6 +139,72 @@ class Browser:
             return list(set(links))  # Remove duplicates
         except Exception:
             return []
+
+    def get_downloadable(self) -> List[str]:
+        """Get all downloadable resource links on the current page."""
+        try:
+            downloadable_extensions = [
+                '.pdf', '.mp4', '.mp3', '.avi', '.mov', '.wmv', '.flv',
+                '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+                '.zip', '.rar', '.gz', '.tar', '.7z',
+                '.csv', '.json', '.xml', '.txt',
+                '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff',
+                '.exe', '.dmg', '.pkg', '.deb', '.rpm'
+            ]
+            
+            links = []
+            link_elements = find_all(Link())
+            
+            for element in link_elements:
+                href = element.web_element.get_attribute("href")
+                if href and href.startswith(("http", "https")):
+                    href_lower = href.lower()
+                    if any(href_lower.endswith(ext) for ext in downloadable_extensions):
+                        links.append(self.clean_url(href))
+                    
+            return list(set(links))  # Remove duplicates
+        except Exception:
+            return []
+
+    def download_file(self, url: str) -> Optional[tuple[bool, str]]:
+        """Download a file from URL to current directory.
+        
+        Args:
+            url: The URL of file to download
+            
+        Returns:
+            tuple[bool, str] | None: (success_status, filename) if successful, None on failure
+        """
+        try:
+            import requests
+            from urllib.parse import urlparse
+            import os
+            
+            # Validate URL is downloadable
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return None
+                
+            # Get filename from URL or use default
+            filename = os.path.basename(parsed.path)
+            if not filename:
+                filename = f"downloaded_file_{int(time.time())}"
+                
+            # Download file
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            
+            # Save to current directory
+            with open(filename, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        
+            return (True, filename)
+            
+        except Exception as e:
+            print(f"Error downloading file: {e}")
+            return None
 
     def get_current_url(self) -> str:
         """Get the current URL."""

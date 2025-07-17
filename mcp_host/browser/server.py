@@ -100,8 +100,8 @@ def restart_browser():
             if browser_instance:
                 try:
                     browser_instance.quit()
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error quitting browser: {e}")
             print("Restarting browser instance")
             browser_instance = Browser()
             print("Browser instance restarted successfully")
@@ -231,47 +231,141 @@ def navigate(url: str) -> Dict[str, str]:
 
 @mcp.tool
 def get_links() -> Dict[str, Any]:
-    """Get all clickable links from the current page
+        """Get all clickable links from the current page
     
-    Returns:
-        Dict[str, Any]: Dictionary containing:
-            - status: "success" or "error"
-            - links: Newline-separated list of URLs
-            - message: Error message (if error occurred)
+        Returns:
+            Dict[str, Any]: Dictionary containing:
+                - status: "success" or "error"
+                - links: Newline-separated list of URLs
+                - message: Error message (if error occurred)
+                
+        Example:
+            >>> get_links()
+            {
+                "status": "success",
+                "links": "https://example.com/page1\nhttps://example.com/page2"
+            }
             
-    Example:
-        >>> get_links()
-        {
-            "status": "success",
-            "links": "https://example.com/page1\nhttps://example.com/page2"
-        }
+        Notes:
+            - Requires an active browser session
+            - Only returns navigable links (not all hrefs)
+            - Links are returned as plain text
+        """
+        print("Fetching page links")
+        if not init_browser():
+            return {"status": "error", "message": "Failed to initialize browser"}
         
-    Notes:
-        - Requires an active browser session
-        - Only returns navigable links (not all hrefs)
-        - Links are returned as plain text
-    """
-    print("Fetching page links")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-    
-    try:
-        links = safe_browser_operation("get_links", browser_instance.get_navigable)
-        if links is None:
-            return {"status": "error", "message": "Failed to get links"}
+        if not browser_lock.acquire(timeout=10):
+            return {"status": "error", "message": "Browser is busy, try again later"}
         
-        return {
-            "status": "success",
-            "links": '\n'.join(links) if links else "No links found"
-        }
-    except Exception as e:
-        print(f"Error fetching links: {e}")
-        return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
+        try:
+            links = safe_browser_operation("get_links", browser_instance.get_navigable)
+            if links is None:
+                return {"status": "error", "message": "Failed to get links"}
+            
+            return {
+                "status": "success",
+                "links": '\n'.join(links) if links else "No links found"
+            }
+        except Exception as e:
+            print(f"Error fetching links: {e}")
+            return {"status": "error", "message": str(e)}
+        finally:
+            browser_lock.release()
+
+@mcp.tool
+def get_downloadable_links() -> Dict[str, Any]:
+        """Get all downloadable resource links from the current page (PDFs, videos, documents, etc.)
+    
+        Returns:
+            Dict[str, Any]: Dictionary containing:
+                - status: "success" or "error"
+                - links: Newline-separated list of downloadable resource URLs
+                - message: Error message (if error occurred)
+                
+        Example:
+            >>> get_downloadable_links()
+            {
+                "status": "success",
+                "links": "https://example.com/doc.pdf\nhttps://example.com/video.mp4"
+            }
+            
+        Notes:
+            - Requires an active browser session
+            - Returns links to common downloadable resources (PDFs, videos, documents, archives, etc.)
+            - Links are returned as plain text
+        """
+        print("Fetching downloadable resource links")
+        if not init_browser():
+            return {"status": "error", "message": "Failed to initialize browser"}
+        
+        if not browser_lock.acquire(timeout=10):
+            return {"status": "error", "message": "Browser is busy, try again later"}
+        
+        try:
+            links = safe_browser_operation("get_downloadable", browser_instance.get_downloadable)
+            if links is None:
+                return {"status": "error", "message": "Failed to get downloadable links"}
+            
+            return {
+                "status": "success",
+                "links": '\n'.join(links) if links else "No downloadable links found"
+            }
+        except Exception as e:
+            print(f"Error fetching downloadable links: {e}")
+            return {"status": "error", "message": str(e)}
+        finally:
+            browser_lock.release()
+
+@mcp.tool
+def download_file(url: str) -> Dict[str, Any]:
+        """Download a file from URL to current directory.
+    
+        Args:
+            url (str): The URL of file to download
+            
+        Returns:
+            Dict[str, Any]: Dictionary containing:
+                - status: "success" or "error"
+                - filename: Name of downloaded file (if successful)
+                - message: Error message (if error occurred)
+                
+        Example:
+            >>> download_file("https://example.com/doc.pdf")
+            {
+                "status": "success",
+                "filename": "doc.pdf"
+            }
+            
+        Notes:
+            - Requires an active browser session
+            - Only downloads files with common extensions (PDFs, videos, documents, etc.)
+            - Files are saved to current working directory
+        """
+        print(f"Downloading file from URL: {url}")
+        if not init_browser():
+            return {"status": "error", "message": "Failed to initialize browser"}
+        
+        if not browser_lock.acquire(timeout=10):
+            return {"status": "error", "message": "Browser is busy, try again later"}
+        
+        try:
+            result = safe_browser_operation("download_file", browser_instance.download_file, url)
+            if result is None:
+                return {"status": "error", "message": "Failed to download file"}
+            
+            success, filename = result
+            if success:
+                return {
+                    "status": "success",
+                    "filename": filename
+                }
+            return {"status": "error", "message": "Download failed"}
+        except Exception as e:
+            print(f"Error downloading file: {e}")
+            return {"status": "error", "message": str(e)}
+        finally:
+            browser_lock.release()
 
 @mcp.tool
 def take_screenshot() -> Dict[str, str]:
