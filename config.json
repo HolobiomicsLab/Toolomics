@@ -10,5 +10,8 @@
     },
     {
         "mcp_host/Rscript/server.py": 5001
+    },
+    {
+        "mcp_host/mcp_search/server.py": 5103
     }
 ]
