@@ -204,7 +204,6 @@ async def test_csv_operations():
         
         print("\n🎉 All tests completed successfully!")
         print("\nTo clean up test files, you can run:")
-        print("rm -rf ./csv_data")
 
 if __name__ == "__main__":
     print("🧪 Starting CSV MCP server.py Tests")

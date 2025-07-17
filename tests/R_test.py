@@ -30,7 +30,7 @@ async def test_r():
 library(CAMERA)
 
 # Use the direct path that worked with mzR
-path <- 'storage/QC_0.mzML'  # or use full path: '/full/path/to/storage/QC_0.mzML'
+path <- 'workspace/QC_0.mzML'  # or use full path: '/full/path/to/workspace/QC_0.mzML'
 
 # Verify file exists
 if(!file.exists(path)) stop("File not found at: ", normalizePath(path))
@@ -54,7 +54,7 @@ print("xcmsSet completed successfully")'''
 library(CAMERA)                                                                                                                                                                       
                                                                                                                                                                                     
 # Read the mzML file                                                                                                                                                                  
-xset <- xcmsSet("storage/QC_0.mzML", method="centWave", ppm=10, peakwidth=c(5,20), snthresh=10)                                                                                       
+xset <- xcmsSet("workspace/QC_0.mzML", method="centWave", ppm=10, peakwidth=c(5,20), snthresh=10)                                                                                       
                                                                                                                                                                                     
 # Group peaks                                                                                                                                                                         
 xset <- group(xset, bw=5, mzwid=0.015, minfrac=0.5)                                                                                                                                   
@@ -66,7 +66,7 @@ an <- findAdducts(an, polarity="positive")
                                                                                                                                                                                     
 # Get and save results                                                                                                                                                                
 adducts <- getPeaklist(an)                                                                                                                                                            
-write.csv(adducts, file="storage/QC_0_adducts.csv", row.names=FALSE)                                                                                                                  
+write.csv(adducts, file="workspace/QC_0_adducts.csv", row.names=FALSE)                                                                                                                  
                                                                                                                                                                                     
 # Print summary                                                                                                                                                                       
 print(paste("Adduct detection completed. Found", nrow(adducts), "features.")) '''
