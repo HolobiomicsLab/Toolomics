@@ -83,14 +83,10 @@ def check_for_new_files(mcp_dir):
     
     current_files = get_all_files_recursive(mcp_dir)
     new_files = []
-    
+
+    initial_files_path = [value for value in initial_files.keys()]
     for file_path, file_info in current_files.items():
-        if file_path not in initial_files:
-            # This is a new file
-            new_files.append(file_path)
-        elif (initial_files[file_path]['mtime'] != file_info['mtime'] or 
-              initial_files[file_path]['size'] != file_info['size']):
-            # This file has been modified
+        if file_path not in initial_files_path:
             new_files.append(file_path)
     
     # Move new/modified files to workspace
@@ -166,9 +162,9 @@ def monitor_processes():
                         line = proc.stdout.readline()
                         if line:
                             print(f"[{p.file}:{p.port}] {line.strip()}")
-                except:
-                    pass
-            
+                except Exception as e:
+                    print(f"Error reading stdout for {p.file}:{p.port}: {e}")
+
             return_code = proc.poll()
             if return_code is not None:
                 remaining_output, _ = proc.communicate()
