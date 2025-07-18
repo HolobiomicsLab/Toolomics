@@ -179,7 +179,7 @@ class ProcessManager:
                         line = proc.stderr.readline()
                         if not line:
                             break
-                        logger.error(f"[{process_info.file_path}:{process_info.port}] STDERR: {line.strip()}")
+                        logger.info(f"[{process_info.file_path}:{process_info.port}] STDERR: {line.strip()}")
                         # Check if more data is available
                         ready, _, _ = select.select([proc.stderr], [], [], 0)
                 else:
@@ -210,10 +210,10 @@ class ProcessManager:
             
             # Display remaining stderr
             if stderr_output:
-                logger.error(f"[{process_info.file_path}] Final STDERR:")
+                logger.info(f"[{process_info.file_path}] Final STDERR:")
                 for line in stderr_output.split('\n'):
                     if line.strip():
-                        logger.error(f"[{process_info.file_path}] STDERR: {line.strip()}")
+                        logger.info(f"[{process_info.file_path}] STDERR: {line.strip()}")
                         
         except subprocess.TimeoutExpired:
             logger.warning(f"Timeout reading final output from {process_info.file_path}")
