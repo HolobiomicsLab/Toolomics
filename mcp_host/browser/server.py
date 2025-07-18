@@ -205,7 +205,7 @@ def navigate(url: str) -> Dict[str, str]:
     
     try:
         if not browser_instance.is_link_valid(url):
-            return {"status": "error", "message": "Invalid URL"}
+            return {"status": "error", "message": "Invalid URL, File is a PDF or unsupported format for navigation, consider downloading instead."}
 
         # Navigate with timeout
         success = safe_browser_operation("navigate", browser_instance.go_to, url)
