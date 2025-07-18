@@ -19,13 +19,15 @@ uv pip install -r requirements.txt
 
 ## Deploying Tools
 
-### Deploy all tools automatically
+### Deploy all tools automatically (docker+host)
 
 ```bash
 ./start.sh
 ```
 
-### Deploy Tools on Docker
+### Deploy docker Tools only
+
+To deploy all docker-tools:
 
 ```bash
 docker build -t toolomics .
@@ -34,9 +36,9 @@ docker run -it -p 5100-5200:5100-5200 toolomics
 
 By default we use port 5100 to 5200 for MCPs running **in docker**.
 
-### Deploy Tools on Host
+### Deploy host Tools only
 
-To deploy all tools, use the following command:
+To deploy all the on-host tools, use the following command:
 
 ```bash
 python3.10 deploy.py --config <config path>
@@ -60,18 +62,6 @@ All MCP servers execute in a centralized **workspace directory** (default: `work
 
 This centralized approach ensures that AI agents can easily find and work with files across different MCP tools without needing to track file locations.
 
-### Workspace Directory
-
-You can specify a custom workspace directory:
-
-```bash
-python3.10 deploy.py --workspace /path/to/custom/workspace
-```
-
-## Using MCP with Your Client
-
-To interact with the tools using a client (e.g., for your AI agent), you can use the `fastmcp` library.
-
 ### Finding the MCP Port
 
 Each MCP server is assigned a port, which is recorded in the `config.json` file. For example:
@@ -90,64 +80,100 @@ Each MCP server is assigned a port, which is recorded in the `config.json` file.
 ]
 ```
 
-### Example Client Code
-
-Here is an example of how to use a client to interact with an MCP server running on port `5002`:
-
-```python
-from fastmcp import Client
-
-async def main():
-    # Connect to the MCP server
-    port = 5002
-    async with Client(f"http://localhost:{port}/mcp") as client:
-        tools = await client.list_tools()
-        print(f"Available tools: {tools}")
-        
-        # Example: Use browser tool to download a file
-        # File will be saved to workspace/ directory
-        result = await client.call_tool("download_file", {
-            "url": "https://example.com/document.pdf",
-            "filename": "document.pdf"
-        })
-        print(f"Result: {result.text}")
-        
-        # The file is now available at workspace/document.pdf
-        # Other MCP tools can access it from the same location
-```
-
 ## Adding a New MCP
 
 You can easily add a new tool as an MCP server.
 
 ### Steps to Add a New MCP
 
-1. Create a `server.py` file with your MCP implementation, it should take the port number as first argument (eg: `server.py 5003`).
-2. Place the file in a subfolder of the `mcp_host` directory. For example, to add a metabolomics-related tool, create a subfolder like `mcp_host/metabolomics/your_tool_name`.
+#### 1. Choose the Right Location
 
-**Put your `server.py` in mcp_docker if your tool need to run in docker for safety.**
+- **`mcp_host/your_tool_name/`**: For safe tools that run directly on the host (ports 5000-5099)
+  - Use for data processing, file manipulation, API calls
+  
+- **`mcp_docker/your_tool_name/`**: For potentially unsafe tools that need containerization (ports 5100-5199)
+  - Use for shell commands, system operations, or untrusted code execution
 
-The `deploy.py` script will look for new `server.py` file, attribute a port for your script and add it to `config.json` (unless you manually did by modifying the config.json), finally it will run your script with the assigned port as first argument.
+#### 2. Create Your MCP Server
 
+Create a `server.py` file in your chosen directory following the required pattern:
+
+- Must accept port number as first command line argument
+- Use the centralized `workspace/` directory for file operations
+- Return structured responses with proper error handling
+
+#### 3. Deploy Automatically
+
+Run the deployment script to discover and start your new MCP server:
+
+```bash
+python3.10 deploy.py --config config.json
+```
+
+The script will automatically:
+- Find your new `server.py` file
+- Assign an appropriate port
+- Update `config.json` with the port mapping
+- Start your server
 
 ### Example MCP Implementation
 
-The `fastmcp` library simplifies the creation of MCP servers. Here's a basic example:
+Here's a complete example showing the required structure:
 
 ```python
+#!/usr/bin/env python3
+
+"""
+Text Processing MCP Server
+Provides tools for basic text operations in the workspace.
+"""
+
+import sys
+from pathlib import Path
+from typing import Dict, Any
 from fastmcp import FastMCP
 
-mcp = FastMCP(name="Calculator")
+# mandatory
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))  # Add 'a/' to Python's search path
+from workspace.shared.shared import CommandResult, run_bash_subprocess, return_as_dict
+
+mcp = FastMCP(
+    name="Text Processing MCP",
+    instructions="Provides text processing tools for the workspace"
+)
 
 @mcp.tool
-def multiply(a: float, b: float) -> float:
-    """Multiplies two numbers."""
-    return a * b
+@return_as_dict
+def count_words_in_file(file_path: str) -> Dict[str, Any]:
+    """
+    Count the number of words in a text file from the workspace.
+    Args:
+        filename: Name of the file to analyze
+    Returns:
+        Dictionary with word count and file information
+    """
+    if not file_path.exists():
+        return CommandResult(
+            status="error",
+            stderr=f"File '{file_path}' not found in workspace",
+            exit_code=-1
+        )
+    content = file_path.read_text(encoding='utf-8')
+    word_count = len(content.split())
+    return CommandResult(
+        status="success",
+        stdout=word_count
+        exit_code=0
+    )
 
-port = -1
+# Required: Port handling for deployment
 if len(sys.argv) > 1 and sys.argv[1].isdigit():
     port = int(sys.argv[1])
-assert port > 0, "You must pass the port as an argument to the script."
+else:
+    port = int(input("Enter port number: "))
+
+print(f"Starting Text Processing MCP server on port {port}...")
 mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
 ```
 
