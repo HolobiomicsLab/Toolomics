@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "Installing dependencies..."
+pip install -r requirements.txt
 echo "Building docker for Toolomics..."
 
 REBUILD=false
