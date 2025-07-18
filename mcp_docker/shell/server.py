@@ -17,10 +17,10 @@ import shlex
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).resolve().parent.parent.parent.parent 
+project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))  # Add 'a/' to Python's search path
-from shared.shared import CommandResult, run_bash_subprocess, return_as_dict
 
+from workspace.shared.shared import CommandResult, run_bash_subprocess, return_as_dict
 
 description = """
 Shell Tools MCP Server provides tools for shell navigation and interaction.

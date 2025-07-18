@@ -34,6 +34,7 @@ class ProcessInfo:
     port: Optional[int] = None
     process_type: str = 'python'
     status: str = 'running'
+    is_critical: bool = False  # If True, failure will cause deployment to exit
     
     def __post_init__(self):
         if self.process_type not in ['python', 'docker']:
@@ -45,9 +46,9 @@ class ProcessManager:
     def __init__(self, workspace_dir: Path):
         self.processes: List[ProcessInfo] = []
         self.shutdown_event = threading.Event()
+        self.failure_event = threading.Event()  # Set when a critical process fails
         self.workspace_dir = workspace_dir
-        # Ensure workspace directory exists
-        self.workspace_dir.mkdir(parents=True, exist_ok=True)
+        self.failed_processes: List[ProcessInfo] = []  # Track failed processes
         
     def start_python_server(self, server_path: Path, port: int) -> ProcessInfo:
         """Start a Python MCP server in the workspace directory"""
@@ -71,7 +72,7 @@ class ProcessManager:
             cwd=self.workspace_dir,  # Execute in workspace directory
             env=env,                 # Preserve import paths
             stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT, 
+            stderr=subprocess.PIPE,  # Capture stderr separately
             text=True, 
             bufsize=1
         )
@@ -106,7 +107,8 @@ class ProcessManager:
         process_info = ProcessInfo(
             proc=proc,
             file_path=str(compose_file),
-            process_type='docker'
+            process_type='docker',
+            is_critical=False
         )
         
         self.processes.append(process_info)
@@ -115,57 +117,142 @@ class ProcessManager:
     
     def monitor_processes(self, check_interval: float = 0.1):
         """Monitor all processes with non-blocking I/O"""
-        while self.processes and not self.shutdown_event.is_set():
+        while self.processes and not self.shutdown_event.is_set() and not self.failure_event.is_set():
             # Check process outputs
             for process_info in self.processes[:]:
                 self._check_process_output(process_info)
                 
                 # Remove completed/failed processes
                 if process_info.proc.poll() is not None:
-                    self._handle_process_completion(process_info)
+                    failed = self._handle_process_completion(process_info)
                     self.processes.remove(process_info)
+                    
+                    # If a critical process failed, trigger shutdown
+                    if failed and process_info.is_critical:
+                        logger.error(f"Critical process {process_info.file_path} failed, initiating shutdown...")
+                        self.failure_event.set()
+                        break
             
             time.sleep(check_interval)
+        
+        # If we exited due to failure, shutdown remaining processes
+        if self.failure_event.is_set():
+            self.shutdown()
+            self._display_failure_summary()
+            sys.exit(1)
     
     def _check_process_output(self, process_info: ProcessInfo):
         """Check and log process output"""
         proc = process_info.proc
         
+        # Check stdout
         if proc.stdout and proc.stdout.readable():
             try:
                 if hasattr(select, 'select'):
+                    # Use select to check if data is available
                     ready, _, _ = select.select([proc.stdout], [], [], 0)
-                    if ready:
+                    while ready:
+                        line = proc.stdout.readline()
+                        if not line:
+                            break
+                        logger.info(f"[{process_info.file_path}:{process_info.port}] STDOUT: {line.strip()}")
+                        # Check if more data is available
+                        ready, _, _ = select.select([proc.stdout], [], [], 0)
+                else:
+                    # Fallback for Windows - try to read one line
+                    try:
                         line = proc.stdout.readline()
                         if line:
-                            logger.info(f"[{process_info.file_path}:{process_info.port}] {line.strip()}")
-                else:
-                    # Fallback for Windows
-                    line = proc.stdout.readline()
-                    if line:
-                        logger.info(f"[{process_info.file_path}:{process_info.port}] {line.strip()}")
+                            logger.info(f"[{process_info.file_path}:{process_info.port}] STDOUT: {line.strip()}")
+                    except:
+                        pass
             except Exception as e:
-                logger.error(f"Error reading output from {process_info.file_path}: {e}")
+                logger.error(f"Error reading stdout from {process_info.file_path}: {e}")
+        
+        # Check stderr
+        if proc.stderr and proc.stderr.readable():
+            try:
+                if hasattr(select, 'select'):
+                    # Use select to check if data is available
+                    ready, _, _ = select.select([proc.stderr], [], [], 0)
+                    while ready:
+                        line = proc.stderr.readline()
+                        if not line:
+                            break
+                        logger.error(f"[{process_info.file_path}:{process_info.port}] STDERR: {line.strip()}")
+                        # Check if more data is available
+                        ready, _, _ = select.select([proc.stderr], [], [], 0)
+                else:
+                    # Fallback for Windows - try to read one line
+                    try:
+                        line = proc.stderr.readline()
+                        if line:
+                            logger.error(f"[{process_info.file_path}:{process_info.port}] STDERR: {line.strip()}")
+                    except:
+                        pass
+            except Exception as e:
+                logger.error(f"Error reading stderr from {process_info.file_path}: {e}")
     
-    def _handle_process_completion(self, process_info: ProcessInfo):
-        """Handle process completion"""
+    def _handle_process_completion(self, process_info: ProcessInfo) -> bool:
+        """Handle process completion and return True if process failed"""
         return_code = process_info.proc.poll()
         
-        # Read remaining output
+        # Read remaining output from both stdout and stderr
         try:
-            remaining_output, _ = process_info.proc.communicate(timeout=1)
-            if remaining_output:
-                for line in remaining_output.split('\n'):
+            stdout_output, stderr_output = process_info.proc.communicate(timeout=1)
+            
+            # Display remaining stdout
+            if stdout_output:
+                logger.info(f"[{process_info.file_path}] Final STDOUT:")
+                for line in stdout_output.split('\n'):
                     if line.strip():
-                        logger.info(f"[{process_info.file_path}] {line.strip()}")
+                        logger.info(f"[{process_info.file_path}] STDOUT: {line.strip()}")
+            
+            # Display remaining stderr
+            if stderr_output:
+                logger.error(f"[{process_info.file_path}] Final STDERR:")
+                for line in stderr_output.split('\n'):
+                    if line.strip():
+                        logger.error(f"[{process_info.file_path}] STDERR: {line.strip()}")
+                        
         except subprocess.TimeoutExpired:
             logger.warning(f"Timeout reading final output from {process_info.file_path}")
+            # Force kill and try to get output
+            try:
+                process_info.proc.kill()
+                stdout_output, stderr_output = process_info.proc.communicate(timeout=1)
+                if stderr_output:
+                    logger.error(f"[{process_info.file_path}] STDERR (after kill): {stderr_output}")
+            except:
+                pass
         
-        if return_code != 0:
+        # Track failed processes
+        failed = return_code != 0
+        if failed:
             logger.error(f"Process {process_info.file_path} exited with code {return_code}")
+            self.failed_processes.append(process_info)
         else:
             logger.info(f"Process {process_info.file_path} completed successfully")
+        
+        return failed
     
+    def _display_failure_summary(self):
+        """Display a summary of failed processes"""
+        if not self.failed_processes:
+            return
+        
+        logger.error("=" * 80)
+        logger.error("ONE OR MORE PROCESSES FAILED")
+        logger.error("=" * 80)
+        logger.error(f"Number of failed processes: {len(self.failed_processes)}")
+        
+        for process_info in self.failed_processes:
+            logger.error(f"FAILED: {process_info.file_path}")
+            logger.error(f"  Port: {process_info.port}")
+            logger.error(f"  Type: {process_info.process_type}")
+            logger.error(f"  Exit Code: {process_info.proc.returncode}")
+            logger.error(f"  Critical: {process_info.is_critical}")
+        
     def shutdown(self):
         """Gracefully shutdown all processes"""
         logger.info("Shutting down all processes...")
@@ -231,22 +318,63 @@ class ConfigManager:
             json.dump(config_list, f, indent=4)
     
     def assign_ports(self, server_files: List[Path], starting_port: int = STARTING_PORT) -> Dict[str, int]:
-        """Assign ports to server files"""
+        """Assign ports to server files with proper range management"""
         config = self.load_config()
         
-        # Find next available port
-        used_ports = set(config.values())
-        next_port = max(used_ports) + 1 if used_ports else starting_port
+        # Define port ranges
+        HOST_PORT_MIN = 5000
+        HOST_PORT_MAX = 5099
+        DOCKER_PORT_MIN = 5100
+        DOCKER_PORT_MAX = 5199
         
-        # Assign ports to new servers
+        # Separate servers by type
+        host_servers = []
+        docker_servers = []
+        
         for server_file in server_files:
+            if "mcp_docker" in str(server_file):
+                docker_servers.append(server_file)
+            else:
+                host_servers.append(server_file)
+        
+        # Get currently used ports
+        used_ports = set(config.values())
+        
+        # Assign ports to host servers (5000-5099)
+        next_host_port = starting_port
+        for server_file in host_servers:
             server_str = str(server_file)
             if server_str not in config:
-                while next_port in used_ports:
-                    next_port += 1
-                config[server_str] = next_port
-                used_ports.add(next_port)
-                next_port += 1
+                # Find next available port in host range
+                while (next_host_port in used_ports or 
+                       next_host_port < HOST_PORT_MIN or 
+                       next_host_port > HOST_PORT_MAX):
+                    next_host_port += 1
+                    if next_host_port > HOST_PORT_MAX:
+                        raise RuntimeError(f"No available ports in host range ({HOST_PORT_MIN}-{HOST_PORT_MAX}) for server {server_str}")
+                
+                config[server_str] = next_host_port
+                used_ports.add(next_host_port)
+                logger.info(f"Assigned host port {next_host_port} to {server_str}")
+                next_host_port += 1
+        
+        # Assign ports to docker servers (5100-5199)
+        next_docker_port = DOCKER_PORT_MIN
+        for server_file in docker_servers:
+            server_str = str(server_file)
+            if server_str not in config:
+                # Find next available port in docker range
+                while (next_docker_port in used_ports or 
+                       next_docker_port < DOCKER_PORT_MIN or 
+                       next_docker_port > DOCKER_PORT_MAX):
+                    next_docker_port += 1
+                    if next_docker_port > DOCKER_PORT_MAX:
+                        raise RuntimeError(f"No available ports in docker range ({DOCKER_PORT_MIN}-{DOCKER_PORT_MAX}) for server {server_str}")
+                
+                config[server_str] = next_docker_port
+                used_ports.add(next_docker_port)
+                logger.info(f"Assigned docker port {next_docker_port} to {server_str}")
+                next_docker_port += 1
         
         self.save_config(config)
         return config

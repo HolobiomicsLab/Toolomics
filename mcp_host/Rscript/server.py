@@ -13,7 +13,7 @@ from datetime import datetime
 import sys
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared.shared import return_as_dict, run_bash_subprocess, CommandResult
+from workspace.shared.shared import return_as_dict, run_bash_subprocess, CommandResult
 
 description = """
 R script MCP Server provides tools for executing R scripts and managing R environments.
@@ -34,7 +34,7 @@ def get_mcp_name() -> str:
 STORAGE_DIR = Path("./workspace")
 STORAGE_DIR.mkdir(exist_ok=True)
 
-SCRIPT_DIR = "mcp_host/Rscript" / Path("./script")
+SCRIPT_DIR = Path("./script")
 SCRIPT_DIR.mkdir(exist_ok=True)
 
 print(f"Using workspace directory: {STORAGE_DIR}")
