@@ -1,4 +1,4 @@
-workspace/*
+workspace/
 *.wav
 *.DS_Store
 *.log

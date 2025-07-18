@@ -154,6 +154,7 @@ class Browser:
             
             links = []
             link_elements = find_all(Link())
+            current_url = self.get_current_url()
             
             for element in link_elements:
                 href = element.web_element.get_attribute("href")
@@ -161,7 +162,11 @@ class Browser:
                     href_lower = href.lower()
                     if any(href_lower.endswith(ext) for ext in downloadable_extensions):
                         links.append(self.clean_url(href))
-                    
+                elif href:
+                    full_url = current_url + href
+                    if any(full_url.lower().endswith(ext) for ext in downloadable_extensions):
+                        links.append(full_url)
+
             return list(set(links))  # Remove duplicates
         except Exception:
             return []
