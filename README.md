@@ -50,6 +50,24 @@ For example :
 python3.10 deploy.py --config config.json 
 ```
 
+## Centralized File Management
+
+All MCP servers execute in a centralized **workspace directory** (default: `workspace/`). This means:
+
+- **Browser MCP** downloads files → `workspace/downloaded_file.pdf`
+- **PDF MCP** processes files → `workspace/extracted_text.txt`
+- **Any MCP** creates files → `workspace/output_file.json`
+
+This centralized approach ensures that AI agents can easily find and work with files across different MCP tools without needing to track file locations.
+
+### Workspace Directory
+
+You can specify a custom workspace directory:
+
+```bash
+python3.10 deploy.py --workspace /path/to/custom/workspace
+```
+
 ## Using MCP with Your Client
 
 To interact with the tools using a client (e.g., for your AI agent), you can use the `fastmcp` library.
@@ -61,32 +79,41 @@ Each MCP server is assigned a port, which is recorded in the `config.json` file.
 ```json
 [
     {
-        "mcp_host/instruments/server.py": 5000
+        "mcp_host/browser/server.py": 5002
     },
     {
-        "mcp_host/files/csv/server.py": 5001
+        "mcp_host/Rscript/server.py": 5001
     },
     {
-        "mcp_host/computer_use/browser/server.py": 5002
+        "mcp_docker/files/csv/server.py": 5101
     }
 ]
 ```
 
 ### Example Client Code
 
-Here is an example of how to use a client to interact with an MCP server running on port `5006`:
+Here is an example of how to use a client to interact with an MCP server running on port `5002`:
 
 ```python
 from fastmcp import Client
 
 async def main():
     # Connect to the MCP server
-    port = 5006
+    port = 5002
     async with Client(f"http://localhost:{port}/mcp") as client:
         tools = await client.list_tools()
         print(f"Available tools: {tools}")
-        result = await client.call_tool("add", {"a": 5, "b": 3})
+        
+        # Example: Use browser tool to download a file
+        # File will be saved to workspace/ directory
+        result = await client.call_tool("download_file", {
+            "url": "https://example.com/document.pdf",
+            "filename": "document.pdf"
+        })
         print(f"Result: {result.text}")
+        
+        # The file is now available at workspace/document.pdf
+        # Other MCP tools can access it from the same location
 ```
 
 ## Adding a New MCP

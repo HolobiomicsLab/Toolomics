@@ -8,13 +8,13 @@ import argparse
 import sys
 import time
 import json
-import subprocess
+import subprocess 
 import signal
+import os
 from pathlib import Path
 import select
-import shutil
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional
 import threading
 import logging
 
@@ -39,101 +39,37 @@ class ProcessInfo:
         if self.process_type not in ['python', 'docker']:
             raise ValueError(f"Invalid process type: {self.process_type}")
 
-class FileTracker:
-    """Dedicated file tracking with proper state management"""
-    
-    def __init__(self, watch_dir: str, workspace_dir: str, excluded_patterns: Set[str] = None):
-        self.watch_dir = Path(watch_dir)
-        self.workspace_dir = Path(workspace_dir)
-        self.excluded_patterns = excluded_patterns or {'.git', '__pycache__', '.pyc', '.log'}
-        self.baseline_files: Dict[str, float] = {}
-        self.workspace_dir.mkdir(parents=True, exist_ok=True)
-        
-    def _should_exclude(self, file_path: Path) -> bool:
-        """Check if file should be excluded from tracking"""
-        return any(pattern in str(file_path) for pattern in self.excluded_patterns)
-    
-    def establish_baseline(self) -> None:
-        """Establish baseline of existing files"""
-        logger.info(f"Establishing file baseline for {self.watch_dir}")
-        self.baseline_files = {}
-        
-        if not self.watch_dir.exists():
-            logger.warning(f"Watch directory {self.watch_dir} does not exist")
-            return
-            
-        for file_path in self.watch_dir.rglob('*'):
-            if file_path.is_file() and not self._should_exclude(file_path):
-                try:
-                    self.baseline_files[str(file_path)] = file_path.stat().st_mtime
-                except (OSError, IOError) as e:
-                    logger.warning(f"Could not stat file {file_path}: {e}")
-        
-        logger.info(f"Baseline established with {len(self.baseline_files)} files")
-    
-    def find_new_files(self) -> List[Path]:
-        """Find files created after baseline"""
-        new_files = []
-        
-        if not self.watch_dir.exists():
-            return new_files
-            
-        for file_path in self.watch_dir.rglob('*'):
-            if file_path.is_file() and not self._should_exclude(file_path):
-                file_str = str(file_path)
-                try:
-                    current_mtime = file_path.stat().st_mtime
-                    
-                    # File is new if it wasn't in baseline OR was modified
-                    if (file_str not in self.baseline_files or 
-                        current_mtime > self.baseline_files[file_str]):
-                        new_files.append(file_path)
-                        # Update baseline to prevent re-processing
-                        self.baseline_files[file_str] = current_mtime
-                        
-                except (OSError, IOError) as e:
-                    logger.warning(f"Could not stat file {file_path}: {e}")
-        
-        return new_files
-    
-    def move_files_to_workspace(self, files: List[Path]) -> int:
-        """Move files to workspace, maintaining directory structure"""
-        moved_count = 0
-        
-        for file_path in files:
-            try:
-                # Create relative path from watch directory
-                rel_path = file_path.relative_to(self.watch_dir)
-                dest_path = self.workspace_dir / rel_path
-                
-                # Create destination directory
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Copy file (don't move to avoid breaking running processes)
-                shutil.copy2(file_path, dest_path)
-                logger.info(f"Copied new file to workspace: {rel_path}")
-                moved_count += 1
-                
-            except Exception as e:
-                logger.error(f"Error copying file {file_path}: {e}")
-        
-        return moved_count
-
 class ProcessManager:
     """Manages MCP server processes with proper lifecycle"""
     
-    def __init__(self):
+    def __init__(self, workspace_dir: Path):
         self.processes: List[ProcessInfo] = []
         self.shutdown_event = threading.Event()
+        self.workspace_dir = workspace_dir
+        # Ensure workspace directory exists
+        self.workspace_dir.mkdir(parents=True, exist_ok=True)
         
     def start_python_server(self, server_path: Path, port: int) -> ProcessInfo:
-        """Start a Python MCP server"""
+        """Start a Python MCP server in the workspace directory"""
         if not server_path.exists():
             raise FileNotFoundError(f"Server file not found: {server_path}")
-            
-        cmd = [sys.executable, str(server_path), str(port)]
+        
+        # Set up environment with server directory in PYTHONPATH
+        server_dir = server_path.parent
+        env = os.environ.copy()
+        current_pythonpath = env.get('PYTHONPATH', '')
+        if current_pythonpath:
+            env['PYTHONPATH'] = f"{server_dir}:{current_pythonpath}"
+        else:
+            env['PYTHONPATH'] = str(server_dir)
+        
+        # Use absolute path for the server file since we're changing working directory
+        absolute_server_path = server_path.resolve()
+        cmd = [sys.executable, str(absolute_server_path), str(port)]
         proc = subprocess.Popen(
-            cmd, 
+            cmd,
+            cwd=self.workspace_dir,  # Execute in workspace directory
+            env=env,                 # Preserve import paths
             stdout=subprocess.PIPE, 
             stderr=subprocess.STDOUT, 
             text=True, 
@@ -148,7 +84,7 @@ class ProcessManager:
         )
         
         self.processes.append(process_info)
-        logger.info(f"Started Python server: {server_path} on port {port}")
+        logger.info(f"Started Python server: {absolute_server_path} on port {port} (workspace: {self.workspace_dir})")
         return process_info
     
     def start_docker_compose(self, compose_file: Path) -> ProcessInfo:
@@ -177,22 +113,9 @@ class ProcessManager:
         logger.info(f"Started Docker compose: {compose_file}")
         return process_info
     
-    def monitor_processes(self, file_tracker: FileTracker, check_interval: float = 0.1):
+    def monitor_processes(self, check_interval: float = 0.1):
         """Monitor all processes with non-blocking I/O"""
-        file_check_interval = 5.0
-        last_file_check = time.time()
-        
         while self.processes and not self.shutdown_event.is_set():
-            current_time = time.time()
-            
-            # Periodic file checking
-            if current_time - last_file_check >= file_check_interval:
-                new_files = file_tracker.find_new_files()
-                if new_files:
-                    moved_count = file_tracker.move_files_to_workspace(new_files)
-                    logger.info(f"Moved {moved_count} new files to workspace")
-                last_file_check = current_time
-            
             # Check process outputs
             for process_info in self.processes[:]:
                 self._check_process_output(process_info)
@@ -334,8 +257,7 @@ class MCPDeploymentManager:
     def __init__(self, mcp_dir: str, workspace_dir: str, config_path: str):
         self.mcp_dir = Path(mcp_dir)
         self.workspace_dir = Path(workspace_dir)
-        self.process_manager = ProcessManager()
-        self.file_tracker = FileTracker(str(self.mcp_dir), str(self.workspace_dir))
+        self.process_manager = ProcessManager(self.workspace_dir)
         self.config_manager = ConfigManager(config_path)
         
         # Set up signal handlers
@@ -353,9 +275,6 @@ class MCPDeploymentManager:
         if not self.mcp_dir.exists():
             raise FileNotFoundError(f"MCP directory {self.mcp_dir} does not exist")
         
-        # Establish file baseline before starting any processes
-        self.file_tracker.establish_baseline()
-        
         # Start Docker services
         if not skip_docker:
             self._deploy_docker_services()
@@ -366,7 +285,8 @@ class MCPDeploymentManager:
         # Monitor processes
         logger.info("All services started. Monitoring processes...")
         logger.info(f"Workspace directory: {self.workspace_dir}")
-        self.process_manager.monitor_processes(self.file_tracker)
+        logger.info("All MCP servers will create files directly in the workspace directory")
+        self.process_manager.monitor_processes()
     
     def _deploy_docker_services(self):
         """Deploy Docker Compose services"""
@@ -408,9 +328,9 @@ class MCPDeploymentManager:
                 logger.error(f"Failed to start server {server_file}: {e}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Deploy MCP servers with improved file tracking")
+    parser = argparse.ArgumentParser(description="Deploy MCP servers with centralized workspace file management")
     parser.add_argument("--mcp-dir", default=DEFAULT_FOLDER, help=f"MCP servers directory (default: {DEFAULT_FOLDER})")
-    parser.add_argument("--workspace", default=WORKSPACE_FOLDER, help=f"Workspace directory (default: {WORKSPACE_FOLDER})")
+    parser.add_argument("--workspace", default=WORKSPACE_FOLDER, help=f"Workspace directory where all MCP servers will create files (default: {WORKSPACE_FOLDER})")
     parser.add_argument("--config", default="config.json", help="Port configuration file")
     parser.add_argument("--starting-port", type=int, default=STARTING_PORT, help=f"Starting port (default: {STARTING_PORT})")
     parser.add_argument("--no-docker", action="store_true", help="Skip Docker services")
