@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 import threading
 import logging
+import shutil
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -43,12 +44,13 @@ class ProcessInfo:
 class ProcessManager:
     """Manages MCP server processes with proper lifecycle"""
     
-    def __init__(self, workspace_dir: Path):
+    def __init__(self, workspace_dir: Path, python_executable: str = None):
         self.processes: List[ProcessInfo] = []
         self.shutdown_event = threading.Event()
         self.failure_event = threading.Event()  # Set when a critical process fails
         self.workspace_dir = workspace_dir
         self.failed_processes: List[ProcessInfo] = []  # Track failed processes
+        self.python_executable = python_executable or sys.executable
         
     def start_python_server(self, server_path: Path, port: int) -> ProcessInfo:
         """Start a Python MCP server in the workspace directory"""
@@ -66,7 +68,7 @@ class ProcessManager:
         
         # Use absolute path for the server file since we're changing working directory
         absolute_server_path = server_path.resolve()
-        cmd = [sys.executable, str(absolute_server_path), str(port)]
+        cmd = [self.python_executable, str(absolute_server_path), str(port)]
         proc = subprocess.Popen(
             cmd,
             cwd=self.workspace_dir,  # Execute in workspace directory
@@ -108,7 +110,7 @@ class ProcessManager:
             proc=proc,
             file_path=str(compose_file),
             process_type='docker',
-            is_critical=False
+            is_critical=True
         )
         
         self.processes.append(process_info)
@@ -385,12 +387,69 @@ class MCPDeploymentManager:
     def __init__(self, mcp_dir: str, workspace_dir: str, config_path: str):
         self.mcp_dir = Path(mcp_dir)
         self.workspace_dir = Path(workspace_dir)
-        self.process_manager = ProcessManager(self.workspace_dir)
+        self.python_executable = self._get_python310_executable()
+        self.process_manager = ProcessManager(self.workspace_dir, self.python_executable)
         self.config_manager = ConfigManager(config_path)
         
         # Set up signal handlers
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
+    
+    def _get_python310_executable(self) -> str:
+        """Find and return the python3.10 executable path"""
+        # Try common python3.10 executable names
+        python_candidates = ['python3.10', 'python3.10.exe']
+        
+        for candidate in python_candidates:
+            python_path = shutil.which(candidate)
+            if python_path:
+                logger.info(f"Found python3.10 at: {python_path}")
+                return python_path
+        
+        # If python3.10 not found, check if current python is 3.10
+        try:
+            result = subprocess.run([sys.executable, '--version'], 
+                                  capture_output=True, text=True, check=True)
+            version_output = result.stdout.strip()
+            if '3.10' in version_output:
+                logger.info(f"Current Python interpreter is 3.10: {sys.executable}")
+                return sys.executable
+        except subprocess.CalledProcessError:
+            pass
+        
+        # Fallback: raise error if python3.10 not found
+        raise RuntimeError("Python 3.10 not found. Please install Python 3.10 or ensure it's in your PATH")
+    
+    def _install_requirements(self):
+        """Install requirements from requirements.txt using python3.10"""
+        requirements_file = Path("requirements.txt")
+        
+        if not requirements_file.exists():
+            logger.warning("requirements.txt not found, skipping requirements installation")
+            return
+        
+        logger.info("Installing requirements from requirements.txt...")
+        try:
+            cmd = [self.python_executable, '-m', 'pip', 'install', '-r', str(requirements_file)]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            
+            logger.info("Requirements installation completed successfully")
+            if result.stdout:
+                logger.debug(f"pip install stdout: {result.stdout}")
+            if result.stderr:
+                logger.debug(f"pip install stderr: {result.stderr}")
+                
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to install requirements: {e}")
+            logger.error(f"Command: {' '.join(cmd)}")
+            if e.stdout:
+                logger.error(f"stdout: {e.stdout}")
+            if e.stderr:
+                logger.error(f"stderr: {e.stderr}")
+            raise RuntimeError(f"Requirements installation failed: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error during requirements installation: {e}")
+            raise
     
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals"""
@@ -402,6 +461,12 @@ class MCPDeploymentManager:
         """Deploy all MCP servers and Docker services"""
         if not self.mcp_dir.exists():
             raise FileNotFoundError(f"MCP directory {self.mcp_dir} does not exist")
+        
+        # Install requirements first
+        logger.info("=" * 60)
+        logger.info("PRELIMINARY STEP: Installing requirements")
+        logger.info("=" * 60)
+        self._install_requirements()
         
         # Start Docker services
         if not skip_docker:
