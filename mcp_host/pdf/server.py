@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 import hashlib
+import string
 
-# Add project root to path for shared utilities
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
 from workspace.shared.shared import CommandResult, return_as_dict
@@ -30,9 +30,10 @@ try:
     import numpy as np
     from sklearn.metrics.pairwise import cosine_similarity
     PDF_LIBS_AVAILABLE = True
+        
 except ImportError as e:
     print(f"Warning: Some PDF libraries not available: {e}")
-    print("Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn")
+    print("Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn nltk")
     PDF_LIBS_AVAILABLE = False
 
 from fastmcp import FastMCP
@@ -122,7 +123,7 @@ def list_pdf_files() -> Dict[str, Any]:
 @mcp.tool
 @return_as_dict
 def extract_text_from_pdf(filename: str, start_page: int = 1, end_page: Optional[int] = None) -> Dict[str, Any]:
-    """Extract text content from a PDF file
+    """Extract text content from a PDF file, limited to 32000 characters
     
     Args:
         filename: Name of the PDF file in workspace
@@ -155,7 +156,6 @@ def extract_text_from_pdf(filename: str, start_page: int = 1, end_page: Optional
         text_content = []
         pages_processed = 0
         
-        # Try PyMuPDF first (better text extraction)
         try:
             doc = fitz.open(str(pdf_path))
             total_pages = len(doc)
@@ -172,30 +172,16 @@ def extract_text_from_pdf(filename: str, start_page: int = 1, end_page: Optional
                 if text.strip():
                     text_content.append(f"--- Page {page_num + 1} ---\n{text}")
                 pages_processed += 1
-            
             doc.close()
-            
+
         except Exception as e:
-            # Fallback to PyPDF2
-            print(f"PyMuPDF failed, trying PyPDF2: {e}")
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                total_pages = len(pdf_reader.pages)
-                
-                if end_page is None:
-                    end_page = total_pages
-                
-                start_page = max(1, start_page)
-                end_page = min(total_pages, end_page)
-                
-                for page_num in range(start_page - 1, end_page):
-                    page = pdf_reader.pages[page_num]
-                    text = page.extract_text()
-                    if text.strip():
-                        text_content.append(f"--- Page {page_num + 1} ---\n{text}")
-                    pages_processed += 1
+            return CommandResult(
+                status="error",
+                stderr=f"Failed to extract text using PyMuPDF: {str(e)}",
+                exit_code=1
+            )
         
-        full_text = "\n\n".join(text_content)
+        full_text = "\n\n".join(text_content[:32384])
         
         return CommandResult(
             status="success",
