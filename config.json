@@ -1,8 +1,5 @@
 [
     {
-        "mcp_docker/shell/server.py": 5100
-    },
-    {
         "mcp_host/Rscript/server.py": 5000
     },
     {
@@ -16,5 +13,8 @@
     },
     {
         "mcp_host/pdf/server.py": 5004
+    },
+    {
+        "mcp_docker/shell/server.py": 5100
     }
 ]
