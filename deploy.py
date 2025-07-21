@@ -11,6 +11,7 @@ import json
 import subprocess 
 import signal
 import os
+import socket
 from pathlib import Path
 import select
 from dataclasses import dataclass
@@ -270,6 +271,37 @@ class ProcessManager:
             except Exception as e:
                 logger.error(f"Error shutting down {process_info.file_path}: {e}")
 
+class PortUtils:
+    """Utilities for port management and availability checking"""
+    
+    @staticmethod
+    def is_port_available(port: int, host: str = 'localhost') -> bool:
+        """Check if a port is available for binding"""
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(1)
+                result = sock.connect_ex((host, port))
+                return result != 0  # Port is available if connection fails
+        except Exception:
+            return False
+    
+    @staticmethod
+    def find_free_port(start_port: int, end_port: int, host: str = 'localhost') -> Optional[int]:
+        """Find the first available port in the given range"""
+        for port in range(start_port, end_port + 1):
+            if PortUtils.is_port_available(port, host):
+                return port
+        return None
+    
+    @staticmethod
+    def get_used_ports_in_range(start_port: int, end_port: int, host: str = 'localhost') -> List[int]:
+        """Get list of ports that are currently in use in the given range"""
+        used_ports = []
+        for port in range(start_port, end_port + 1):
+            if not PortUtils.is_port_available(port, host):
+                used_ports.append(port)
+        return used_ports
+
 class ServerDiscovery:
     """Handles discovery of MCP servers and Docker services"""
     
@@ -320,7 +352,7 @@ class ConfigManager:
             json.dump(config_list, f, indent=4)
     
     def assign_ports(self, server_files: List[Path], starting_port: int = STARTING_PORT) -> Dict[str, int]:
-        """Assign ports to server files with proper range management"""
+        """Assign ports to server files with intelligent port availability checking"""
         config = self.load_config()
         
         # Define port ranges
@@ -339,46 +371,76 @@ class ConfigManager:
             else:
                 host_servers.append(server_file)
         
-        # Get currently used ports
+        # Check which ports from existing config are still available
+        config_changed = False
+        for server_str, port in list(config.items()):
+            if not PortUtils.is_port_available(port):
+                logger.warning(f"Port {port} for {server_str} is no longer available, will reassign")
+                del config[server_str]
+                config_changed = True
+        
+        # Get currently used ports from config
         used_ports = set(config.values())
         
+        # Check for port conflicts in the ranges and log them
+        host_used_ports = PortUtils.get_used_ports_in_range(HOST_PORT_MIN, HOST_PORT_MAX)
+        docker_used_ports = PortUtils.get_used_ports_in_range(DOCKER_PORT_MIN, DOCKER_PORT_MAX)
+        
+        if host_used_ports:
+            logger.info(f"Found {len(host_used_ports)} ports in use in host range ({HOST_PORT_MIN}-{HOST_PORT_MAX}): {host_used_ports}")
+        if docker_used_ports:
+            logger.info(f"Found {len(docker_used_ports)} ports in use in docker range ({DOCKER_PORT_MIN}-{DOCKER_PORT_MAX}): {docker_used_ports}")
+        
         # Assign ports to host servers (5000-5099)
-        next_host_port = starting_port
         for server_file in host_servers:
             server_str = str(server_file)
             if server_str not in config:
-                # Find next available port in host range
-                while (next_host_port in used_ports or 
-                       next_host_port < HOST_PORT_MIN or 
-                       next_host_port > HOST_PORT_MAX):
-                    next_host_port += 1
-                    if next_host_port > HOST_PORT_MAX:
+                # Find next available port in host range, starting from preferred port
+                preferred_start = max(starting_port, HOST_PORT_MIN)
+                available_port = PortUtils.find_free_port(preferred_start, HOST_PORT_MAX)
+                
+                if available_port is None:
+                    raise RuntimeError(f"No available ports in host range ({HOST_PORT_MIN}-{HOST_PORT_MAX}) for server {server_str}")
+                
+                # Make sure we don't assign the same port to multiple servers
+                while available_port in used_ports:
+                    available_port = PortUtils.find_free_port(available_port + 1, HOST_PORT_MAX)
+                    if available_port is None:
                         raise RuntimeError(f"No available ports in host range ({HOST_PORT_MIN}-{HOST_PORT_MAX}) for server {server_str}")
                 
-                config[server_str] = next_host_port
-                used_ports.add(next_host_port)
-                logger.info(f"Assigned host port {next_host_port} to {server_str}")
-                next_host_port += 1
+                config[server_str] = available_port
+                used_ports.add(available_port)
+                logger.info(f"Assigned host port {available_port} to {server_str}")
+                config_changed = True
         
         # Assign ports to docker servers (5100-5199)
-        next_docker_port = DOCKER_PORT_MIN
         for server_file in docker_servers:
             server_str = str(server_file)
             if server_str not in config:
                 # Find next available port in docker range
-                while (next_docker_port in used_ports or 
-                       next_docker_port < DOCKER_PORT_MIN or 
-                       next_docker_port > DOCKER_PORT_MAX):
-                    next_docker_port += 1
-                    if next_docker_port > DOCKER_PORT_MAX:
+                available_port = PortUtils.find_free_port(DOCKER_PORT_MIN, DOCKER_PORT_MAX)
+                
+                if available_port is None:
+                    raise RuntimeError(f"No available ports in docker range ({DOCKER_PORT_MIN}-{DOCKER_PORT_MAX}) for server {server_str}")
+                
+                # Make sure we don't assign the same port to multiple servers
+                while available_port in used_ports:
+                    available_port = PortUtils.find_free_port(available_port + 1, DOCKER_PORT_MAX)
+                    if available_port is None:
                         raise RuntimeError(f"No available ports in docker range ({DOCKER_PORT_MIN}-{DOCKER_PORT_MAX}) for server {server_str}")
                 
-                config[server_str] = next_docker_port
-                used_ports.add(next_docker_port)
-                logger.info(f"Assigned docker port {next_docker_port} to {server_str}")
-                next_docker_port += 1
+                config[server_str] = available_port
+                used_ports.add(available_port)
+                logger.info(f"Assigned docker port {available_port} to {server_str}")
+                config_changed = True
         
-        self.save_config(config)
+        # Only save config if it changed
+        if config_changed:
+            self.save_config(config)
+            logger.info("Port configuration updated and saved")
+        else:
+            logger.info("Port configuration unchanged")
+        
         return config
 
 class MCPDeploymentManager:

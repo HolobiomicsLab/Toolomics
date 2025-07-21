@@ -62,10 +62,17 @@ All MCP servers execute in a centralized **workspace directory** (default: `work
 
 This centralized approach ensures that AI agents can easily find and work with files across different MCP tools without needing to track file locations.
 
-### Finding the MCP Port
+### Intelligent Port Management
 
-Each MCP server is assigned a port, which is recorded in the `config.json` file. For example:
+Each MCP server is automatically assigned an available port, which is recorded in the `config.json` file. The system uses intelligent port detection to avoid conflicts:
 
+- **Host servers** use ports 5000-5099
+- **Docker servers** use ports 5100-5199
+- **Automatic conflict resolution**: If a port is already in use, the system finds the next available port
+- **Persistent configuration**: Port assignments are saved and reused across deployments
+- **No process killing**: Unlike previous versions, the system works around existing processes instead of terminating them
+
+Example configuration:
 ```json
 [
     {
@@ -75,10 +82,16 @@ Each MCP server is assigned a port, which is recorded in the `config.json` file.
         "mcp_host/Rscript/server.py": 5001
     },
     {
-        "mcp_docker/files/csv/server.py": 5101
+        "mcp_docker/shell/server.py": 5101
     }
 ]
 ```
+
+The deployment system will automatically:
+- Check which ports are currently available
+- Reassign ports if previously assigned ones are no longer available
+- Log all port assignments and conflicts for transparency
+- Update the configuration file only when changes are made
 
 ## Adding a New MCP
 
