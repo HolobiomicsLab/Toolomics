@@ -20,7 +20,7 @@ import string
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from workspace.shared.shared import CommandResult, return_as_dict
+from shared import CommandResult, return_as_dict
 
 # PDF processing imports
 try:

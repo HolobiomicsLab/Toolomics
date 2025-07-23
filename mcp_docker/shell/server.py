@@ -20,7 +20,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))  # Add 'a/' to Python's search path
 
-from workspace.shared.shared import CommandResult, run_bash_subprocess, return_as_dict
+from shared import CommandResult, run_bash_subprocess, return_as_dict
 
 description = """
 Shell Tools MCP Server provides tools for shell navigation and interaction.
@@ -61,8 +61,7 @@ def execute_command(command: str) -> dict:
         ['rm', '-r'], ['rm', '-rf'], ['rm', '-f'],
         ['kill', '-9'], ['chmod', '777'],
         ['mv', '/etc'], ['cp', '/etc'], ['rm', '/etc'], 
-        ['rm', '/usr'], ['rm', '/var'], ['rm', '/'],
-        [':()', '{', ':|:&', '};:']  # Fork bomb pattern
+        ['rm', '/usr'], ['rm', '/var'], ['rm', '/']
     ]
     try:
         command_words = shlex.split(command.lower())

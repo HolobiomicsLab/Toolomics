@@ -16,5 +16,8 @@
     },
     {
         "mcp_host/pdf/server.py": 5004
+    },
+    {
+        "mcp_host/shell/server.py": 5005
     }
 ]

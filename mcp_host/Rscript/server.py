@@ -13,7 +13,7 @@ from datetime import datetime
 import sys
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from workspace.shared.shared import return_as_dict, run_bash_subprocess, CommandResult
+from shared import return_as_dict, run_bash_subprocess, CommandResult
 
 description = """
 R script MCP Server provides tools for executing R scripts and managing R environments.
