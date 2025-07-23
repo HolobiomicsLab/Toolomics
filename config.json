@@ -1,14 +1,20 @@
 [
     {
-        "mcp_host/browser/server.py": 5002
+        "mcp_host/Rscript/server.py": 5000
     },
     {
-        "mcp_docker/files/csv/server.py": 5101
+        "mcp_host/browser/server.py": 5001
     },
     {
-        "mcp_docker/computer/shell/server.py": 5102
+        "mcp_host/csv/server.py": 5002
     },
     {
-        "mcp_host/Rscript/server.py": 5001
+        "mcp_host/mcp_search/server.py": 5003
+    },
+    {
+        "mcp_host/pdf/server.py": 5004
+    },
+    {
+        "mcp_docker/shell/server.py": 5100
     }
 ]

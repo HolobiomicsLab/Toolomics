@@ -90,33 +90,34 @@ class Browser:
         except Exception:
             return None
 
-    def clean_url(self, url: str) -> str:
-        """Clean URL to keep only essential parts."""
-        clean = url.split('#')[0]
-        parts = clean.split('?', 1)
-        base_url = parts[0]
-        
-        if len(parts) > 1:
-            query = parts[1]
-            essential_params = []
-            for param in query.split('&'):
-                if any(param.startswith(prefix) for prefix in ['q=', 's=', 'search=']):
-                    essential_params.append(param)
-            if essential_params:
-                return f"{base_url}?{'&'.join(essential_params)}"
-        return base_url
-
     def is_link_valid(self, url: str) -> bool:
         """Check if a URL is a valid navigable link."""
-        if len(url) > 128:
+        if not url or len(url) > 512:
             return False
+        try:
+            parsed_url = urlparse(url)
+            if not parsed_url.scheme or not parsed_url.netloc:
+                return False
+            if parsed_url.scheme not in ['http', 'https']:
+                return False
+            path = parsed_url.path.lower()
+            download_extensions = [
+                '.pdf', '.mp4', '.mp3', '.avi', '.mov', '.wmv', '.flv', '.mkv',
+                '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+                '.zip', '.rar', '.gz', '.tar', '.7z', '.bz2',
+                '.csv', '.json', '.xml', '.txt', '.log',
+                '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.svg', '.webp',
+                '.exe', '.dmg', '.pkg', '.deb', '.rpm', '.msi', '.apk',
+                '.iso', '.img', '.bin'
+            ]
+            for ext in download_extensions:
+                if path.endswith(ext):
+                    return False
+            return True
             
-        parsed_url = urlparse(url)
-        if not parsed_url.scheme or not parsed_url.netloc:
+        except Exception as e:
+            print(f"Error validating URL {url}: {e}")
             return False
-            
-        invalid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.ico', '.xml', '.json', '.pdf']
-        return not any(url.lower().endswith(ext) for ext in invalid_extensions)
 
     def get_navigable(self) -> List[str]:
         """Get all navigable links on the current page."""
@@ -127,11 +128,261 @@ class Browser:
             for element in link_elements:
                 href = element.web_element.get_attribute("href")
                 if href and href.startswith(("http", "https")) and self.is_link_valid(href):
-                    links.append(self.clean_url(href))
+                    links.append(href)
                     
             return list(set(links))  # Remove duplicates
         except Exception:
             return []
+
+    def _get_downloadable_extensions(self) -> List[str]:
+        """Get list of downloadable file extensions."""
+        return [
+            '.pdf', '.mp4', '.mp3', '.avi', '.mov', '.wmv', '.flv', '.mkv',
+            '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+            '.zip', '.rar', '.gz', '.tar', '.7z', '.bz2',
+            '.csv', '.json', '.xml', '.txt', '.log',
+            '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.svg', '.webp',
+            '.exe', '.dmg', '.pkg', '.deb', '.rpm', '.msi', '.apk',
+            '.iso', '.img', '.bin'
+        ]
+
+    def _convert_to_absolute_url(self, href: str, current_url: str, base_url: str) -> str:
+        """Convert relative URL to absolute URL."""
+        if href.startswith('/'):
+            return base_url + href
+        elif href.startswith('./') or not href.startswith(('http://', 'https://')):
+            if href.startswith('./'):
+                href = href[2:]
+            current_path = '/'.join(current_url.split('/')[:-1])
+            return f"{current_path}/{href}"
+        else:
+            return href
+
+    def _is_downloadable_by_extension(self, url: str, extensions: List[str]) -> bool:
+        """Check if URL has a downloadable file extension."""
+        parsed_url = urlparse(url)
+        path_lower = parsed_url.path.lower()
+        return any(path_lower.endswith(ext) for ext in extensions)
+
+    def _is_downloadable_by_pattern(self, url: str, patterns: List[str]) -> bool:
+        """Check if URL matches download patterns."""
+        url_lower = url.lower()
+        return any(pattern in url_lower for pattern in patterns)
+
+    def _is_downloadable_by_query(self, url: str, extensions: List[str]) -> bool:
+        """Check if URL has downloadable indicators in query parameters."""
+        parsed_url = urlparse(url)
+        if not parsed_url.query:
+            return False
+        query_lower = parsed_url.query.lower()
+        if any(param in query_lower for param in ['file=', 'filename=', 'download=', 'attachment=']):
+            return True
+        for param in parsed_url.query.split('&'):
+            if '=' in param:
+                value = param.split('=', 1)[1]
+                if any(value.lower().endswith(ext) for ext in extensions):
+                    return True
+        return False
+
+    def _extract_links_from_elements(self, current_url: str, base_url: str) -> List[str]:
+        """Extract downloadable links from HTML elements."""
+        links = []
+        extensions = self._get_downloadable_extensions()
+        
+        try:
+            link_elements = find_all(Link())
+            for element in link_elements:
+                href = element.web_element.get_attribute("href")
+                if not href:
+                    continue
+                    
+                full_url = self._convert_to_absolute_url(href, current_url, base_url)
+                
+                if (self._is_downloadable_by_extension(full_url, extensions) or
+                    self._is_downloadable_by_query(full_url, extensions)):
+                    links.append(full_url)
+                    
+        except Exception as e:
+            print(f"Error extracting links from elements: {e}")
+            
+        return links
+
+    def _extract_links_from_attributes(self, current_url: str, base_url: str) -> List[str]:
+        """Extract downloadable links from HTML attributes like download, data-url, etc."""
+        links = []
+        extensions = self._get_downloadable_extensions()
+        patterns = self._get_download_patterns()
+        
+        try:
+            page_source = get_driver().page_source
+            soup = BeautifulSoup(page_source, 'html.parser')
+            
+            # Find elements with download attributes
+            download_elements = soup.find_all(['a', 'button'], attrs={'download': True})
+            for elem in download_elements:
+                href = elem.get('href')
+                if href:
+                    full_url = self._convert_to_absolute_url(href, current_url, base_url)
+                    links.append(full_url)
+            
+            # Find elements with data-url or data-file attributes
+            data_elements = soup.find_all(attrs={'data-url': True}) + soup.find_all(attrs={'data-file': True})
+            for elem in data_elements:
+                data_url = elem.get('data-url') or elem.get('data-file')
+                if data_url:
+                    full_url = self._convert_to_absolute_url(data_url, current_url, base_url)
+                    
+                    # Check if it looks like a downloadable file
+                    if (self._is_downloadable_by_extension(full_url, extensions) or
+                        self._is_downloadable_by_pattern(full_url, patterns)):
+                        links.append(full_url)
+                        
+        except Exception as e:
+            print(f"Error extracting links from attributes: {e}")
+            
+        return links
+
+    def _deduplicate_links(self, links: List[str]) -> List[str]:
+        """Remove duplicate links and clean URLs."""
+        unique_links = []
+        seen = set()
+        for link in links:
+            if link not in seen:
+                seen.add(link)
+                unique_links.append(link)
+        return unique_links
+
+    def get_downloadable(self) -> List[str]:
+        """Get all downloadable resource links on the current page."""
+        try:
+            current_url = self.get_current_url()
+            base_url = f"{urlparse(current_url).scheme}://{urlparse(current_url).netloc}"
+            all_links = []
+            element_links = self._extract_links_from_elements(current_url, base_url)
+            all_links.extend(element_links)
+            attribute_links = self._extract_links_from_attributes(current_url, base_url)
+            all_links.extend(attribute_links)
+            return self._deduplicate_links(all_links)
+            
+        except Exception as e:
+            print(f"Error getting downloadable links: {e}")
+            return []
+
+    def download_file(self, url: str) -> Optional[tuple[bool, str]]:
+        """Download a file from URL to current directory.
+        
+        Args:
+            url: The URL of file to download
+            
+        Returns:
+            tuple[bool, str] | None: (success_status, filename) if successful, None on failure
+        """
+        try:
+            import requests
+            from urllib.parse import urlparse, unquote
+            import os
+            import re
+            
+            # Validate URL is downloadable
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return None
+            
+            session = requests.Session()
+            session.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+            })
+            
+            try:
+                head_response = session.head(url, allow_redirects=True, timeout=10)
+                final_url = head_response.url
+            except:
+                final_url = url
+            
+            response = session.get(url, stream=True, allow_redirects=True, timeout=30)
+            response.raise_for_status()
+            
+            filename = None
+            
+            # 1. Try Content-Disposition header
+            if 'content-disposition' in response.headers:
+                cd = response.headers['content-disposition']
+                filename_match = re.search(r'filename[*]?=([^;]+)', cd)
+                if filename_match:
+                    filename = filename_match.group(1).strip('"\'')
+                    filename = unquote(filename)  # URL decode
+            
+            # 2. Try final URL after redirects
+            if not filename:
+                final_parsed = urlparse(response.url)
+                filename = os.path.basename(final_parsed.path)
+                if filename:
+                    filename = unquote(filename)  # URL decode
+            
+            # 3. Try original URL
+            if not filename:
+                filename = os.path.basename(parsed.path)
+                if filename:
+                    filename = unquote(filename)  # URL decode
+            
+            # 4. Try to guess from Content-Type
+            if not filename:
+                content_type = response.headers.get('content-type', '').lower()
+                extension_map = {
+                    'application/pdf': '.pdf',
+                    'application/msword': '.doc',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+                    'application/vnd.ms-excel': '.xls',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+                    'application/zip': '.zip',
+                    'text/csv': '.csv',
+                    'application/json': '.json',
+                    'text/plain': '.txt',
+                    'image/jpeg': '.jpg',
+                    'image/png': '.png',
+                    'image/gif': '.gif',
+                    'video/mp4': '.mp4',
+                    'audio/mpeg': '.mp3',
+                }
+                
+                for mime_type, ext in extension_map.items():
+                    if mime_type in content_type:
+                        filename = f"downloaded_file_{int(time.time())}{ext}"
+                        break
+            
+            # 5. Final fallback
+            if not filename or filename == '/':
+                filename = f"downloaded_file_{int(time.time())}"
+            
+            # Clean filename - remove invalid characters
+            filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+            filename = filename.strip()
+            
+            # Ensure we don't overwrite existing files
+            original_filename = filename
+            counter = 1
+            while os.path.exists(filename):
+                name, ext = os.path.splitext(original_filename)
+                filename = f"{name}_{counter}{ext}"
+                counter += 1
+            
+            # Save to current directory
+            with open(filename, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            
+            print(f"Successfully downloaded: {filename} ({os.path.getsize(filename)} bytes)")
+            return (True, filename)
+            
+        except Exception as e:
+            print(f"Error downloading file from {url}: {e}")
+            return None
 
     def get_current_url(self) -> str:
         """Get the current URL."""
@@ -155,6 +406,22 @@ class Browser:
     def get_screenshot(self) -> str:
         """Get screenshot path."""
         return os.path.join(self.screenshot_folder, "updated_screen.png")
+
+    def is_session_valid(self) -> bool:
+        """Check if the browser session is still valid."""
+        try:
+            # Try to get current URL to test if session is alive
+            current_url = get_driver().current_url
+            return current_url is not None
+        except Exception:
+            return False
+
+    def quit(self):
+        """Quit the browser session."""
+        try:
+            kill_browser()
+        except Exception:
+            pass
 
     def close(self):
         """Close the browser."""

@@ -1,3 +1,4 @@
+workspace/
 *.wav
 *.DS_Store
 *.log
@@ -22,8 +23,8 @@ config.ini
 */.env
 .venv
 */.venv
-storage/
-storage/*
+workspace/
+workspace/*
 
 ### react ###
 .DS_*

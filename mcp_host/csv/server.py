@@ -28,8 +28,7 @@ def get_mcp_name() -> str:
     return "CSV Management"
 
 # Default working directory for CSV files
-CSV_DIR = Path("./csv_data")
-CSV_DIR.mkdir(exist_ok=True)
+CSV_DIR = Path("./")
 
 def _get_csv_path(name: str) -> Path:
     """Get the full path for a CSV file, ensuring it's in our CSV directory."""

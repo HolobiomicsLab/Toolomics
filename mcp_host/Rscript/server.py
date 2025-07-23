@@ -13,7 +13,7 @@ from datetime import datetime
 import sys
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared.shared import return_as_dict, run_bash_subprocess, CommandResult
+from workspace.shared.shared import return_as_dict, run_bash_subprocess, CommandResult
 
 description = """
 R script MCP Server provides tools for executing R scripts and managing R environments.
@@ -30,14 +30,14 @@ mcp = FastMCP(
 def get_mcp_name() -> str:
     return "R command MCP"
 
-# Ensure storage directory exists
-STORAGE_DIR = Path("./storage")
+# Ensure workspace directory exists
+STORAGE_DIR = Path("./workspace")
 STORAGE_DIR.mkdir(exist_ok=True)
 
-SCRIPT_DIR = "mcp_host/Rscript" / Path("./script")
+SCRIPT_DIR = Path("./script")
 SCRIPT_DIR.mkdir(exist_ok=True)
 
-print(f"Using storage directory: {STORAGE_DIR}")
+print(f"Using workspace directory: {STORAGE_DIR}")
 print(f"Using script directory: {SCRIPT_DIR}")
 
 def run_rscript(script_path: str) -> CommandResult:
@@ -59,13 +59,22 @@ def run_rscript(script_path: str) -> CommandResult:
 def execute_r_code(r_code: str) -> Dict[str,Any]:
     f"""
     Execute R code.
-    Also saves the executed R script in the storage directory.
+    Also saves the executed R script in the workspace directory.
 
     Args:
         r_code: The R code to execute as a string.
 
     Returns:
         dict: {CommandResult.__doc__}
+
+    Example:
+        >>> execute_r_code(r_code="print('Hello World')")
+        {{
+            "status": "success",
+            "stdout": "[1] \"Hello World\"\\n",
+            "stderr": "",
+            "exit_code": 0
+        }}
     """
     try:
         # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
@@ -86,14 +95,19 @@ def execute_r_code(r_code: str) -> Dict[str,Any]:
 
 @mcp.tool
 def write_r_script(r_code: str, filename:str) -> str:
-    f"""
+    """
     Write the R script in the script directory.
 
     Args:
         r_code: The R code to write as a string.
+        filename: The name of the file to save the script as.
 
     Returns:
         str: A message indicating success or failure.
+
+    Example:
+        >>> write_r_script(r_code="x <- 1:10\\nprint(x)", filename="example.r")
+        "Script written successfully: /path/to/script/example.r"
     """
     try:
         # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
@@ -107,12 +121,16 @@ def write_r_script(r_code: str, filename:str) -> str:
 
 
 @mcp.tool
-def list_storage_files() -> List[str]:
+def list_workspace_files() -> List[str]:
     """
-    List all files in the storage directory.
+    List all files in the workspace directory.
 
     Returns:
-        A list of filenames in the storage directory.
+        A list of filenames in the workspace directory.
+
+    Example:
+        >>> list_workspace_files()
+        ["analysis1.r", "data.csv", "results.txt"]
     """
     return [f.name for f in STORAGE_DIR.iterdir() if f.is_file()]
 
@@ -123,6 +141,10 @@ def list_script_files() -> List[str]:
 
     Returns:
         A list of filenames in the script directory.
+
+    Example:
+        >>> list_script_files()
+        ["analysis.r", "preprocessing.r", "visualization.r"]
     """
     return [f.name for f in SCRIPT_DIR.iterdir() if f.is_file()]
 
@@ -138,6 +160,15 @@ def execute_r_script_file(filename: str) -> Dict[str,Any]:
 
     Returns:
         dict: {CommandResult.__doc__}
+
+    Example:
+        >>> execute_r_script_file(filename="analysis.r")
+        {{
+            "status": "success",
+            "stdout": "Analysis completed\\n",
+            "stderr": "",
+            "exit_code": 0
+        }}
     """
     script_path = SCRIPT_DIR / filename
     if not script_path.exists() or not script_path.is_file():

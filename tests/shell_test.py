@@ -40,7 +40,7 @@ async def test_shell():
         print("=" * 50)
         
         result = await client.call_tool("execute_command", {
-            "command": "test -e storage/QC_0.mzML",
+            "command": "test -e , workspace/QC_0.mzML",
         })
 
         dict_result = json.loads(result[0].text) if result else {}
@@ -52,7 +52,7 @@ async def test_shell():
         print("=" * 50)
         
         result = await client.call_tool("execute_command", {
-            "command": "rm -f storage/QC_0_adducts.csv",
+            "command": "rm -f workspace/QC_0_adducts.csv",
         })
 
         dict_result = json.loads(result[0].text) if result else {}

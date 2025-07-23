@@ -9,6 +9,8 @@ FROM python:3.10
 # Set the working directory
 WORKDIR /app
 
+COPY workspace /app/workspace
+
 # Copy the application code
 COPY requirements.txt /app/requirements.txt
 #COPY . /app

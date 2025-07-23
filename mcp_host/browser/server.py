@@ -33,6 +33,15 @@ mcp = FastMCP(
 
 @mcp.tool
 def get_mcp_name() -> str:
+    """Get the name of this MCP server
+    
+    Returns:
+        str: The name of this MCP server ("Web Browser MCP")
+        
+    Example:
+        >>> get_mcp_name()
+        "Web Browser MCP"
+    """
     return "Web Browser MCP"
 
 # Global browser instance with thread safety
@@ -91,8 +100,8 @@ def restart_browser():
             if browser_instance:
                 try:
                     browser_instance.quit()
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error quitting browser: {e}")
             print("Restarting browser instance")
             browser_instance = Browser()
             print("Browser instance restarted successfully")
@@ -119,7 +128,31 @@ def init_browser():
 
 @mcp.tool
 def search(query: str) -> Dict[str, str]:
-    """Search for a query using SearxNG"""
+    """Perform a web search using SearxNG search engine
+    
+    Args:
+        query (str): The search query string
+        
+    Returns:
+        Dict[str, str]: Dictionary containing:
+            - status: "success" or "error"
+            - result: List of search results (if successful)
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> search("latest AI research papers")
+        {
+            "status": "success",
+            "result": [
+                "Title: Recent Advances in AI...",
+                "Title: New Machine Learning Techniques..."
+            ]
+        }
+        
+    Notes:
+        - This doesn't use the browser, just the SearxNG search API
+        - Results are returned as plain text snippets
+    """
     print(f"Searching for query: {query}")
     try:
         # Search doesn't use browser, so no timeout needed
@@ -134,7 +167,33 @@ def search(query: str) -> Dict[str, str]:
 
 @mcp.tool
 def navigate(url: str) -> Dict[str, str]:
-    """Navigate to a URL"""
+    """Navigate to a specified URL in the browser
+    
+    Args:
+        url (str): The URL to navigate to (must include http:// or https://)
+        
+    Returns:
+        Dict[str, str]: Dictionary containing:
+            - status: "success", "failed", or "error"
+            - current_url: The final URL after navigation
+            - title: Page title
+            - content: Main page text content
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> navigate("https://example.com")
+        {
+            "status": "success",
+            "current_url": "https://example.com",
+            "title": "Example Domain",
+            "content": "This domain is for use in illustrative examples..."
+        }
+        
+    Notes:
+        - Will automatically initialize browser if not already running
+        - Has 30 second timeout for navigation
+        - Returns simplified text content (no HTML markup)
+    """
     print(f"Navigating to URL: {url}")
     
     if not init_browser():
@@ -146,7 +205,7 @@ def navigate(url: str) -> Dict[str, str]:
     
     try:
         if not browser_instance.is_link_valid(url):
-            return {"status": "error", "message": "Invalid URL"}
+            return {"status": "error", "message": "Invalid URL, File is a PDF or unsupported format for navigation, consider downloading instead."}
 
         # Navigate with timeout
         success = safe_browser_operation("navigate", browser_instance.go_to, url)
@@ -172,32 +231,164 @@ def navigate(url: str) -> Dict[str, str]:
 
 @mcp.tool
 def get_links() -> Dict[str, Any]:
-    """Get all navigable links on page"""
-    print("Fetching page links")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
+        """Get all clickable links from the current page
     
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-    
-    try:
-        links = safe_browser_operation("get_links", browser_instance.get_navigable)
-        if links is None:
-            return {"status": "error", "message": "Failed to get links"}
+        Returns:
+            Dict[str, Any]: Dictionary containing:
+                - status: "success" or "error"
+                - links: Newline-separated list of URLs
+                - message: Error message (if error occurred)
+                
+        Example:
+            >>> get_links()
+            {
+                "status": "success",
+                "links": "https://example.com/page1\nhttps://example.com/page2"
+            }
+            
+        Notes:
+            - Requires an active browser session
+            - Only returns navigable links (not all hrefs)
+            - Links are returned as plain text
+        """
+        print("Fetching page links")
+        if not init_browser():
+            return {"status": "error", "message": "Failed to initialize browser"}
         
-        return {
-            "status": "success",
-            "links": '\n'.join(links) if links else "No links found"
-        }
-    except Exception as e:
-        print(f"Error fetching links: {e}")
-        return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
+        if not browser_lock.acquire(timeout=10):
+            return {"status": "error", "message": "Browser is busy, try again later"}
+        
+        try:
+            links = safe_browser_operation("get_links", browser_instance.get_navigable)
+            if links is None:
+                return {"status": "error", "message": "Failed to get links"}
+            
+            return {
+                "status": "success",
+                "links": '\n'.join(links) if links else "No links found"
+            }
+        except Exception as e:
+            print(f"Error fetching links: {e}")
+            return {"status": "error", "message": str(e)}
+        finally:
+            browser_lock.release()
+
+@mcp.tool
+def get_downloadable_links() -> Dict[str, Any]:
+        """Get all downloadable resource links from the current page (PDFs, videos, documents, etc.)
+    
+        Returns:
+            Dict[str, Any]: Dictionary containing:
+                - status: "success" or "error"
+                - links: Newline-separated list of downloadable resource URLs
+                - message: Error message (if error occurred)
+                
+        Example:
+            >>> get_downloadable_links()
+            {
+                "status": "success",
+                "links": "https://example.com/doc.pdf\nhttps://example.com/video.mp4"
+            }
+            
+        Notes:
+            - Requires an active browser session
+            - Returns links to common downloadable resources (PDFs, videos, documents, archives, etc.)
+            - Links are returned as plain text
+        """
+        print("Fetching downloadable resource links")
+        if not init_browser():
+            return {"status": "error", "message": "Failed to initialize browser"}
+        
+        if not browser_lock.acquire(timeout=10):
+            return {"status": "error", "message": "Browser is busy, try again later"}
+        
+        try:
+            links = safe_browser_operation("get_downloadable", browser_instance.get_downloadable)
+            if links is None:
+                return {"status": "error", "message": "Failed to get downloadable links"}
+            
+            return {
+                "status": "success",
+                "links": '\n'.join(links) if links else "No downloadable links found"
+            }
+        except Exception as e:
+            print(f"Error fetching downloadable links: {e}")
+            return {"status": "error", "message": str(e)}
+        finally:
+            browser_lock.release()
+
+@mcp.tool
+def download_file(url: str) -> Dict[str, Any]:
+        """Download a file from URL to current directory.
+    
+        Args:
+            url (str): The URL of file to download
+            
+        Returns:
+            Dict[str, Any]: Dictionary containing:
+                - status: "success" or "error"
+                - filename: Name of downloaded file (if successful)
+                - message: Error message (if error occurred)
+                
+        Example:
+            >>> download_file("https://example.com/doc.pdf")
+            {
+                "status": "success",
+                "filename": "doc.pdf"
+            }
+            
+        Notes:
+            - Requires an active browser session
+            - Only downloads files with common extensions (PDFs, videos, documents, etc.)
+            - Files are saved to current working directory
+        """
+        print(f"Downloading file from URL: {url}")
+        if not init_browser():
+            return {"status": "error", "message": "Failed to initialize browser"}
+        
+        if not browser_lock.acquire(timeout=10):
+            return {"status": "error", "message": "Browser is busy, try again later"}
+        
+        try:
+            result = safe_browser_operation("download_file", browser_instance.download_file, url)
+            if result is None:
+                return {"status": "error", "message": "Failed to download file"}
+            
+            success, filename = result
+            if success:
+                return {
+                    "status": "success",
+                    "filename": filename
+                }
+            return {"status": "error", "message": "Download failed"}
+        except Exception as e:
+            print(f"Error downloading file: {e}")
+            return {"status": "error", "message": str(e)}
+        finally:
+            browser_lock.release()
 
 @mcp.tool
 def take_screenshot() -> Dict[str, str]:
-    """Take and return screenshot"""
+    """Capture a screenshot of the current page
+    
+    Returns:
+        Dict[str, str]: Dictionary containing:
+            - status: "success" or "error"
+            - filename: Path to saved screenshot image
+            - message: Error message (if error occurred)
+            
+    Example:
+        >>> take_screenshot()
+        {
+            "status": "success",
+            "filename": "screenshot_1234567890.png"
+        }
+        
+    Notes:
+        - Screenshots are saved in .screenshots/ directory
+        - Filename contains timestamp when taken
+        - PNG format is used
+    """
     print("Taking screenshot")
     if not init_browser():
         return {"status": "error", "message": "Failed to initialize browser"}
@@ -217,56 +408,6 @@ def take_screenshot() -> Dict[str, str]:
         }
     except Exception as e:
         print(f"Error taking screenshot: {e}")
-        return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
-
-@mcp.tool
-def get_page_info() -> Dict[str, str]:
-    """Get current page info"""
-    print("Fetching current page info")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-    
-    try:
-        current_url = safe_browser_operation("get_url", browser_instance.get_current_url)
-        title = safe_browser_operation("get_title", browser_instance.get_page_title)
-        
-        return {
-            "status": "success",
-            "current_url": current_url or "unknown",
-            "title": title or "unknown"
-        }
-    except Exception as e:
-        print(f"Error fetching page info: {e}")
-        return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
-
-@mcp.tool
-def is_link_valid(url: str) -> Dict[str, Any]:
-    """Check if a link is valid for navigation"""
-    print(f"Checking if link is valid: {url}")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-    
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-    
-    try:
-        valid = safe_browser_operation("check_link", browser_instance.is_link_valid, url)
-        if valid is None:
-            return {"status": "error", "message": "Link validation timed out"}
-        
-        return {
-            "status": "success",
-            "valid": valid
-        }
-    except Exception as e:
-        print(f"Error checking link validity: {e}")
         return {"status": "error", "message": str(e)}
     finally:
         browser_lock.release()
