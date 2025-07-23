@@ -613,4 +613,5 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
+    os.makedirs('workspace', exist_ok=True)  # Ensure workspace directory exists
     main()
