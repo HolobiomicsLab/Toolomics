@@ -16,5 +16,8 @@
     },
     {
         "mcp_host/shell/server.py": 5005
+    },
+    {
+        "mcp_docker/shell/server.py": 5100
     }
 ]

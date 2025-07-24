@@ -32,6 +32,8 @@ async def test_workspace_functionality():
         result = await client.call_tool("execute_command", {
             "command": f"echo '{test_content}' > {test_filename}",
         })
+
+        print(f"📋 Command output: {result[0].text}")
         
         # Test 2: Verify the file was created in workspace
         print("\n" + "=" * 50)
@@ -41,6 +43,8 @@ async def test_workspace_functionality():
         result = await client.call_tool("execute_command", {
             "command": f"ls -la {test_filename}",
         })
+
+        print(f"📋 Command output: {result[0].text}")
         
         # Test 3: Check current working directory
         print("\n" + "=" * 50)
@@ -50,6 +54,8 @@ async def test_workspace_functionality():
         result = await client.call_tool("execute_command", {
             "command": "pwd",
         })
+
+        print(f"📋 Command output: {result[0].text}")
 
 
 if __name__ == "__main__":

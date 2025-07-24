@@ -10,5 +10,5 @@ services:
     working_dir: /app
     volumes:
       - ./rstudio_data:/home/rstudio  # Persist RStudio data (optional)
-      - "../../:/app"
+      - "../../workspace/:/app"
     restart: unless-stopped  # Auto-restart unless manually stopped
