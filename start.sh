@@ -1,7 +1,9 @@
 #!/bin/bash
 echo "Installing dependencies..."
-pip install -r requirements.txt
+python3 -m ensurepip
+python3 pip install -r requirements.txt
 echo "Building docker for Toolomics..."
+
 
 REBUILD=false
 if [[ "$1" == "--rebuild" || "$1" == "-r" ]]; then
@@ -32,7 +34,7 @@ done
 
 echo "Starting on-host MCP..."
 # Start MCP server on host
-python3.10 deploy.py --config config.json --mcp-dir mcp_host &
+python3 deploy.py --config config.json --mcp-dir mcp_host &
 HOST_PID=$!
 
 # start the MCP server in docker
