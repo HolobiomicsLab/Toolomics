@@ -31,13 +31,14 @@ def get_mcp_name() -> str:
     return "R command MCP"
 
 # Ensure workspace directory exists
-STORAGE_DIR = Path("./workspace")
-STORAGE_DIR.mkdir(exist_ok=True)
+#STORAGE_DIR = Path("./workspace")
+#STORAGE_DIR.mkdir(exist_ok=True)
 
 SCRIPT_DIR = Path("./script")
 SCRIPT_DIR.mkdir(exist_ok=True)
 
-print(f"Using workspace directory: {STORAGE_DIR}")
+
+#print(f"Using workspace directory: {STORAGE_DIR}")
 print(f"Using script directory: {SCRIPT_DIR}")
 
 def run_rscript(script_path: str) -> CommandResult:
@@ -59,7 +60,7 @@ def run_rscript(script_path: str) -> CommandResult:
 def execute_r_code(r_code: str) -> Dict[str,Any]:
     f"""
     Execute R code.
-    Also saves the executed R script in the workspace directory.
+    Also saves the executed R script in the script directory.
 
     Args:
         r_code: The R code to execute as a string.
@@ -88,6 +89,9 @@ def execute_r_code(r_code: str) -> Dict[str,Any]:
             stderr=f"Error saving R script: {str(e)}",
             exit_code=-1,
         )
+    
+
+    #print(run_bash_subprocess("ls"))
     
     res = run_rscript(script_path)
     print(f"Executed R script: {script_name} with result: {res}")
@@ -132,7 +136,7 @@ def list_workspace_files() -> List[str]:
         >>> list_workspace_files()
         ["analysis1.r", "data.csv", "results.txt"]
     """
-    return [f.name for f in STORAGE_DIR.iterdir() if f.is_file()]
+    return [f.name for f in Path(".").iterdir() if f.is_file()]
 
 @mcp.tool
 def list_script_files() -> List[str]:
