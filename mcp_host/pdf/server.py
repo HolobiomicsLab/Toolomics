@@ -916,9 +916,16 @@ def search_keywords_in_pdf(filename: str, keywords: str, case_sensitive: bool = 
             exit_code=1
         )
 
-print("Starting PDF Processing MCP server with stdio transport...")
+print("Starting PDF Processing MCP server with streamable-http transport...")
 if not PDF_LIBS_AVAILABLE:
     print("Warning: PDF libraries not fully available. Some features may not work.")
     print("Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn")
 
-mcp.run(transport="stdio")
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python server.py <port>")
+        sys.exit(1)
+    
+    port = int(sys.argv[1])
+    print(f"Starting server on port {port}")
+    mcp.run(transport="streamable-http", port=port, host="127.0.0.1")

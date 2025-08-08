@@ -184,5 +184,11 @@ def get_mcp_server_info(qualified_name: str) -> Dict[str, Any]:
     }
 
 if __name__ == "__main__":
-    print("Starting MCP Search server with stdio transport...")
-    mcp.run(transport="stdio")
+    print("Starting MCP Search server with streamable-http transport...")
+    if len(sys.argv) != 2:
+        print("Usage: python server.py <port>")
+        sys.exit(1)
+    
+    port = int(sys.argv[1])
+    print(f"Starting server on port {port}")
+    mcp.run(transport="streamable-http", port=port, host="127.0.0.1")

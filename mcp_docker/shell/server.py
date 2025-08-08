@@ -80,5 +80,12 @@ def execute_command(command: str) -> dict:
     
     return run_bash_subprocess(command, timeout=1800)
 
-print("Starting Shell MCP server with stdio transport...")
-mcp.run(transport="stdio")
+print("Starting Shell MCP server with streamable-http transport...")
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python server.py <port>")
+        sys.exit(1)
+    
+    port = int(sys.argv[1])
+    print(f"Starting server on port {port}")
+    mcp.run(transport="streamable-http", port=port, host="127.0.0.1")

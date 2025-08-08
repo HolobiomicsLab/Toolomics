@@ -489,11 +489,19 @@ screenshots_dir = os.path.join(os.path.dirname(__file__), '.screenshots')
 if not os.path.exists(screenshots_dir):
     os.makedirs(screenshots_dir)
 
-print("Starting Browser MCP server with stdio transport...")
+print("Starting Browser MCP server with streamable-http transport...")
 
 # Start SearxNG first
 start_searxng()
 
 # Initialize browser
 init_browser()
-mcp.run(transport="stdio")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python server.py <port>")
+        sys.exit(1)
+    
+    port = int(sys.argv[1])
+    print(f"Starting server on port {port}")
+    mcp.run(transport="streamable-http", port=port, host="127.0.0.1")

@@ -8,6 +8,7 @@ Provides tools for creating, reading, and manipulating CSV files.
 Author: Martin Legrand - HolobiomicsLab, CNRS
 """
 
+import sys
 import pandas as pd
 import json
 from pathlib import Path
@@ -352,5 +353,12 @@ def get_csv_stats(name: str) -> Dict[str, Any]:
     except Exception as e:
         return {"status": str(e)}
 
-print("Starting CSV MCP server with stdio transport...")
-mcp.run(transport="stdio")
+print("Starting CSV MCP server with streamable-http transport...")
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python server.py <port>")
+        sys.exit(1)
+    
+    port = int(sys.argv[1])
+    print(f"Starting server on port {port}")
+    mcp.run(transport="streamable-http", port=port, host="127.0.0.1")
