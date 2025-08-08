@@ -184,11 +184,5 @@ def get_mcp_server_info(qualified_name: str) -> Dict[str, Any]:
     }
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1].isdigit():
-        port = int(sys.argv[1])
-    else:
-        port = int(input("Enter port number: "))
-    
-    print(f"Running MCP Finder server on port {port}")
-    
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
+    print("Starting MCP Search server with stdio transport...")
+    mcp.run(transport="stdio")

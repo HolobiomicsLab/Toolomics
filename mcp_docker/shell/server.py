@@ -80,9 +80,5 @@ def execute_command(command: str) -> dict:
     
     return run_bash_subprocess(command, timeout=1800)
 
-if len(sys.argv) > 1 and sys.argv[1].isdigit():
-    port = int(sys.argv[1])
-else:
-    port = int(input("Enter port number: "))
-print(f"Running Shell MCP server on port {port}")
-mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
+print("Starting Shell MCP server with stdio transport...")
+mcp.run(transport="stdio")

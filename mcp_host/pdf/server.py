@@ -916,15 +916,9 @@ def search_keywords_in_pdf(filename: str, keywords: str, case_sensitive: bool = 
             exit_code=1
         )
 
-# Port handling for deployment
-if len(sys.argv) > 1 and sys.argv[1].isdigit():
-    port = int(sys.argv[1])
-else:
-    port = int(input("Enter port number: "))
-
-print(f"Starting PDF Processing MCP server on port {port}...")
+print("Starting PDF Processing MCP server with stdio transport...")
 if not PDF_LIBS_AVAILABLE:
     print("Warning: PDF libraries not fully available. Some features may not work.")
     print("Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn")
 
-mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
+mcp.run(transport="stdio")

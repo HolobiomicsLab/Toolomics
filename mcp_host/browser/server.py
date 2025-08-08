@@ -416,15 +416,6 @@ screenshots_dir = os.path.join(os.path.dirname(__file__), '.screenshots')
 if not os.path.exists(screenshots_dir):
     os.makedirs(screenshots_dir)
 
-if len(sys.argv) > 1 and sys.argv[1].isdigit():
-    port = int(sys.argv[1])
-else:
-    port = int(input("Enter port number: "))
-
-print(f"Running browser MCP server on port {port}")
+print("Starting Browser MCP server with stdio transport...")
 init_browser()
-mcp.run(transport="streamable-http",
-        host="0.0.0.0",
-        port=port,
-        path="/mcp"
-)
+mcp.run(transport="stdio")

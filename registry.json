@@ -1,0 +1,70 @@
+{
+  "servers": {
+    "toolomics-rscript": {
+      "description": "R Script execution MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "args": ["python", "/app/mcp_host/Rscript/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "rscript"
+        }
+      ]
+    },
+    "toolomics-browser": {
+      "description": "Web browser automation and search MCP server", 
+      "image": "holobiomicslab/toolomics:latest",
+      "args": ["python", "/app/mcp_host/browser/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "browser"
+        }
+      ]
+    },
+    "toolomics-csv": {
+      "description": "CSV data processing MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "args": ["python", "/app/mcp_host/csv/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "csv"
+        }
+      ]
+    },
+    "toolomics-search": {
+      "description": "MCP server registry search and discovery",
+      "image": "holobiomicslab/toolomics:latest",
+      "args": ["python", "/app/mcp_host/mcp_search/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "search"
+        }
+      ]
+    },
+    "toolomics-pdf": {
+      "description": "PDF processing and navigation MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "args": ["python", "/app/mcp_host/pdf/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "pdf"
+        }
+      ]
+    },
+    "toolomics-shell-docker": {
+      "description": "Shell command execution MCP server (dockerized)",
+      "image": "holobiomicslab/toolomics:latest",
+      "args": ["python", "/app/mcp_docker/shell/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "shell-docker"
+        }
+      ]
+    }
+  }
+}

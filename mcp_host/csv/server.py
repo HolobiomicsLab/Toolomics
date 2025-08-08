@@ -352,10 +352,5 @@ def get_csv_stats(name: str) -> Dict[str, Any]:
     except Exception as e:
         return {"status": str(e)}
 
-import sys
-if len(sys.argv) > 1 and sys.argv[1].isdigit():
-    port = int(sys.argv[1])
-else:
-    port = int(input("Enter port number: "))
-print(f"Starting CSV MCP server on port {port}...")
-mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
+print("Starting CSV MCP server with stdio transport...")
+mcp.run(transport="stdio")

@@ -10,13 +10,14 @@ RUN useradd -m -s /bin/bash dockeruser && \
 # Set the working directory
 WORKDIR /app
 
-COPY workspace /app/workspace
+# Copy the entire project
+COPY . /app/
 
-# Copy the application code
-COPY requirements.txt /app/requirements.txt
-
-# Install Python dependencies
+# Install Python dependencies  
 RUN pip3 install -r /app/requirements.txt
+
+# Create workspace directory
+RUN mkdir -p /app/workspace
 
 # Change ownership of the app directory to dockeruser
 RUN chown -R dockeruser:dockeruser /app
