@@ -14,6 +14,8 @@ import threading
 import time
 import os
 import sys
+import subprocess
+import atexit
 from typing import List, Dict, Any, Optional
 import signal
 from contextlib import contextmanager
@@ -49,6 +51,77 @@ browser_lock = threading.Lock()
 browser_instance = None
 
 BROWSER_TIMEOUT = 30
+
+# SearxNG management
+searxng_process = None
+searxng_dir = os.path.join(os.path.dirname(__file__), 'searxng')
+
+def start_searxng():
+    """Start SearxNG using docker-compose if not already running"""
+    global searxng_process
+    
+    if not os.path.exists(searxng_dir):
+        print("Warning: SearxNG directory not found. Search functionality may not work.")
+        return False
+        
+    # Check if SearxNG is already running
+    try:
+        import requests
+        response = requests.get("http://localhost:8080/", timeout=5)
+        if response.status_code == 200:
+            print("SearxNG is already running")
+            return True
+    except:
+        pass
+    
+    print("Starting SearxNG services...")
+    try:
+        # Start docker-compose in detached mode
+        searxng_process = subprocess.Popen(
+            ["docker-compose", "up", "-d"],
+            cwd=searxng_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        # Wait for the process to complete
+        searxng_process.wait()
+        
+        # Give SearxNG a moment to start up
+        time.sleep(5)
+        
+        # Verify it's running
+        try:
+            import requests
+            response = requests.get("http://localhost:8080/", timeout=10)
+            if response.status_code == 200:
+                print("SearxNG started successfully")
+                return True
+        except:
+            pass
+            
+        print("Warning: SearxNG may not have started properly")
+        return False
+        
+    except Exception as e:
+        print(f"Failed to start SearxNG: {e}")
+        return False
+
+def stop_searxng():
+    """Stop SearxNG services on exit"""
+    if os.path.exists(searxng_dir):
+        try:
+            print("Stopping SearxNG services...")
+            subprocess.run(
+                ["docker-compose", "down"],
+                cwd=searxng_dir,
+                capture_output=True
+            )
+        except Exception as e:
+            print(f"Error stopping SearxNG: {e}")
+
+# Register cleanup function
+atexit.register(stop_searxng)
 
 @contextmanager
 def timeout_handler(seconds):
@@ -417,5 +490,10 @@ if not os.path.exists(screenshots_dir):
     os.makedirs(screenshots_dir)
 
 print("Starting Browser MCP server with stdio transport...")
+
+# Start SearxNG first
+start_searxng()
+
+# Initialize browser
 init_browser()
 mcp.run(transport="stdio")
