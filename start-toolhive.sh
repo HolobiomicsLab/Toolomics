@@ -53,6 +53,24 @@ else
     echo "✅ Docker image already exists"
 fi
 
+# Start SearxNG services first
+echo "🔍 Starting SearxNG services..."
+SEARXNG_DIR="mcp_host/browser/searxng"
+if [[ -f "$SEARXNG_DIR/docker-compose.yml" ]]; then
+    cd "$SEARXNG_DIR"
+    docker-compose up -d
+    if [ $? -eq 0 ]; then
+        echo "✅ SearxNG services started successfully"
+    else
+        echo "❌ Failed to start SearxNG services"
+        exit 1
+    fi
+    cd ../../..
+else
+    echo "❌ SearxNG docker-compose.yml not found at $SEARXNG_DIR"
+    exit 1
+fi
+
 # Create workspace directory
 echo "📁 Creating workspace directory..."
 mkdir -p workspace
@@ -72,7 +90,16 @@ cleanup() {
     echo ""
     echo "🛑 Stopping all MCP servers..."
     thv stop --all 2>/dev/null || true
-    echo "✅ All servers stopped"
+    echo "✅ All MCP servers stopped"
+    
+    echo "🛑 Stopping SearxNG services..."
+    SEARXNG_DIR="mcp_host/browser/searxng"
+    if [[ -f "$SEARXNG_DIR/docker-compose.yml" ]]; then
+        cd "$SEARXNG_DIR"
+        docker-compose down 2>/dev/null || true
+        cd ../../..
+        echo "✅ SearxNG services stopped"
+    fi
     exit 0
 }
 
@@ -90,8 +117,8 @@ successful_servers=()
 for server in "${SERVERS[@]}"; do
     echo "🔄 Starting $server..."
     
-    # Mount workspace directory to /workspace in container
-    if thv run "$server" --volume "$(pwd)/workspace:/workspace" --detach; then
+    # Mount workspace directory to /workspace in container and connect to searxng network
+    if thv run "$server" --volume "$(pwd)/workspace:/workspace" --network searxng_default --detach; then
         echo "✅ $server started successfully"
         successful_servers+=("$server")
     else

@@ -14,7 +14,27 @@ def search_searx(query):
     Returns:
         str: Formatted search results or error message
     """
-    base_url = "http://0.0.0.0:8080"
+    # Try container service name first, then fallback options
+    base_url_candidates = [
+        "http://searxng:8080",              # Docker service name (preferred)
+        "http://localhost:8080",            # Local development
+        "http://0.0.0.0:8080",             # Original fallback
+        "http://host.docker.internal:8080"  # Docker Desktop
+    ]
+    
+    base_url = None
+    for url in base_url_candidates:
+        try:
+            # Quick connectivity test
+            response = requests.get(f"{url}/", timeout=2)
+            if response.status_code == 200:
+                base_url = url
+                break
+        except:
+            continue
+    
+    if not base_url:
+        base_url = base_url_candidates[0]  # Use first as fallback
     if not base_url:
         return "Error: SearxNG base URL must be provided either as an argument or via the SEARXNG_BASE_URL environment variable."
     

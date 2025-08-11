@@ -10,6 +10,9 @@ from bs4 import BeautifulSoup
 from typing import List, Optional, Dict, Any
 import helium
 from helium import *
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+# Override helium's ChromeOptions with selenium's for better compatibility
+helium.ChromeOptions = ChromeOptions
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -22,10 +25,73 @@ class Browser:
         
     def _start_browser(self):
         """Start the browser with appropriate options."""
-        options = {
-            'headless': self.headless,
-        }
-        start_chrome(**options)
+        try:
+            # Detect containerized environment
+            in_container = os.environ.get('DISPLAY') == ':99' or os.path.exists('/.dockerenv')
+            
+            if in_container:
+                # Container environment - use Chromium with optimized settings
+                chrome_options = helium.ChromeOptions()
+                chrome_options.add_argument('--no-sandbox')
+                chrome_options.add_argument('--disable-dev-shm-usage')
+                chrome_options.add_argument('--disable-gpu')
+                chrome_options.add_argument('--disable-software-rasterizer')
+                chrome_options.add_argument('--disable-background-timer-throttling')
+                chrome_options.add_argument('--disable-renderer-backgrounding')
+                chrome_options.add_argument('--disable-backgrounding-occluded-windows')
+                chrome_options.add_argument('--disable-client-side-phishing-detection')
+                chrome_options.add_argument('--disable-crash-reporter')
+                chrome_options.add_argument('--disable-extensions')
+                chrome_options.add_argument('--disable-features=TranslateUI')
+                chrome_options.add_argument('--disable-ipc-flooding-protection')
+                chrome_options.add_argument('--memory-pressure-off')
+                chrome_options.add_argument('--max_old_space_size=4096')
+                chrome_options.add_argument('--single-process')
+                
+                if self.headless:
+                    chrome_options.add_argument('--headless=new')
+                
+                # Set Chromium binary path for container
+                chrome_options.binary_location = '/usr/bin/chromium'
+                
+                # Start with custom options
+                start_chrome(options=chrome_options)
+                print("Started Chromium in container environment")
+            else:
+                # Desktop environment - try Chrome first, fallback to Chromium
+                try:
+                    options = {'headless': self.headless}
+                    start_chrome(**options)
+                    print("Started Chrome in desktop environment")
+                except Exception as chrome_error:
+                    print(f"Chrome not available, trying Chromium: {chrome_error}")
+                    chrome_options = helium.ChromeOptions()
+                    chrome_options.binary_location = '/usr/bin/chromium'
+                    if self.headless:
+                        chrome_options.add_argument('--headless=new')
+                    start_chrome(options=chrome_options)
+                    print("Started Chromium in desktop environment")
+                
+        except Exception as e:
+            print(f"Failed to start browser with Helium: {e}")
+            # Final fallback with minimal options
+            try:
+                chrome_options = helium.ChromeOptions()
+                chrome_options.add_argument('--no-sandbox')
+                chrome_options.add_argument('--disable-dev-shm-usage')
+                chrome_options.add_argument('--headless=new')
+                chrome_options.add_argument('--single-process')
+                # Try both Chrome and Chromium paths
+                for browser_path in ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser']:
+                    if os.path.exists(browser_path):
+                        chrome_options.binary_location = browser_path
+                        break
+                
+                start_chrome(options=chrome_options)
+                print("Successfully started browser with fallback options")
+            except Exception as fallback_error:
+                print(f"All browser initialization attempts failed: {fallback_error}")
+                raise RuntimeError(f"Unable to initialize browser. Chrome/Chromium may not be installed or accessible: {fallback_error}")
         
     def go_to(self, url: str) -> bool:
         """Navigate to a specified URL."""
