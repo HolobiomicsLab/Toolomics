@@ -82,10 +82,21 @@ def execute_command(command: str) -> dict:
 
 print("Starting Shell MCP server with streamable-http transport...")
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    # Get port from environment variable (set by ToolHive) or command line argument as fallback
+    port = None
+    if "MCP_PORT" in os.environ:
+        port = int(os.environ["MCP_PORT"])
+        print(f"Using port from MCP_PORT environment variable: {port}")
+    elif "FASTMCP_PORT" in os.environ:
+        port = int(os.environ["FASTMCP_PORT"])
+        print(f"Using port from FASTMCP_PORT environment variable: {port}")
+    elif len(sys.argv) == 2:
+        port = int(sys.argv[1])
+        print(f"Using port from command line argument: {port}")
+    else:
         print("Usage: python server.py <port>")
+        print("Or set MCP_PORT/FASTMCP_PORT environment variable")
         sys.exit(1)
     
-    port = int(sys.argv[1])
     print(f"Starting server on port {port}")
     mcp.run(transport="streamable-http", port=port, host="127.0.0.1")

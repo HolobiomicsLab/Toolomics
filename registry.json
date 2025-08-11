@@ -3,6 +3,7 @@
     "toolomics-rscript": {
       "description": "R Script execution MCP server",
       "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/Rscript/server.py"],
       "env_vars": [
         {
@@ -14,6 +15,7 @@
     "toolomics-browser": {
       "description": "Web browser automation and search MCP server", 
       "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/browser/server.py"],
       "env_vars": [
         {
@@ -25,6 +27,7 @@
     "toolomics-csv": {
       "description": "CSV data processing MCP server",
       "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/csv/server.py"],
       "env_vars": [
         {
@@ -36,6 +39,7 @@
     "toolomics-search": {
       "description": "MCP server registry search and discovery",
       "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/mcp_search/server.py"],
       "env_vars": [
         {
@@ -47,6 +51,7 @@
     "toolomics-pdf": {
       "description": "PDF processing and navigation MCP server",
       "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/pdf/server.py"],
       "env_vars": [
         {
@@ -58,6 +63,7 @@
     "toolomics-shell-docker": {
       "description": "Shell command execution MCP server (dockerized)",
       "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
       "args": ["python", "/app/mcp_docker/shell/server.py"],
       "env_vars": [
         {
