@@ -71,10 +71,7 @@ SERVERS=(
 cleanup() {
     echo ""
     echo "🛑 Stopping all MCP servers..."
-    for server in "${SERVERS[@]}"; do
-        echo "   Stopping $server..."
-        thv stop "$server" 2>/dev/null || true
-    done
+    thv stop --all 2>/dev/null || true
     echo "✅ All servers stopped"
     exit 0
 }
@@ -88,6 +85,7 @@ echo "🚀 Starting MCP servers..."
 echo "=========================="
 
 failed_servers=()
+successful_servers=()
 
 for server in "${SERVERS[@]}"; do
     echo "🔄 Starting $server..."
@@ -95,6 +93,7 @@ for server in "${SERVERS[@]}"; do
     # Mount workspace directory to /workspace in container
     if thv run "$server" --volume "$(pwd)/workspace:/workspace" --detach; then
         echo "✅ $server started successfully"
+        successful_servers+=("$server")
     else
         echo "❌ Failed to start $server"
         failed_servers+=("$server")
@@ -134,21 +133,72 @@ echo "   - Stop server:      thv stop <server-name>"
 echo "   - Stop all:         thv stop --all"
 echo ""
 
+# Show status regardless of startup success
 if [ ${#failed_servers[@]} -eq 0 ]; then
     echo "🎉 All servers are running! You can now use Mimosa-AI."
-    echo ""
-    echo "⌨️  Press Ctrl+C to stop all servers"
-    
+else
+    echo "⚠️  Some servers failed to start, but continuing to monitor running servers."
+    echo "   Failed servers: ${failed_servers[*]}"
+    echo "   Monitoring servers: ${successful_servers[*]}"
+fi
+
+echo ""
+echo "⌨️  Press Ctrl+C to stop all servers"
+
+# Only monitor servers if we have any successful ones
+if [ ${#successful_servers[@]} -gt 0 ]; then
     # Keep script running and monitor servers
     while true; do
         sleep 10
         
-        # Check if any server has stopped
+        # Check if any successfully started server has stopped
         stopped_servers=()
-        for server in "${SERVERS[@]}"; do
-            if ! thv list --format json | grep -q "\"name\":\"$server\""; then
-                stopped_servers+=("$server")
+        
+        # Wait a moment and retry up to 3 times to handle timing issues
+        for attempt in 1 2 3; do
+            stopped_servers=()
+            
+            # Get server list once and parse it
+            server_list=$(thv list --format json 2>/dev/null)
+            if [ $? -ne 0 ] || [ -z "$server_list" ]; then
+                echo "⚠️  Warning: Failed to get server list (attempt $attempt/3)"
+                if [ $attempt -lt 3 ]; then
+                    sleep 2
+                    continue
+                else
+                    echo "❌ Unable to check server status after 3 attempts"
+                    break 2
+                fi
             fi
+            
+            # Check only the servers that started successfully
+            for server in "${successful_servers[@]}"; do
+                # Use jq if available, otherwise use grep with better pattern
+                if command -v jq &> /dev/null; then
+                    if ! echo "$server_list" | jq -e ".[] | select(.name == \"$server\" and .status == \"running\")" &>/dev/null; then
+                        stopped_servers+=("$server")
+                    fi
+                else
+                    # Fallback to grep with more precise pattern
+                    if ! echo "$server_list" | grep -q "\"name\":\"$server\".*\"status\":\"running\""; then
+                        stopped_servers+=("$server")
+                    fi
+                fi
+            done
+            
+            # If no stopped servers found, we're good
+            if [ ${#stopped_servers[@]} -eq 0 ]; then
+                break
+            fi
+            
+            # If this was the last attempt, report the issue
+            if [ $attempt -eq 3 ]; then
+                break
+            fi
+            
+            # Wait before retry to let servers fully start
+            echo "⏳ Servers may still be starting up, retrying in 3 seconds (attempt $attempt/3)..."
+            sleep 3
         done
         
         if [ ${#stopped_servers[@]} -gt 0 ]; then
@@ -162,6 +212,9 @@ if [ ${#failed_servers[@]} -eq 0 ]; then
         fi
     done
 else
-    echo "❌ Some servers failed to start. Check the logs above for details."
-    exit 1
+    echo "❌ No servers started successfully. Exiting monitoring."
+    # Still wait for user input to allow manual cleanup
+    while true; do
+        sleep 10
+    done
 fi
