@@ -331,6 +331,7 @@ ui_*.h
 *.jsc
 Makefile*
 *build-*
+!build-toolhive.sh
 *.qm
 *.prl
 
