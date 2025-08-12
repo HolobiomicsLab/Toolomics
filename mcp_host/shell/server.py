@@ -8,13 +8,10 @@ Provides tools for shell navigation and interaction.
 Author: Martin Legrand - HolobiomicsLab, CNRS
 """
 
-
 import os
 import sys
 from fastmcp import FastMCP
-from typing import Optional
 import shlex
-import sys
 from pathlib import Path
 
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -33,9 +30,11 @@ mcp = FastMCP(
     instructions=description,
 )
 
+
 @mcp.tool
 def get_mcp_name() -> str:
     return "Bash command MCP"
+
 
 @mcp.tool
 @return_as_dict
@@ -54,20 +53,27 @@ def execute_command(command: str) -> dict:
     Example:
         execute_command(command="ls -la /tmp")
     """
-    
+
     print(f"Executing command: {command}")
 
     dangerous_patterns = [
-        ['rm', '-r'], ['rm', '-rf'], ['rm', '-f'],
-        ['kill', '-9'], ['chmod', '777'],
-        ['mv', '/etc'], ['cp', '/etc'], ['rm', '/etc'], 
-        ['rm', '/usr'], ['rm', '/var'], ['rm', '/']
+        ["rm", "-r"],
+        ["rm", "-rf"],
+        ["rm", "-f"],
+        ["kill", "-9"],
+        ["chmod", "777"],
+        ["mv", "/etc"],
+        ["cp", "/etc"],
+        ["rm", "/etc"],
+        ["rm", "/usr"],
+        ["rm", "/var"],
+        ["rm", "/"],
     ]
     try:
         command_words = shlex.split(command.lower())
     except ValueError:
         command_words = command.lower().split()
-    
+
     # Check for dangerous command patterns
     for pattern in dangerous_patterns:
         if all(word in command_words for word in pattern):
@@ -75,10 +81,11 @@ def execute_command(command: str) -> dict:
                 status="error",
                 stdout="Command blocked for security reasons",
                 stderr="Command blocked for security reasons",
-                exit_code=-1
+                exit_code=-1,
             )
-    
+
     return run_bash_subprocess(command, timeout=1800)
+
 
 print("Starting Shell MCP server with streamable-http transport...")
 if __name__ == "__main__":
@@ -97,6 +104,6 @@ if __name__ == "__main__":
         print("Usage: python server.py <port>")
         print("Or set MCP_PORT/FASTMCP_PORT environment variable")
         sys.exit(1)
-    
+
     print(f"Starting server on port {port}")
     mcp.run(transport="streamable-http", port=port, host="0.0.0.0")

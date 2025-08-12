@@ -53,8 +53,5 @@ ENV DISPLAY=:99
 # Switch to the dockeruser
 USER dockeruser
 
-# # Expose ports, from 5100 to 5200 as MCP might use all this range depending on number of tools deployed
-# EXPOSE 5100-5200
-
-# Command to run the application
-CMD ["python3", "/app/deploy.py", "--config", "/app/config.json", "--mcp-dir", "/app/mcp_docker", "--starting-port", "5100"]
+# No CMD directive needed - ToolHive manages container execution via registry.json
+# Each server is started individually by ToolHive with specific arguments

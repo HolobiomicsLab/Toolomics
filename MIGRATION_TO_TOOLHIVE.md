@@ -1,6 +1,6 @@
 # Migration to ToolHive - COMPLETED ✅
 
-This document describes the **completed migration** of Toolomics MCP servers from the custom deploy.py system to ToolHive.
+This document describes the **completed migration** of Toolomics MCP servers from the custom deploy.py system to ToolHive, including the final cleanup phase.
 
 ## Overview
 
@@ -8,9 +8,10 @@ The migration has successfully enabled:
 - **Dynamic port allocation** - No more fixed port assignments
 - **Better isolation** - Each MCP server runs in its own container 
 - **Easier management** - Use `thv` commands to start/stop/monitor servers
+- **Shared workspace** - All MCP servers work in unified `/workspace` directory
 - **Transport-aware discovery** - Mimosa-AI automatically finds servers via ToolHive with proper SSE transport
 - **Universal compatibility** - Works with any MCP servers, not just toolomics
-- **Clean architecture** - Removed legacy port scanning code
+- **Clean architecture** - All legacy code removed, ToolHive-only workflow
 
 ## Migration Status: ✅ COMPLETE
 
@@ -20,35 +21,58 @@ The migration has successfully enabled:
 - ✅ `toolomics-csv` - CSV data processing (11 tools)
 - ✅ `toolomics-search` - MCP registry search (2 tools)
 - ✅ `toolomics-pdf` - PDF processing (14 tools)
-- ✅ `toolomics-shell-docker` - Shell command execution (2 tools)
+- ✅ `toolomics-shell` - Shell command execution (2 tools)
 
-## Files Created/Modified
+## Migration Phases
 
-### New Files:
-- `registry.json` - ToolHive registry with all toolomics MCP servers
-- `start-toolhive.sh` - New startup script using ToolHive
-- `MIGRATION_TO_TOOLHIVE.md` - This documentation
+### Phase 1: ToolHive Implementation
+- ✅ Created `registry.json` - ToolHive registry with all toolomics MCP servers
+- ✅ Created `start-toolhive.sh` (now renamed to `start.sh`) - ToolHive startup script
+- ✅ Updated **All MCP server files** - Transport compatibility 
+- ✅ Updated `/Mimosa-AI/sources/core/tools_manager.py` - ToolHive-only discovery
+- ✅ Updated `Dockerfile` - Container optimization
 
-### Modified Files:
-- **All MCP server files** - Updated from `streamable-http` to `stdio` transport
-- `/Mimosa-AI/sources/core/tools_manager.py` - **Complete rewrite** for ToolHive-only discovery with transport awareness
-- `Dockerfile` - Updated to copy entire project for container execution
+### Phase 2: Workspace Integration  
+- ✅ Fixed shared workspace issue between browser and PDF MCP tools
+- ✅ Modified `Dockerfile` - Set `WORKDIR /workspace` for shared file access
+- ✅ Updated volume mounting - Correct `/workspace` directory mapping
+
+### Phase 3: Legacy Cleanup (Final)
+- ✅ **Removed** `config.json` - Legacy port configuration
+- ✅ **Removed** `deploy.py` - Legacy deployment script  
+- ✅ **Removed** original `start.sh` - Legacy startup script
+- ✅ **Renamed** `start-toolhive.sh` → `start.sh` - Clean naming convention
+- ✅ **Updated** `Dockerfile` - Removed legacy CMD directive
+
+### Phase 4: Directory Structure Simplification
+- ✅ **Unified directory structure** - All servers now under `mcp_host/`
+- ✅ **Moved** `mcp_docker/shell/` → `mcp_host/shell/`
+- ✅ **Removed** empty `mcp_docker/` directory
+- ✅ **Updated** `registry.json` - Shell server path and name changes
+- ✅ **Updated** `start.sh` - Server name from `toolomics-shell-docker` → `toolomics-shell`
+- ✅ **Updated** documentation - README.md and CLAUDE.md reflect simplified structure
 
 ## Architecture Changes
 
-### Before (deploy.py):
-1. ❌ Fixed ports (5000-5005, 5100+)
-2. ❌ Mixed deployment (Python processes + Docker containers)
+### Before (Legacy System):
+1. ❌ Fixed ports (5000-5005, 5100+) via `config.json`
+2. ❌ Mixed deployment (Python processes + Docker containers) via `deploy.py`
 3. ❌ Port scanning discovery by Mimosa-AI
 4. ❌ Manual port conflict resolution
 5. ❌ `streamable-http` transport with `/mcp` endpoints
+6. ❌ Workspace file access issues between MCP tools
+7. ❌ Legacy code complexity
+8. ❌ Split directory structure (`mcp_host/` vs `mcp_docker/`)
 
-### After (ToolHive):
+### After (ToolHive + Cleanup + Restructure):
 1. ✅ **Dynamic port allocation** by ToolHive
 2. ✅ **All servers in isolated containers**
 3. ✅ **`thv list` discovery** by Mimosa-AI (ToolHive-only)
 4. ✅ **Automatic port management**
 5. ✅ **`stdio` transport with SSE proxy** (`/sse` endpoints)
+6. ✅ **Unified `/workspace` directory** - shared file access across all MCP tools
+7. ✅ **Clean architecture** - all legacy code removed
+8. ✅ **Simplified structure** - all servers under `mcp_host/` only
 
 ## Usage
 
@@ -58,16 +82,17 @@ The migration has successfully enabled:
 
 ### Starting Servers
 
-**ToolHive (current method):**
+**Current method (ToolHive):**
 ```bash
-./start-toolhive.sh
+./start.sh
 # or with rebuild
-./start-toolhive.sh --rebuild
+./start.sh --rebuild
 ```
 
-**Legacy method (REMOVED):**
-- ❌ `./start.sh` - No longer supported
-- ❌ `deploy.py` - Removed from workflow
+**Legacy methods (REMOVED):**
+- ❌ Original `./start.sh` - Replaced with ToolHive version
+- ❌ `deploy.py` - Completely removed
+- ❌ `config.json` - No longer needed
 
 ### Managing Servers
 
@@ -79,6 +104,8 @@ thv list
 **Stop specific server:**
 ```bash
 thv stop toolomics-browser
+# Note: Shell server is now named 'toolomics-shell' (not 'toolomics-shell-docker')
+thv stop toolomics-shell
 ```
 
 **Stop all servers:**
@@ -137,18 +164,34 @@ The `registry.json` defines all 6 toolomics MCP servers:
 2. ✅ **Dynamic ports**: Zero port conflicts
 3. ✅ **Universal discovery**: Works with any ToolHive MCP servers
 4. ✅ **Better management**: Rich CLI for all server operations
-5. ✅ **Simplified architecture**: Removed legacy code complexity
+5. ✅ **Simplified architecture**: All legacy code removed
 6. ✅ **Transport awareness**: Proper SSE/HTTP handling
 7. ✅ **Monitoring**: Built-in logging and status monitoring
+8. ✅ **Shared workspace**: Unified file access across all MCP tools
+9. ✅ **Clean codebase**: No legacy artifacts or unused files
 
 ## Migration Complete
 
 The migration is **100% complete and operational**. Key achievements:
 
+### Core Migration:
 - 🚀 **All servers running** via ToolHive with dynamic ports
 - 🔧 **Discovery working** with full transport awareness  
-- 🧹 **Legacy code removed** - clean ToolHive-only architecture
 - 📊 **All tools available** - complete functionality preserved
 - 🔒 **Better security** - containerized isolation achieved
 
-**No rollback needed** - migration successful and stable.
+### Workspace Integration:
+- 📁 **Shared workspace** - Browser and PDF tools share `/workspace` directory
+- 📄 **File compatibility** - Downloads from browser MCP accessible to PDF MCP
+- 🔧 **Container optimization** - `WORKDIR /workspace` for unified file access
+
+### Legacy Cleanup:
+- 🧹 **Complete cleanup** - All legacy files removed (`config.json`, `deploy.py`, original `start.sh`)
+- 🎯 **Clean codebase** - No unused artifacts or conflicting code
+- 📝 **Consistent naming** - `start.sh` now refers to ToolHive version
+- 🐳 **Optimized Dockerfile** - No legacy CMD directive, clean architecture
+
+### Directory Structure Simplification:
+- 📁 **Unified structure** - All servers moved to `mcp_host/` directory for cleaner organization
+
+**Migration Status: ✅ FULLY COMPLETE** - No rollback needed, system is production-ready.

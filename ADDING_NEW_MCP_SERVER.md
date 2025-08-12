@@ -1,331 +1,599 @@
 # Adding a New MCP Server to Toolomics
 
-This guide explains how to create and integrate a new MCP server into the Toolomics project running on ToolHive.
+This comprehensive guide walks you through creating and integrating a new MCP server into the Toolomics suite.
+
+## Prerequisites
+
+Before starting, ensure you have:
+- **ToolHive** installed: `curl -sSL https://get.toolhive.dev | sh`
+- **Docker** running on your system
+- **Python 3.10** environment
+- Basic understanding of the **FastMCP** framework
 
 ## Overview
 
-After the ToolHive migration, all MCP servers:
-- Run in isolated Docker containers
-- Use `stdio` transport (proxied to SSE by ToolHive)
-- Are automatically discovered by Mimosa-AI
-- Have dynamic port allocation
+Toolomics uses a standardized architecture where all MCP servers:
+1. Are located in `mcp_host/your_tool_name/` directory
+2. Run in Docker containers managed by ToolHive
+3. Share a centralized `/workspace` directory
+4. Use standardized response patterns via `shared.py` utilities
+5. Are registered in `registry.json` for ToolHive management
 
-## Step-by-Step Process
+## Step 1: Create the Server Directory Structure
 
-### 1. Create the Server Directory
+Create your new MCP server directory:
 
-Choose the appropriate location based on your server type:
-
-**For host-based servers (most common):**
 ```bash
-mkdir -p mcp_host/your-server-name
-cd mcp_host/your-server-name
+mkdir -p mcp_host/your_tool_name
+cd mcp_host/your_tool_name
 ```
 
-**For Docker-based servers (special cases):**
-```bash
-mkdir -p mcp_docker/your-server-name
-cd mcp_docker/your-server-name
-```
+## Step 2: Implement Your MCP Server
 
-### 2. Create the Server File
-
-Create `server.py` with the required structure:
+Create `server.py` with the following template:
 
 ```python
 #!/usr/bin/env python3
 
 """
-Your Server Name MCP Server
+Your Tool Name MCP Server
 
-Provides tools for [describe functionality].
+Brief description of what your tool does and its main capabilities.
+
+Author: Your Name - HolobiomicsLab, CNRS
 """
 
-from fastmcp import FastMCP
-from typing import Any, Dict, List
+import os
 import sys
 from pathlib import Path
+from typing import Dict, Any, Optional
+from fastmcp import FastMCP
 
 # Add project root to path for shared imports
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import return_as_dict, run_bash_subprocess, CommandResult
 
+from shared import CommandResult, run_bash_subprocess, return_as_dict
+
+# Server description for documentation
 description = """
-Your server description here.
-Explain what this server does and what tools it provides.
+Your Tool Name MCP Server provides tools for [describe main functionality].
+It allows [list main capabilities and use cases].
 """
 
+# Initialize FastMCP server
 mcp = FastMCP(
-    name="Your Server Name MCP",
+    name="Your Tool Name MCP",
     instructions=description,
 )
 
 @mcp.tool
 def get_mcp_name() -> str:
-    """Required: Get the name of this MCP server"""
-    return "Your Server Name MCP"
+    """Get the name of this MCP server
+    
+    Returns:
+        str: The name of this MCP server
+        
+    Example:
+        >>> get_mcp_name()
+        "Your Tool Name MCP"
+    """
+    return "Your Tool Name MCP"
 
 @mcp.tool
-def your_tool_function(parameter: str) -> Dict[str, Any]:
+@return_as_dict
+def your_main_tool(input_param: str, optional_param: Optional[str] = None) -> Dict[str, Any]:
     """
-    Description of what this tool does.
+    Main tool function - describe what it does here.
     
     Args:
-        parameter: Description of the parameter
-        
+        input_param (str): Description of the main parameter
+        optional_param (Optional[str]): Description of optional parameter
+    
     Returns:
-        Dict containing the result
+        dict: CommandResult dictionary with status, stdout, stderr, exit_code
+        
+    Example:
+        your_main_tool(input_param="example", optional_param="value")
     """
     try:
-        # Your tool implementation here
-        result = {"status": "success", "data": f"Processed: {parameter}"}
-        return result
+        # Your tool logic here
+        # Use /workspace for file operations:
+        workspace_path = Path("/workspace")
+        
+        # Example: Create a file in workspace
+        output_file = workspace_path / "your_tool_output.txt"
+        
+        # Your processing logic
+        result_data = f"Processed: {input_param}"
+        
+        # Write to workspace if needed
+        output_file.write_text(result_data)
+        
+        return CommandResult(
+            status="success",
+            stdout=f"Successfully processed {input_param}. Output saved to {output_file}",
+            stderr="",
+            exit_code=0
+        )
+        
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return CommandResult(
+            status="error",
+            stdout="",
+            stderr=str(e),
+            exit_code=1
+        )
 
-# Add more @mcp.tool functions as needed
+@mcp.tool
+@return_as_dict
+def list_workspace_files() -> Dict[str, Any]:
+    """
+    List files in the shared workspace directory.
+    
+    Returns:
+        dict: CommandResult with list of files in workspace
+    """
+    try:
+        workspace_path = Path("/workspace")
+        if not workspace_path.exists():
+            return CommandResult(
+                status="error",
+                stdout="",
+                stderr="Workspace directory not found",
+                exit_code=1
+            )
+        
+        files = [f.name for f in workspace_path.iterdir() if f.is_file()]
+        
+        return CommandResult(
+            status="success",
+            stdout=f"Files in workspace: {', '.join(files) if files else 'No files found'}",
+            stderr="",
+            exit_code=0
+        )
+        
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stdout="",
+            stderr=str(e),
+            exit_code=1
+        )
 
-# Required: Use stdio transport for ToolHive compatibility
-print("Starting Your Server Name MCP server with stdio transport...")
-mcp.run(transport="stdio")
+# Server startup logic
+if __name__ == "__main__":
+    print("Starting Your Tool Name MCP server with streamable-http transport...")
+    
+    # Get port from environment variable (set by ToolHive) or command line argument as fallback
+    port = None
+    if "MCP_PORT" in os.environ:
+        port = int(os.environ["MCP_PORT"])
+        print(f"Using port from MCP_PORT environment variable: {port}")
+    elif "FASTMCP_PORT" in os.environ:
+        port = int(os.environ["FASTMCP_PORT"])
+        print(f"Using port from FASTMCP_PORT environment variable: {port}")
+    elif len(sys.argv) == 2:
+        port = int(sys.argv[1])
+        print(f"Using port from command line argument: {port}")
+    else:
+        print("Usage: python server.py <port>")
+        print("Or set MCP_PORT/FASTMCP_PORT environment variable")
+        sys.exit(1)
+    
+    print(f"Starting server on port {port}")
+    mcp.run(transport="streamable-http", port=port, host="0.0.0.0")
 ```
 
-### 3. Add Dependencies
-
-If your server needs additional Python packages:
-
-1. **Add to requirements.txt:**
-```bash
-echo "your-package-name>=1.0.0" >> requirements.txt
-```
-
-2. **Import in your server:**
-```python
-try:
-    import your_package
-    YOUR_PACKAGE_AVAILABLE = True
-except ImportError:
-    YOUR_PACKAGE_AVAILABLE = False
-    print("Warning: your-package not available. Some features may not work.")
-```
-
-### 4. Update the ToolHive Registry
+## Step 3: Register Your Server in ToolHive
 
 Add your server to `registry.json`:
 
 ```json
 {
   "servers": {
-    "toolomics-your-server": {
-      "description": "Brief description of your server",
+    // ... existing servers ...
+    "toolomics-your-tool": {
+      "description": "Your tool description - what it does and main capabilities",
       "image": "holobiomicslab/toolomics:latest",
-      "args": ["python", "/app/mcp_host/your-server-name/server.py"],
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/your_tool_name/server.py"],
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
-          "value": "your-server-type"
+          "value": "your-tool"
         }
       ]
-    },
-    // ... existing servers
+    }
   }
 }
 ```
 
-### 5. Update Start Script (Optional)
+**Important naming conventions:**
+- Server name: `toolomics-your-tool` (kebab-case)
+- Directory name: `your_tool_name` (snake_case)
+- Environment variable value: `your-tool` (kebab-case)
 
-If you want your server to start automatically, add it to `start-toolhive.sh`:
+## Step 4: Update start.sh Script
+
+Add your server to the `SERVERS` array in `start.sh`:
 
 ```bash
+# List of servers to start (all toolomics servers)
 SERVERS=(
     "toolomics-rscript"
-    "toolomics-browser"
+    "toolomics-browser" 
     "toolomics-csv"
-    "toolomics-search"  
+    "toolomics-search"
     "toolomics-pdf"
-    "toolomics-shell-docker"
-    "toolomics-your-server"  # Add your server here
+    "toolomics-shell"
+    "toolomics-your-tool"    # Add your server here
 )
 ```
 
-### 6. Test Your Server
+## Step 5: Create a Test Script
 
-1. **Build and start with your server:**
-```bash
-./start-toolhive.sh --rebuild
+Create `tests/your_tool_test.py`:
+
+```python
+#!/usr/bin/env python3
+
+"""
+Test client for Your Tool Name MCP Server
+Demonstrates functionality with realistic test scenarios.
+"""
+
+import asyncio
+import json
+from pathlib import Path
+from fastmcp import Client
+
+async def test_your_tool_operations():
+    """Test all your tool operations comprehensively."""
+    
+    # Connect to the MCP server (you'll need to find the actual port)
+    # Run `thv list` to see the assigned port
+    async with Client("http://localhost:PORT/mcp") as client:
+        print("🚀 Connected to Your Tool Name MCP Server")
+        
+        # List available tools
+        tools = await client.list_tools()
+        print(f"📋 Available tools: {[tool.name for tool in tools]}")
+        print()
+        
+        # Test 1: Get server name
+        print("=" * 50)
+        print("TEST 1: Getting server name")
+        print("=" * 50)
+        
+        result = await client.call_tool("get_mcp_name", {})
+        print(f"🏷️ Server name: {result[0].text}")
+        print()
+        
+        # Test 2: Test main functionality
+        print("=" * 50)
+        print("TEST 2: Testing main tool")
+        print("=" * 50)
+        
+        result = await client.call_tool("your_main_tool", {
+            "input_param": "test_value",
+            "optional_param": "optional_value"
+        })
+        print(f"✅ Main tool result: {result[0].text}")
+        print()
+        
+        # Test 3: List workspace files
+        print("=" * 50)
+        print("TEST 3: Listing workspace files")
+        print("=" * 50)
+        
+        result = await client.call_tool("list_workspace_files", {})
+        print(f"📁 Workspace files: {result[0].text}")
+        print()
+        
+        print("🎉 All tests completed successfully!")
+
+if __name__ == "__main__":
+    print("🧪 Starting Your Tool Name MCP Server Tests")
+    asyncio.run(test_your_tool_operations())
 ```
 
-2. **Verify it's running:**
+## Step 6: Build and Deploy
+
+1. **Rebuild the Docker image** (includes your new server):
+```bash
+./start.sh --rebuild
+```
+
+2. **Or build manually if needed**:
+```bash
+./build-toolhive.sh
+```
+
+3. **Start all services**:
+```bash
+./start.sh
+```
+
+## Step 7: Test Your Server
+
+1. **Check if your server is running**:
+```bash
+thv list
+```
+Look for `toolomics-your-tool` in the output.
+
+2. **Check server logs**:
+```bash
+thv logs toolomics-your-tool
+```
+
+3. **Run your test script** (update port number from `thv list`):
+```bash
+# Update the port in your test file first
+python tests/your_tool_test.py
+```
+
+## Common Patterns and Best Practices
+
+### File Operations
+Always use the `/workspace` directory for file operations to ensure compatibility with other MCP servers:
+
+```python
+from pathlib import Path
+
+# Correct way to handle files
+workspace = Path("/workspace")
+input_file = workspace / "input.txt"
+output_file = workspace / "output.json"
+
+# Read from workspace
+if input_file.exists():
+    content = input_file.read_text()
+
+# Write to workspace
+output_file.write_text(json.dumps(result_data))
+```
+
+### Error Handling
+Use the `CommandResult` class for consistent error handling:
+
+```python
+try:
+    # Your logic here
+    return CommandResult(
+        status="success",
+        stdout="Operation completed successfully",
+        stderr="",
+        exit_code=0
+    )
+except FileNotFoundError as e:
+    return CommandResult(
+        status="error",
+        stdout="",
+        stderr=f"File not found: {e}",
+        exit_code=2
+    )
+except Exception as e:
+    return CommandResult(
+        status="error",
+        stdout="",
+        stderr=f"Unexpected error: {e}",
+        exit_code=1
+    )
+```
+
+### Tool Documentation
+Follow FastMCP documentation patterns:
+
+```python
+@mcp.tool
+@return_as_dict
+def process_data(input_data: str, format_type: str = "json") -> Dict[str, Any]:
+    """
+    Process input data and return formatted results.
+    
+    Args:
+        input_data (str): The data to process
+        format_type (str): Output format - "json", "csv", or "txt" (default: "json")
+    
+    Returns:
+        dict: CommandResult with processed data
+        
+    Example:
+        process_data(input_data="sample data", format_type="json")
+    """
+```
+
+### Environment Variables
+Access server-specific environment variables:
+
+```python
+server_type = os.environ.get("MCP_SERVER_TYPE", "unknown")
+port = os.environ.get("MCP_PORT") or os.environ.get("FASTMCP_PORT")
+```
+
+## Troubleshooting
+
+### Server Not Starting
+1. **Check ToolHive status**:
 ```bash
 thv list
 ```
 
-3. **Test discovery with Mimosa-AI:**
+2. **Check server logs**:
 ```bash
-cd /path/to/Mimosa-AI
-uv run python -c "
-import asyncio
-from sources.core.tools_manager import ToolManager
-from config import Config
-
-async def test():
-    config = Config()
-    tool_manager = ToolManager(config)
-    mcps = await tool_manager.discover_mcp_servers()
-    for mcp in mcps:
-        if 'your-server' in mcp.toolhive_name:
-            print(f'✅ Found: {mcp.name}')
-            print(f'   Tools: {mcp.tools}')
-
-asyncio.run(test())
-"
+thv logs toolomics-your-tool
 ```
 
-4. **Check server logs:**
+3. **Verify registry.json syntax**:
 ```bash
-thv logs toolomics-your-server
+python -m json.tool registry.json
 ```
 
-### 7. Testing Individual Tools
+### Import Errors
+If you get import errors for `shared`:
+```python
+# Make sure this is at the top of your server.py
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+```
 
-You can test individual tools using the ToolHive CLI:
-
+### Port Issues
+ToolHive assigns ports dynamically. Always check current ports with:
 ```bash
-# Test basic connectivity
-curl -X POST http://127.0.0.1:PORT/messages \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tools/list",
-    "id": 1
-  }'
+thv list --format table
 ```
 
-## File Structure Example
+### Container Issues
+If the container doesn't build:
+1. **Check Dockerfile** - ensure your dependencies are in `requirements.txt`
+2. **Rebuild image**: `./start.sh --rebuild`
+3. **Check Docker**: `docker images holobiomicslab/toolomics:latest`
 
-After following this guide, your structure should look like:
+### Testing Connection Issues
+If your test client can't connect:
+1. **Verify server is running**: `thv list`
+2. **Check the correct port**: Use port from `thv list` output
+3. **Verify endpoint**: Use `http://localhost:PORT/mcp`
 
-```
-toolomics/
-├── mcp_host/
-│   ├── your-server-name/
-│   │   └── server.py          # Your new server
-│   ├── browser/
-│   ├── csv/
-│   └── ...
-├── registry.json              # Updated with your server
-├── start-toolhive.sh          # Optionally updated
-├── requirements.txt           # Updated if needed
-└── ...
-```
+## Example: Simple Text Processing Server
 
-## Best Practices
+Here's a complete working example of a text processing MCP server:
 
-### Tool Design
-- **Always include `get_mcp_name()` tool** - required for identification
-- **Use descriptive tool names** - avoid generic names like `process()` or `run()`
-- **Provide clear documentation** - include docstrings with Args and Returns
-- **Handle errors gracefully** - return error status rather than throwing exceptions
-- **Use type hints** - helps with MCP protocol schema generation
-
-### Server Configuration
-- **Use `stdio` transport only** - required for ToolHive compatibility
-- **Don't hardcode ports** - ToolHive handles port management
-- **Include server description** - helps users understand functionality
-- **Use environment variables** for configuration when needed
-
-### Testing
-- **Test in isolation first** - make sure your server.py runs standalone
-- **Test via ToolHive** - ensure it works in the containerized environment
-- **Test discovery** - verify Mimosa-AI can find and connect to your server
-- **Test all tools** - ensure every @mcp.tool function works correctly
-
-### Integration
-- **Follow naming conventions** - use `toolomics-` prefix in registry
-- **Update documentation** - add your server to relevant docs
-- **Consider dependencies** - minimize external package requirements when possible
-- **Test with existing servers** - ensure no conflicts with other servers
-
-## Troubleshooting
-
-### Server Won't Start
-1. Check server logs: `thv logs toolomics-your-server`
-2. Verify Python syntax: `python mcp_host/your-server-name/server.py`
-3. Check imports: ensure all required packages are available
-4. Verify registry.json syntax: use `jq . registry.json` to validate
-
-### Server Not Discovered
-1. Ensure server is running: `thv list`
-2. Check registry entry syntax
-3. Verify the server is accessible: test the `/sse` endpoint
-4. Check Mimosa-AI discovery: run the test script above
-
-### Tool Errors
-1. Check tool function signatures match MCP requirements
-2. Verify return types are JSON-serializable
-3. Test error handling with invalid inputs
-4. Check server logs for Python exceptions
-
-## Example: Simple Echo Server
-
-Here's a complete example of a minimal MCP server:
+### File: `mcp_host/text_processor/server.py`
 
 ```python
 #!/usr/bin/env python3
+
 """
-Echo MCP Server - Simple example server
+Text Processing MCP Server
+Provides tools for text analysis and manipulation in the workspace.
 """
 
+import os
+import sys
+import re
+from pathlib import Path
+from typing import Dict, Any, Optional
 from fastmcp import FastMCP
-from typing import Any, Dict
 
-description = """
-Echo MCP Server provides a simple echo tool for testing.
-"""
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+
+from shared import CommandResult, run_bash_subprocess, return_as_dict
 
 mcp = FastMCP(
-    name="Echo MCP",
-    instructions=description,
+    name="Text Processing MCP",
+    instructions="Provides text processing and analysis tools for workspace files"
 )
 
 @mcp.tool
 def get_mcp_name() -> str:
-    return "Echo MCP"
+    return "Text Processing MCP"
 
-@mcp.tool  
-def echo(message: str) -> Dict[str, Any]:
-    """Echo back the input message.
-    
-    Args:
-        message: The message to echo back
+@mcp.tool
+@return_as_dict
+def count_words(filename: str) -> Dict[str, Any]:
+    """Count words, lines, and characters in a text file."""
+    try:
+        filepath = Path("/workspace") / filename
+        if not filepath.exists():
+            return CommandResult(
+                status="error",
+                stderr=f"File '{filename}' not found in workspace",
+                exit_code=1
+            )
         
-    Returns:
-        Dict containing the echoed message
-    """
-    return {
-        "status": "success",
-        "echo": message,
-        "length": len(message)
-    }
+        content = filepath.read_text(encoding='utf-8')
+        words = len(content.split())
+        lines = len(content.splitlines())
+        chars = len(content)
+        
+        stats = {
+            "filename": filename,
+            "words": words,
+            "lines": lines, 
+            "characters": chars
+        }
+        
+        return CommandResult(
+            status="success",
+            stdout=f"Text statistics: {stats}",
+            exit_code=0
+        )
+        
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=str(e),
+            exit_code=1
+        )
 
-print("Starting Echo MCP server with stdio transport...")
-mcp.run(transport="stdio")
+@mcp.tool
+@return_as_dict
+def find_pattern(filename: str, pattern: str) -> Dict[str, Any]:
+    """Find regex pattern matches in a text file."""
+    try:
+        filepath = Path("/workspace") / filename
+        if not filepath.exists():
+            return CommandResult(
+                status="error",
+                stderr=f"File '{filename}' not found",
+                exit_code=1
+            )
+        
+        content = filepath.read_text(encoding='utf-8')
+        matches = re.findall(pattern, content, re.MULTILINE)
+        
+        return CommandResult(
+            status="success",
+            stdout=f"Found {len(matches)} matches: {matches[:10]}",  # Show first 10
+            exit_code=0
+        )
+        
+    except re.error as e:
+        return CommandResult(
+            status="error",
+            stderr=f"Invalid regex pattern: {e}",
+            exit_code=2
+        )
+    except Exception as e:
+        return CommandResult(
+            status="error", 
+            stderr=str(e),
+            exit_code=1
+        )
+
+if __name__ == "__main__":
+    port = int(os.environ.get("MCP_PORT") or sys.argv[1])
+    mcp.run(transport="streamable-http", port=port, host="0.0.0.0")
 ```
 
-Registry entry for echo server:
+### Registry Entry:
 ```json
-"toolomics-echo": {
-  "description": "Simple echo server for testing",
-  "image": "holobiomicslab/toolomics:latest",
-  "args": ["python", "/app/mcp_host/echo/server.py"],
+"toolomics-text-processor": {
+  "description": "Text processing and analysis MCP server",
+  "image": "holobiomicslab/toolomics:latest", 
+  "transport": "streamable-http",
+  "args": ["python", "/app/mcp_host/text_processor/server.py"],
   "env_vars": [
     {
       "name": "MCP_SERVER_TYPE",
-      "value": "echo"
+      "value": "text-processor"
     }
   ]
 }
 ```
 
-This creates a fully functional MCP server that will be automatically discovered by Mimosa-AI and accessible via ToolHive.
+## Next Steps
+
+After successfully creating and testing your MCP server:
+
+1. **Document your tools** - Add descriptions to your tool functions
+2. **Add comprehensive tests** - Cover edge cases and error conditions  
+3. **Update documentation** - Add your server to README.md if it's a major addition
+4. **Consider dependencies** - Add any new Python packages to `requirements.txt`
+5. **Test integration** - Verify your server works well with other MCP servers in the workspace
+
+Your new MCP server is now ready to be used by AI agents through ToolHive! 🎉

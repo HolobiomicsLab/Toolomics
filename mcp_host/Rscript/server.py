@@ -12,6 +12,7 @@ from fastmcp import FastMCP
 from datetime import datetime
 import sys
 import os
+
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
 from shared import return_as_dict, run_bash_subprocess, CommandResult
@@ -27,20 +28,23 @@ mcp = FastMCP(
     instructions=description,
 )
 
+
 @mcp.tool
 def get_mcp_name() -> str:
     return "R command MCP"
 
+
 # Ensure workspace directory exists
-#STORAGE_DIR = Path("./workspace")
-#STORAGE_DIR.mkdir(exist_ok=True)
+# STORAGE_DIR = Path("./workspace")
+# STORAGE_DIR.mkdir(exist_ok=True)
 
 SCRIPT_DIR = Path("./script")
 SCRIPT_DIR.mkdir(exist_ok=True)
 
 
-#print(f"Using workspace directory: {STORAGE_DIR}")
+# print(f"Using workspace directory: {STORAGE_DIR}")
 print(f"Using script directory: {SCRIPT_DIR}")
+
 
 def run_rscript(script_path: str) -> CommandResult:
     """
@@ -54,11 +58,11 @@ def run_rscript(script_path: str) -> CommandResult:
     """
     cmd = f"docker exec xcmsrocker Rscript {script_path}"
     return run_bash_subprocess(cmd, timeout=60)
-    
+
 
 @mcp.tool
 @return_as_dict
-def execute_r_code(r_code: str) -> Dict[str,Any]:
+def execute_r_code(r_code: str) -> Dict[str, Any]:
     f"""
     Execute R code.
     Also saves the executed R script in the script directory.
@@ -90,16 +94,16 @@ def execute_r_code(r_code: str) -> Dict[str,Any]:
             stderr=f"Error saving R script: {str(e)}",
             exit_code=-1,
         )
-    
 
-    #print(run_bash_subprocess("ls"))
-    
+    # print(run_bash_subprocess("ls"))
+
     res = run_rscript(script_path)
     print(f"Executed R script: {script_name} with result: {res}")
     return res
 
+
 @mcp.tool
-def write_r_script(r_code: str, filename:str) -> str:
+def write_r_script(r_code: str, filename: str) -> str:
     """
     Write the R script in the script directory.
 
@@ -116,7 +120,7 @@ def write_r_script(r_code: str, filename:str) -> str:
     """
     try:
         # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
-        #script_name = f"rscript_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.R"
+        # script_name = f"rscript_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.R"
         script_path = SCRIPT_DIR / filename
         with open(script_path, "w") as f:
             f.write(r_code)
@@ -139,6 +143,7 @@ def list_workspace_files() -> List[str]:
     """
     return [f.name for f in Path(".").iterdir() if f.is_file()]
 
+
 @mcp.tool
 def list_script_files() -> List[str]:
     """
@@ -156,7 +161,7 @@ def list_script_files() -> List[str]:
 
 @mcp.tool
 @return_as_dict
-def execute_r_script_file(filename: str) -> Dict[str,Any]:
+def execute_r_script_file(filename: str) -> Dict[str, Any]:
     f"""
     Execute an existing R script file from the script directory using Rscript.
 
@@ -178,9 +183,8 @@ def execute_r_script_file(filename: str) -> Dict[str,Any]:
     script_path = SCRIPT_DIR / filename
     if not script_path.exists() or not script_path.is_file():
         return f"File '{filename}' does not exist in script dir."
-    
-    return run_rscript(script_path)
 
+    return run_rscript(script_path)
 
 
 print("Starting R script MCP server with streamable-http transport...")
@@ -200,6 +204,6 @@ if __name__ == "__main__":
         print("Usage: python server.py <port>")
         print("Or set MCP_PORT/FASTMCP_PORT environment variable")
         sys.exit(1)
-    
+
     print(f"Starting server on port {port}")
     mcp.run(transport="streamable-http", port=port, host="0.0.0.0")

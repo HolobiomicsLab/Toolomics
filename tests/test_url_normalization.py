@@ -62,39 +62,70 @@ def test_normalize_endpoint():
     """Test the normalize_mcp_endpoint function"""
     print("Testing URL normalization for MCP endpoints...")
     print("=" * 50)
-    
+
     test_cases = [
         # (input_url, transport, expected_url, expected_transport)
-        ("http://127.0.0.1:5002", "streamable-http", "http://127.0.0.1:5002/mcp/", "streamable-http"),
-        ("http://127.0.0.1:5002", "http", "http://127.0.0.1:5002/mcp/", "streamable-http"),
-        ("http://127.0.0.1:5002/mcp", "streamable-http", "http://127.0.0.1:5002/mcp/", "streamable-http"),
-        ("http://127.0.0.1:5002/", "streamable-http", "http://127.0.0.1:5002/mcp/", "streamable-http"),
+        (
+            "http://127.0.0.1:5002",
+            "streamable-http",
+            "http://127.0.0.1:5002/mcp/",
+            "streamable-http",
+        ),
+        (
+            "http://127.0.0.1:5002",
+            "http",
+            "http://127.0.0.1:5002/mcp/",
+            "streamable-http",
+        ),
+        (
+            "http://127.0.0.1:5002/mcp",
+            "streamable-http",
+            "http://127.0.0.1:5002/mcp/",
+            "streamable-http",
+        ),
+        (
+            "http://127.0.0.1:5002/",
+            "streamable-http",
+            "http://127.0.0.1:5002/mcp/",
+            "streamable-http",
+        ),
         ("http://127.0.0.1:5002", "sse", "http://127.0.0.1:5002/sse", "sse"),
-        ("http://127.0.0.1:5002/sse#container", "sse", "http://127.0.0.1:5002/sse", "sse"),
+        (
+            "http://127.0.0.1:5002/sse#container",
+            "sse",
+            "http://127.0.0.1:5002/sse",
+            "sse",
+        ),
     ]
-    
+
     passed = 0
     failed = 0
-    
+
     for input_url, transport, expected_url, expected_transport in test_cases:
         try:
-            result_url, result_transport, extras = normalize_mcp_endpoint(input_url, transport)
-            
+            result_url, result_transport, extras = normalize_mcp_endpoint(
+                input_url, transport
+            )
+
             if result_url == expected_url and result_transport == expected_transport:
-                print(f"✅ {input_url} ({transport}) → {result_url} ({result_transport})")
+                print(
+                    f"✅ {input_url} ({transport}) → {result_url} ({result_transport})"
+                )
                 passed += 1
             else:
-                print(f"❌ {input_url} ({transport}) → {result_url} ({result_transport})")
+                print(
+                    f"❌ {input_url} ({transport}) → {result_url} ({result_transport})"
+                )
                 print(f"   Expected: {expected_url} ({expected_transport})")
                 failed += 1
-                
+
         except Exception as e:
             print(f"❌ {input_url} ({transport}) → Error: {e}")
             failed += 1
-    
+
     print("=" * 50)
     print(f"Results: {passed} passed, {failed} failed")
-    
+
     if failed == 0:
         print("🎉 All URL normalization tests passed!")
         return True
@@ -106,13 +137,13 @@ def test_normalize_endpoint():
 def main():
     """Run the URL normalization tests"""
     success = test_normalize_endpoint()
-    
+
     print("\nThese normalized URLs should work with the updated Toolomics servers:")
     print("- http://127.0.0.1:5002/mcp/ (CSV server)")
     print("- http://127.0.0.1:5003/mcp/ (Search server)")
     print("- http://127.0.0.1:5004/mcp/ (PDF server)")
     print("- etc.")
-    
+
     return success
 
 
