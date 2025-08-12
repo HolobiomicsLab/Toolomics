@@ -384,6 +384,21 @@ class Browser:
             ".bin",
         ]
 
+    def _get_download_patterns(self) -> List[str]:
+        """Get list of URL patterns that indicate downloadable content."""
+        return [
+            "download",
+            "attachment",
+            "file",
+            "document",
+            "export",
+            "report",
+            "data",
+            "dataset",
+            "archive",
+            "backup",
+        ]
+
     def _convert_to_absolute_url(
         self, href: str, current_url: str, base_url: str
     ) -> str:
