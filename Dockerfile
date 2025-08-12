@@ -34,20 +34,18 @@ RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-c
 RUN useradd -m -s /bin/bash dockeruser && \
     echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Set the working directory
-WORKDIR /app
-
-# Copy the entire project
+# Copy the entire project to /app
 COPY . /app/
 
 # Install Python dependencies  
 RUN pip3 install -r /app/requirements.txt
 
-# Create workspace directory
-RUN mkdir -p /app/workspace
+# Create and set workspace as working directory
+RUN mkdir -p /workspace
+WORKDIR /workspace
 
-# Change ownership of the app directory to dockeruser
-RUN chown -R dockeruser:dockeruser /app
+# Change ownership of both directories to dockeruser
+RUN chown -R dockeruser:dockeruser /app /workspace
 
 # Set display environment variable for headless Chrome
 ENV DISPLAY=:99
@@ -55,8 +53,8 @@ ENV DISPLAY=:99
 # Switch to the dockeruser
 USER dockeruser
 
-# Expose ports, from 5100 to 5200 as MCP might use all this range depending on number of tools deployed
-EXPOSE 5100-5200
+# # Expose ports, from 5100 to 5200 as MCP might use all this range depending on number of tools deployed
+# EXPOSE 5100-5200
 
 # Command to run the application
-CMD ["python3", "deploy.py", "--config", "config.json", "--mcp-dir", "mcp_docker", "--starting-port", "5100"]
+CMD ["python3", "/app/deploy.py", "--config", "/app/config.json", "--mcp-dir", "/app/mcp_docker", "--starting-port", "5100"]

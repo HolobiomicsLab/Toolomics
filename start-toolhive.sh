@@ -53,6 +53,13 @@ else
     echo "✅ Docker image already exists"
 fi
 
+# If rebuild flag is set, stop existing containers first
+if [ "$REBUILD" = true ]; then
+    echo "🔄 Stopping existing containers for rebuild..."
+    thv stop --all 2>/dev/null || true
+    sleep 2
+fi
+
 # Start SearxNG services first
 echo "🔍 Starting SearxNG services..."
 SEARXNG_DIR="mcp_host/browser/searxng"
