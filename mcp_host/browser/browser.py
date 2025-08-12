@@ -13,7 +13,7 @@ from helium import *
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.chromium import ChromiumDriverManager
+from webdriver_manager.core.os_manager import ChromeType
 # Override helium's ChromeOptions with selenium's for better compatibility
 helium.ChromeOptions = ChromeOptions
 
@@ -59,7 +59,7 @@ class Browser:
                         return service
                 elif strategy_name.startswith("download"):
                     if "chromium" in strategy_name:
-                        driver_path = ChromiumDriverManager().install()
+                        driver_path = ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install()
                         print(f"Downloaded Chromium driver: {driver_path}")
                     else:
                         driver_path = ChromeDriverManager().install()
