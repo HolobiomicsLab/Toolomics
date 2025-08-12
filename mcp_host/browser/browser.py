@@ -25,6 +25,7 @@ class Browser:
         """Initialize the browser with Helium."""
         self.screenshot_folder = os.path.join(os.getcwd(), ".screenshots")
         self.headless = headless
+        self.driver = None  # Initialize driver instance variable
         self._start_browser()
 
     def _setup_webdriver_service(self):
@@ -146,9 +147,21 @@ class Browser:
 
             # Create the webdriver
             driver = webdriver.Chrome(service=service, options=chrome_options)
-
-            # Set this driver as the active driver for Helium
-            helium._impl.DRIVER = driver
+            
+            # Validate driver was created successfully
+            if driver is None:
+                raise RuntimeError("Failed to create Chrome WebDriver")
+            
+            # Store driver as instance variable for persistence
+            self.driver = driver
+            
+            # Use proper Helium API to set the driver
+            helium.set_driver(driver)
+            
+            # Validate the driver is accessible
+            current_url = driver.current_url
+            if current_url is None:
+                raise RuntimeError("Driver session is not valid")
 
             print("Successfully initialized browser with Helium")
 
@@ -163,8 +176,11 @@ class Browser:
                 chrome_options.add_argument("--disable-dev-shm-usage")
 
                 # Try to use basic start_chrome
-                start_chrome(options=chrome_options)
-                print("Fallback initialization succeeded")
+                self.driver = start_chrome(options=chrome_options)
+                if self.driver is not None:
+                    print("Fallback initialization succeeded")
+                else:
+                    raise RuntimeError("Fallback initialization failed - driver is None")
             except Exception as fallback_error:
                 print(f"All initialization attempts failed: {fallback_error}")
                 raise RuntimeError(f"Cannot initialize browser: {fallback_error}")
@@ -655,8 +671,10 @@ class Browser:
     def is_session_valid(self) -> bool:
         """Check if the browser session is still valid."""
         try:
+            if self.driver is None:
+                return False
             # Try to get current URL to test if session is alive
-            current_url = get_driver().current_url
+            current_url = self.driver.current_url
             return current_url is not None
         except Exception:
             return False
