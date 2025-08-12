@@ -517,3 +517,5 @@ CMakeUserPresets.json
 
 
 CLAUDE.md
+
+!build-optimized.sh

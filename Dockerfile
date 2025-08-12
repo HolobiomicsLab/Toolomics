@@ -1,57 +1,49 @@
-FROM python:3.10
+FROM python:3.10-slim
 
-# Install system dependencies for ARM64/AMD64 compatibility
-RUN apt-get update && apt-get install -y --fix-missing \
-    sudo \
-    wget \
-    curl \
-    gnupg \
-    unzip \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Set working directory early
+WORKDIR /app
 
-# Install Chromium and dependencies (ARM64 compatible)
-RUN apt-get update && apt-get install -y --fix-missing \
-    chromium \
-    chromium-driver \
-    xvfb \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgconf-2-4 \
-    libxss1 \
-    libxtst6 \
-    && rm -rf /var/lib/apt/lists/*
+# Copy only requirements first for better layer caching
+COPY requirements.txt .
 
-# Install Docker Compose
-RUN curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
+# Install all dependencies in a single layer to minimize image size
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        sudo \
+        curl \
+        ca-certificates \
+        gnupg \
+        unzip \
+        chromium \
+        chromium-driver \
+        xvfb \
+        libnss3 \
+        libatk-bridge2.0-0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxrandr2 \
+        libgconf-2-4 \
+        libxss1 \
+        libxtst6 \
+    && curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
     && chmod +x /usr/local/bin/docker-compose \
-    && ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+    && ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose \
+    && pip install --no-cache-dir -r requirements.txt \
+    && useradd -m -s /bin/bash dockeruser \
+    && echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+    && mkdir -p /workspace \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Create a user with sudo privileges and no password requirement
-RUN useradd -m -s /bin/bash dockeruser && \
-    echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+# Copy application code (dockerignore excludes .venv, workspace, etc)
+COPY . .
 
-# Copy the entire project to /app
-COPY . /app/
-
-# Install Python dependencies  
-RUN pip3 install -r /app/requirements.txt
-
-# Create and set workspace as working directory
-RUN mkdir -p /workspace
-WORKDIR /workspace
-
-# Change ownership of both directories to dockeruser
-RUN chown -R dockeruser:dockeruser /app /workspace
-
-# Set display environment variable for headless Chrome
+# Set environment for headless Chrome
 ENV DISPLAY=:99
 
-# Switch to the dockeruser
+# Set final permissions and switch to non-root user
+RUN chown -R dockeruser:dockeruser /app /workspace
 USER dockeruser
+WORKDIR /workspace
 
 # No CMD directive needed - ToolHive manages container execution via registry.json
-# Each server is started individually by ToolHive with specific arguments

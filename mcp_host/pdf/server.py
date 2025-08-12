@@ -321,7 +321,35 @@ def get_current_page(session_id: str) -> Dict[str, Any]:
             )
 
         nav_state = _navigation_state[session_id]
-        return navigate_to_page(session_id, nav_state.current_page)
+        doc_key = f"{nav_state.filename}_{session_id}"
+
+        if doc_key not in _document_pages:
+            return CommandResult(
+                status="error",
+                stderr=f"Document pages not found for session '{session_id}'",
+                exit_code=1,
+            )
+
+        current_page_num = nav_state.current_page
+        page_content = _document_pages[doc_key][current_page_num]
+
+        return CommandResult(
+            status="success",
+            stdout=json.dumps(
+                {
+                    "session_id": session_id,
+                    "current_page": current_page_num,
+                    "total_pages": nav_state.total_pages,
+                    "page_content": page_content["text"],
+                    "filename": nav_state.filename,
+                    "navigation_info": {
+                        "has_previous": current_page_num > 1,
+                        "has_next": current_page_num < nav_state.total_pages,
+                        "bookmarks": nav_state.bookmarks,
+                    },
+                }
+            ),
+        )
 
     except Exception as e:
         return CommandResult(

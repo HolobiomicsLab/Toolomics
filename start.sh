@@ -124,8 +124,9 @@ successful_servers=()
 for server in "${SERVERS[@]}"; do
     echo "🔄 Starting $server..."
     
-    # Mount workspace directory to /workspace in container and connect to searxng network
-    if thv run "$server" --volume "$(pwd)/workspace:/workspace" --network searxng_default --detach; then
+    # Mount workspace directory to /workspace in container
+    # Network configuration is handled by ToolHive registry
+    if thv run "$server" --volume "$(pwd)/workspace:/workspace" --detach; then
         echo "✅ $server started successfully"
         successful_servers+=("$server")
     else

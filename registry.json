@@ -17,6 +17,13 @@
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/browser/server.py"],
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
@@ -41,6 +48,13 @@
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/mcp_search/server.py"],
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",

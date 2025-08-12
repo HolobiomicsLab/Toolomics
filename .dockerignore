@@ -1,0 +1,91 @@
+# Docker ignore file to reduce build context and image size
+
+# Workspace directory (mounted at runtime, contains user data)
+workspace/
+
+# Virtual environments (huge and not needed in container)
+.venv/
+venv/
+env/
+.env/
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+README*
+CHANGELOG*
+docs/
+examples/
+
+# Development files
+.vscode/
+.idea/
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+.tox/
+.env
+.env.local
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Large binary files that aren't needed in containers
+*.iso
+*.dmg
+*.pkg
+*.deb
+*.rpm
+
+# Test files
+test/
+tests/test_*.py
+*_test.py
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Development scripts
+test-*.sh
+compare-*.sh
+build-toolhive.sh
+
+# Docker files for other builds
+Dockerfile.old
+docker-compose.override.yml
+
+# SearxNG directory (handled separately)
+mcp_host/browser/searxng/
+
+# IDE and editor files
+*.sublime-*
+.vscode/
+.idea/
+
+.ruff_cache/
+
+uv.lock
+CLAUDE.md
