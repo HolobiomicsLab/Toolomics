@@ -33,13 +33,14 @@ mcp = FastMCP(
 
 @mcp.tool
 def get_mcp_name() -> str:
+    """Get the name of this MCP server"""
     return "Bash command MCP"
 
 
 @mcp.tool
 @return_as_dict
 def execute_command(command: str) -> dict:
-    f"""
+    """
     Execute a shell command and return the output with better error handling and security.
     You should NEVER use this tool to execute Rscript, use the dedicated Rscript tool instead.
     execute_command does not support multiple positional arguments or combined positional and keyword arguments

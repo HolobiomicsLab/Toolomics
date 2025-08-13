@@ -31,6 +31,7 @@ mcp = FastMCP(
 
 @mcp.tool
 def get_mcp_name() -> str:
+    """Get the name of this MCP server"""
     return "R command MCP"
 
 
@@ -63,7 +64,7 @@ def run_rscript(script_path: str) -> CommandResult:
 @mcp.tool
 @return_as_dict
 def execute_r_code(r_code: str) -> Dict[str, Any]:
-    f"""
+    """
     Execute R code.
     Also saves the executed R script in the script directory.
 
@@ -162,7 +163,7 @@ def list_script_files() -> List[str]:
 @mcp.tool
 @return_as_dict
 def execute_r_script_file(filename: str) -> Dict[str, Any]:
-    f"""
+    """
     Execute an existing R script file from the script directory using Rscript.
 
     Args:
