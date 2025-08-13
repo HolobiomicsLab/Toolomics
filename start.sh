@@ -82,7 +82,9 @@ fi
 echo "📁 Creating workspace directory..."
 mkdir -p workspace
 
-# List of servers to start (all toolomics servers)
+# List of servers to start (Toolomics + Essential MCP servers)
+# Note: The registry contains many more MCP servers available.
+# Use 'thv run <server-name>' to start additional servers as needed.
 SERVERS=(
     "toolomics-rscript"
     "toolomics-browser" 
@@ -90,6 +92,10 @@ SERVERS=(
     "toolomics-search"
     "toolomics-pdf"
     "toolomics-shell"
+    "fetch"
+    "git"
+    "filesystem"
+    "time"
 )
 
 # Function to stop all servers on exit
@@ -124,9 +130,9 @@ successful_servers=()
 for server in "${SERVERS[@]}"; do
     echo "🔄 Starting $server..."
     
-    # Mount workspace directory to /workspace in container
+    # Mount workspace directory to /projects in container (filesystem server standard)
     # Network configuration is handled by ToolHive registry
-    if thv run "$server" --volume "$(pwd)/workspace:/workspace" --detach; then
+    if thv run "$server" --volume "$(pwd)/workspace:/projects" --detach; then
         echo "✅ $server started successfully"
         successful_servers+=("$server")
     else
@@ -176,6 +182,31 @@ else
     echo "   Failed servers: ${failed_servers[*]}"
     echo "   Monitoring servers: ${successful_servers[*]}"
 fi
+
+echo ""
+echo "📋 Available MCP Servers (run individually with 'thv run <server-name> --detach'):"
+echo "==============================================================================="
+thv registry list
+
+echo ""
+echo "🔧 Configuration Examples for Popular Servers:"
+echo "==============================================="
+echo "# GitHub (requires personal access token):"
+echo "thv run github --env GITHUB_PERSONAL_ACCESS_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx --volume \$(pwd):/workspace --detach"
+echo ""
+echo "# PostgreSQL (requires database connection):"
+echo "thv run postgres-mcp-pro --env DATABASE_URI=postgresql://user:pass@host:5432/dbname --detach"
+echo ""
+echo "# Redis (requires Redis host):"
+echo "thv run redis --env REDIS_HOST=127.0.0.1 --detach"
+echo ""
+echo "# Filesystem (mount workspace for file operations):"
+echo "thv run filesystem --volume \$(pwd)/workspace:/projects/workspace --detach"
+echo ""
+echo "# Simple servers (no configuration needed):"
+echo "thv run fetch --detach"
+echo "thv run git --detach"
+echo "thv run time --detach"
 
 echo ""
 echo "⌨️  Press Ctrl+C to stop all servers"
