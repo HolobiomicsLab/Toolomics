@@ -58,76 +58,44 @@ searxng_process = None
 searxng_dir = os.path.join(os.path.dirname(__file__), "searxng")
 
 
-def start_searxng():
-    """Start SearxNG using docker-compose if not already running"""
-    global searxng_process
-
-    if not os.path.exists(searxng_dir):
-        print(
-            "Warning: SearxNG directory not found. Search functionality may not work."
-        )
-        return False
-
-    # Check if SearxNG is already running
-    try:
-        import requests
-
-        response = requests.get("http://localhost:8080/", timeout=5)
-        if response.status_code == 200:
-            print("SearxNG is already running")
-            return True
-    except:
-        pass
-
-    print("Starting SearxNG services...")
-    try:
-        # Start docker-compose in detached mode
-        searxng_process = subprocess.Popen(
-            ["docker-compose", "up", "-d"],
-            cwd=searxng_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        # Wait for the process to complete
-        searxng_process.wait()
-
-        # Give SearxNG a moment to start up
-        time.sleep(5)
-
-        # Verify it's running
+def check_external_searxng():
+    """Check if external SearxNG service is accessible"""
+    
+    # Try different SearxNG endpoints that might be available
+    searxng_urls = [
+        "http://host.docker.internal:8080/",  # From container to host
+        "http://localhost:8080/",             # Direct localhost
+        "http://127.0.0.1:8080/",            # Direct IP
+    ]
+    
+    print("Checking for external SearxNG service...")
+    
+    for url in searxng_urls:
         try:
             import requests
-
-            response = requests.get("http://localhost:8080/", timeout=10)
+            response = requests.get(url, timeout=5)
             if response.status_code == 200:
-                print("SearxNG started successfully")
-                return True
-        except:
-            pass
-
-        print("Warning: SearxNG may not have started properly")
-        return False
-
-    except Exception as e:
-        print(f"Failed to start SearxNG: {e}")
-        return False
-
-
-def stop_searxng():
-    """Stop SearxNG services on exit"""
-    if os.path.exists(searxng_dir):
-        try:
-            print("Stopping SearxNG services...")
-            subprocess.run(
-                ["docker-compose", "down"], cwd=searxng_dir, capture_output=True
-            )
+                print(f"SearxNG found and accessible at: {url}")
+                return True, url
         except Exception as e:
-            print(f"Error stopping SearxNG: {e}")
+            print(f"SearxNG not accessible at {url}: {e}")
+            continue
+    
+    print("Warning: External SearxNG service not found. Search functionality may not work.")
+    print("Make sure SearxNG is running externally (e.g., via docker-compose in the searxng directory)")
+    return False, None
 
 
-# Register cleanup function
-atexit.register(stop_searxng)
+def get_searxng_url():
+    """Get the accessible SearxNG URL"""
+    searxng_available, searxng_url = check_external_searxng()
+    if searxng_available:
+        return searxng_url
+    return "http://host.docker.internal:8080/"  # Default fallback
+
+
+# SearxNG URL will be determined at runtime
+searxng_url = None
 
 
 @contextmanager
@@ -512,8 +480,10 @@ if not os.path.exists(screenshots_dir):
 
 print("Starting Browser MCP server with streamable-http transport...")
 
-# Start SearxNG first
-start_searxng()
+# Check for external SearxNG service
+searxng_available, searxng_url = check_external_searxng()
+if not searxng_available:
+    searxng_url = "http://host.docker.internal:8080/"  # Default fallback
 
 # Initialize browser
 init_browser()

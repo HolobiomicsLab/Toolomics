@@ -29,9 +29,7 @@
           "outbound": {
             "insecure_allow_all": true
           }
-        },
-        "read": ["/projects"],
-        "write": ["/projects"]
+        }
       },
       "env_vars": [
         {
