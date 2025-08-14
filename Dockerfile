@@ -11,18 +11,19 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         sudo \
         curl \
+        wget \
+        git \
         ca-certificates \
         gnupg \
         unzip \
         chromium \
         chromium-driver \
         xvfb \
-        libnss3 \
+        libnss3-dev \
         libatk-bridge2.0-0 \
         libxcomposite1 \
         libxdamage1 \
         libxrandr2 \
-        libgconf-2-4 \
         libxss1 \
         libxtst6 \
     && curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \

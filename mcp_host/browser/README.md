@@ -59,4 +59,4 @@ If SearxNG fails to start automatically:
 
 - SearxNG runs on port 8080 by default
 - Browser operations have a 30-second timeout
-- Screenshots are saved to `.screenshots/` directory
+- Screenshots are saved to `/workspace/.screenshots/` directory

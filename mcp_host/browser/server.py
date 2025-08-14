@@ -434,7 +434,7 @@ def download_file(url: str) -> Dict[str, Any]:
     Notes:
         - Requires an active browser session
         - Only downloads files with common extensions (PDFs, videos, documents, etc.)
-        - Files are saved to current working directory
+        - Files are saved to /workspace directory
     """
     print(f"Downloading file from URL: {url}")
     if not init_browser():
@@ -479,7 +479,7 @@ def take_screenshot() -> Dict[str, str]:
         }
 
     Notes:
-        - Screenshots are saved in .screenshots/ directory
+        - Screenshots are saved in /workspace/.screenshots/ directory
         - Filename contains timestamp when taken
         - PNG format is used
     """
@@ -506,7 +506,7 @@ def take_screenshot() -> Dict[str, str]:
         browser_lock.release()
 
 
-screenshots_dir = os.path.join(os.path.dirname(__file__), ".screenshots")
+screenshots_dir = "/workspace/.screenshots"
 if not os.path.exists(screenshots_dir):
     os.makedirs(screenshots_dir)
 

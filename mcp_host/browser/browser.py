@@ -23,7 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class Browser:
     def __init__(self, headless: bool = True):
         """Initialize the browser with Helium."""
-        self.screenshot_folder = os.path.join(os.getcwd(), ".screenshots")
+        self.screenshot_folder = "/workspace/.screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
         self._start_browser()
@@ -637,22 +637,30 @@ class Browser:
             filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
             filename = filename.strip()
 
+            # Save to /workspace directory for cross-container sharing
+            workspace_dir = "/workspace"
+            if not os.path.exists(workspace_dir):
+                os.makedirs(workspace_dir)
+            
+            filepath = os.path.join(workspace_dir, filename)
+            
             # Ensure we don't overwrite existing files
             original_filename = filename
             counter = 1
-            while os.path.exists(filename):
+            while os.path.exists(filepath):
                 name, ext = os.path.splitext(original_filename)
                 filename = f"{name}_{counter}{ext}"
+                filepath = os.path.join(workspace_dir, filename)
                 counter += 1
 
-            # Save to current directory
-            with open(filename, "wb") as f:
+            # Save to workspace directory
+            with open(filepath, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
 
             print(
-                f"Successfully downloaded: {filename} ({os.path.getsize(filename)} bytes)"
+                f"Successfully downloaded: {filename} to {workspace_dir} ({os.path.getsize(filepath)} bytes)"
             )
             return (True, filename)
 

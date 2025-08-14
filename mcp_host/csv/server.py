@@ -31,8 +31,9 @@ def get_mcp_name() -> str:
     return "CSV Management"
 
 
-# Default working directory for CSV files
-CSV_DIR = Path("./")
+# Default working directory for CSV files - use shared workspace
+CSV_DIR = Path("/workspace")
+CSV_DIR.mkdir(exist_ok=True)
 
 
 def _get_csv_path(name: str) -> Path:

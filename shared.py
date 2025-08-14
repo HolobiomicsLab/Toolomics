@@ -37,11 +37,13 @@ def run_bash_subprocess(
     command: str,
     timeout: int = 30,
 ) -> CommandResult:
-    # cwd = working_directory if working_directory and os.path.exists(working_directory) else None
-    print(f"Running command: {command} with timeout: {timeout} seconds")
+    import os
+    # Set working directory to /workspace for consistency
+    cwd = "/workspace" if os.path.exists("/workspace") else None
+    print(f"Running command: {command} with timeout: {timeout} seconds in {cwd}")
     try:
         result = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout, shell=True
+            command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
         )
         return CommandResult(
             status="success" if result.returncode == 0 else "error",
