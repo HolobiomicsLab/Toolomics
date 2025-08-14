@@ -98,5 +98,6 @@ echo "   2. Or start individual server: thv run toolomics-browser"
 echo ""
 echo "🔧 Useful commands:"
 echo "   - List available servers:  thv registry list"
-echo "   - Check running servers:   thv workload list"
-echo "   - View server logs:        thv workload logs <server-name>"
+echo "   - Check running servers:   thv list"
+echo "   - View server logs:        thv logs <server-name>"
+echo "   - Stop a server:          thv mcp tools --server <server-url>"s

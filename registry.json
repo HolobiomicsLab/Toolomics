@@ -7,6 +7,10 @@
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/Rscript/server.py"],
+      "permissions": {
+        "read": ["./workspace"],
+        "write": ["./workspace"]
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
@@ -26,7 +30,9 @@
           "outbound": {
             "insecure_allow_all": true
           }
-        }
+        },
+        "read": ["./workspace"],
+        "write": ["./workspace"]
       },
       "env_vars": [
         {
@@ -42,6 +48,10 @@
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/csv/server.py"],
+      "permissions": {
+        "read": ["./workspace"],
+        "write": ["./workspace"]
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
@@ -61,7 +71,9 @@
           "outbound": {
             "insecure_allow_all": true
           }
-        }
+        },
+        "read": ["./workspace"],
+        "write": ["./workspace"]
       },
       "env_vars": [
         {
@@ -77,6 +89,10 @@
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/pdf/server.py"],
+      "permissions": {
+        "read": ["./workspace"],
+        "write": ["./workspace"]
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
@@ -91,6 +107,10 @@
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/shell/server.py"],
+      "permissions": {
+        "read": ["./workspace"],
+        "write": ["./workspace"]
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
