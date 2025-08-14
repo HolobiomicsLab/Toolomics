@@ -32,7 +32,7 @@ RUN apt-get update \
     && pip install --no-cache-dir -r requirements.txt \
     && useradd -m -s /bin/bash dockeruser \
     && echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-    && mkdir -p /workspace \
+    && mkdir -p /projects \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -43,8 +43,8 @@ COPY . .
 ENV DISPLAY=:99
 
 # Set final permissions and switch to non-root user
-RUN chown -R dockeruser:dockeruser /app /workspace
+RUN chown -R dockeruser:dockeruser /app /projects
 USER dockeruser
-WORKDIR /workspace
+WORKDIR /projects
 
 # No CMD directive needed - ToolHive manages container execution via registry.json

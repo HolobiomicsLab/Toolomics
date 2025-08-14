@@ -23,7 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class Browser:
     def __init__(self, headless: bool = True):
         """Initialize the browser with Helium."""
-        self.screenshot_folder = "/workspace/.screenshots"
+        self.screenshot_folder = "/projects/.screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
         self._start_browser()
@@ -638,7 +638,7 @@ class Browser:
             filename = filename.strip()
 
             # Save to /workspace directory for cross-container sharing
-            workspace_dir = "/workspace"
+            workspace_dir = "/projects"
             if not os.path.exists(workspace_dir):
                 os.makedirs(workspace_dir)
             

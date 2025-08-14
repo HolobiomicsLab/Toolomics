@@ -39,7 +39,7 @@ def get_mcp_name() -> str:
 # STORAGE_DIR = Path("./workspace")
 # STORAGE_DIR.mkdir(exist_ok=True)
 
-SCRIPT_DIR = Path("/workspace")
+SCRIPT_DIR = Path("/projects")
 SCRIPT_DIR.mkdir(exist_ok=True)
 
 

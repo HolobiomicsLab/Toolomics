@@ -7,18 +7,17 @@
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/Rscript/server.py"],
-      "permissions": {
-        "read": ["./workspace"],
-        "write": ["./workspace"]
-      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
-          "value": "rscript"
+          "description": "MCP server type identifier",
+          "required": false
         }
       ],
-      "tier": "Custom",
-      "tags": ["toolomics", "r", "statistics", "data-analysis"]
+      "tier": "Community",
+      "tags": ["toolomics", "rlanguage", "statistics", "data-analysis"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "execute_r_code", "write_r_script", "list_workspace_files", "list_script_files", "execute_r_script_file"]
     },
     "toolomics-browser": {
       "description": "Web browser automation and search MCP server", 
@@ -31,94 +30,71 @@
             "insecure_allow_all": true
           }
         },
-        "read": ["./workspace"],
-        "write": ["./workspace"]
+        "read": ["/projects"],
+        "write": ["/projects"]
       },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
-          "value": "browser"
+          "description": "MCP server type identifier",
+          "required": false
         }
       ],
-      "tier": "Custom",
-      "tags": ["toolomics", "browser", "selenium", "web-automation", "searxng"]
+      "tier": "Community",
+      "tags": ["toolomics", "browser", "selenium", "web-automation", "searxng"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "search", "navigate", "get_links", "get_downloadable_links", "download_file", "take_screenshot"]
     },
     "toolomics-csv": {
       "description": "CSV data processing MCP server",
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/csv/server.py"],
-      "permissions": {
-        "read": ["./workspace"],
-        "write": ["./workspace"]
-      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
-          "value": "csv"
+          "description": "MCP server type identifier",
+          "required": false
         }
       ],
-      "tier": "Custom",
-      "tags": ["toolomics", "csv", "data-processing", "pandas"]
-    },
-    "toolomics-search": {
-      "description": "MCP server registry search and discovery",
-      "image": "holobiomicslab/toolomics:latest",
-      "transport": "streamable-http",
-      "args": ["python", "/app/mcp_host/mcp_search/server.py"],
-      "permissions": {
-        "network": {
-          "outbound": {
-            "insecure_allow_all": true
-          }
-        },
-        "read": ["./workspace"],
-        "write": ["./workspace"]
-      },
-      "env_vars": [
-        {
-          "name": "MCP_SERVER_TYPE",
-          "value": "search"
-        }
-      ],
-      "tier": "Custom",
-      "tags": ["toolomics", "mcp", "search", "discovery"]
+      "tier": "Community",
+      "tags": ["toolomics", "csv", "data-processing", "pandas"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "create_csv", "load_csv_from_path", "get_csv_data", "add_csv_row", "update_csv_row", "delete_csv_row", "list_csv_datasets", "delete_csv_dataset", "query_csv", "get_csv_stats"]
     },
     "toolomics-pdf": {
       "description": "PDF processing and navigation MCP server",
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/pdf/server.py"],
-      "permissions": {
-        "read": ["./workspace"],
-        "write": ["./workspace"]
-      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
-          "value": "pdf"
+          "description": "MCP server type identifier",
+          "required": false
         }
       ],
-      "tier": "Custom",
-      "tags": ["toolomics", "pdf", "document-processing", "text-extraction"]
+      "tier": "Community",
+      "tags": ["toolomics", "pdf", "document-processing", "text-extraction"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "list_pdf_files", "initialize_pdf_navigation", "navigate_to_page", "get_current_page", "navigate_next_page", "navigate_previous_page", "add_bookmark", "search_in_current_session", "rag_query_current_session", "get_navigation_status", "close_navigation_session", "extract_text_from_pdf", "search_keywords_in_pdf"]
     },
     "toolomics-shell": {
       "description": "Shell command execution MCP server",
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/shell/server.py"],
-      "permissions": {
-        "read": ["./workspace"],
-        "write": ["./workspace"]
-      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
-          "value": "shell"
+          "description": "MCP server type identifier",
+          "required": false
         }
       ],
-      "tier": "Custom",
-      "tags": ["toolomics", "shell", "command-execution", "system"]
+      "tier": "Community",
+      "tags": ["toolomics", "shell", "command-execution", "system"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "execute_command"]
     },
     "atlassian": {
       "args": [],
@@ -223,8 +199,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/sooperset/mcp-atlassian",
       "status": "Active",
@@ -241,7 +217,8 @@
         "data-center"
       ],
       "tier": "Community",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["confluence_search", "confluence_create_page", "confluence_update_page", "jira_search", "jira_create_issue", "jira_update_issue"]
     },
     "aws-pricing": {
       "args": [],
@@ -300,8 +277,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/awslabs/mcp",
       "status": "Active",
@@ -315,7 +292,8 @@
         "aws-pricing"
       ],
       "tier": "Official",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["get_aws_pricing", "get_service_pricing", "estimate_costs", "list_services", "get_pricing_details"]
     },
     "azure": {
       "args": [],
@@ -381,8 +359,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/Azure/azure-mcp",
       "status": "Active",
@@ -397,7 +375,8 @@
         "storage"
       ],
       "tier": "Official",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["azure_vm_list", "azure_storage_create", "azure_database_query", "azure_resource_group_create", "azure_key_vault_get_secret"]
     },
     "elasticsearch": {
       "args": [
@@ -465,8 +444,8 @@
             "insecure_allow_all": true
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/elastic/mcp-server-elasticsearch",
       "status": "Active",
@@ -482,7 +461,8 @@
       ],
       "target_port": 8080,
       "tier": "Official",
-      "transport": "streamable-http"
+      "transport": "streamable-http",
+      "tools": ["elasticsearch_search", "elasticsearch_index", "elasticsearch_query", "elasticsearch_bulk_insert", "elasticsearch_get_mapping"]
     },
     "fetch": {
       "args": [],
@@ -504,8 +484,8 @@
             "insecure_allow_all": true
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/stackloklabs/gofetch",
       "status": "Active",
@@ -522,7 +502,8 @@
         "modelcontextprotocol"
       ],
       "tier": "Community",
-      "transport": "streamable-http"
+      "transport": "streamable-http",
+      "tools": ["fetch_url", "fetch_html", "fetch_json", "fetch_text", "fetch_xml"]
     },
     "filesystem": {
       "args": [
@@ -544,8 +525,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/modelcontextprotocol/servers",
       "status": "Active",
@@ -562,7 +543,8 @@
         "operations"
       ],
       "tier": "Community",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["create_directory", "list_directory", "read_file", "write_file", "move_file", "delete_file", "get_file_info"]
     },
     "git": {
       "args": [],
@@ -582,8 +564,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/modelcontextprotocol/servers",
       "status": "Active",
@@ -599,7 +581,8 @@
         "unstages"
       ],
       "tier": "Community",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["git_status", "git_add", "git_commit", "git_push", "git_pull", "git_branch", "git_checkout", "git_diff", "git_log"]
     },
     "github": {
       "args": [],
@@ -636,8 +619,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/github/github-mcp-server",
       "status": "Active",
@@ -655,7 +638,8 @@
         "issues"
       ],
       "tier": "Official",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["github_search_repositories", "github_create_repository", "github_get_file", "github_create_or_update_file", "github_create_issue", "github_create_pull_request", "github_list_issues", "github_get_issue", "github_update_issue"]
     },
     "memory": {
       "args": [],
@@ -683,8 +667,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/modelcontextprotocol/servers",
       "status": "Active",
@@ -698,7 +682,8 @@
         "relations"
       ],
       "tier": "Community",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["create_entity", "add_observation", "delete_entity", "search_memory", "get_entities", "get_observations"]
     },
     "postgres-mcp-pro": {
       "args": [
@@ -735,8 +720,8 @@
             "insecure_allow_all": true
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/crystaldba/postgres-mcp",
       "status": "Active",
@@ -754,7 +739,8 @@
       ],
       "target_port": 8000,
       "tier": "Official",
-      "transport": "sse"
+      "transport": "sse",
+      "tools": ["postgres_query", "postgres_insert", "postgres_update", "postgres_delete", "postgres_analyze_performance", "postgres_create_index"]
     },
     "redis": {
       "args": [],
@@ -844,8 +830,8 @@
             "insecure_allow_all": true
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/redis/mcp-redis",
       "status": "Active",
@@ -858,7 +844,8 @@
         "data"
       ],
       "tier": "Official",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["redis_get", "redis_set", "redis_delete", "redis_list_keys", "redis_exists", "redis_expire", "redis_ttl"]
     },
     "sqlite": {
       "args": [],
@@ -878,8 +865,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/StacklokLabs/sqlite-mcp",
       "status": "Active",
@@ -891,7 +878,8 @@
         "sqlite"
       ],
       "tier": "Community",
-      "transport": "sse"
+      "transport": "sse",
+      "tools": ["sqlite_query", "sqlite_execute", "sqlite_create_table", "sqlite_insert", "sqlite_update", "sqlite_delete"]
     },
     "terraform": {
       "args": [],
@@ -915,8 +903,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/hashicorp/terraform-mcp-server",
       "status": "Active",
@@ -936,7 +924,8 @@
         "azure"
       ],
       "tier": "Official",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["tf_plan", "tf_apply", "tf_destroy", "tf_init", "tf_validate", "tf_fmt", "tf_show", "tf_output"]
     },
     "time": {
       "args": [],
@@ -956,8 +945,8 @@
             "insecure_allow_all": false
           }
         },
-        "read": [],
-        "write": []
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
       },
       "repository_url": "https://github.com/modelcontextprotocol/servers",
       "status": "Active",
@@ -974,7 +963,8 @@
         "examples"
       ],
       "tier": "Community",
-      "transport": "stdio"
+      "transport": "stdio",
+      "tools": ["get_current_time", "convert_timezone", "format_time", "parse_time", "get_timezone_info"]
     }
   },
   "version": "1.0.0"
