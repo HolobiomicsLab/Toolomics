@@ -94,6 +94,68 @@
       "status": "Active",
       "tools": ["get_mcp_name", "execute_command"]
     },
+    "arxiv-mcp-server": {
+      "args": [
+        "--storage-path",
+        "/arxiv-papers"
+      ],
+      "description": "Enables AI assistants to search and access arXiv research papers through MCP protocol. Mount a volume to /arxiv-papers for persistent paper storage.",
+      "env_vars": [
+        {
+          "default": "/arxiv-papers",
+          "description": "Directory path where downloaded papers will be stored",
+          "name": "ARXIV_STORAGE_PATH",
+          "required": false
+        }
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/arxiv-mcp-server:0.3.0",
+      "metadata": {
+        "last_updated": "2025-08-14T06:56:18Z",
+        "pulls": 154,
+        "stars": 1564
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "arxiv.org",
+              "export.arxiv.org"
+            ],
+            "allow_port": [
+              443,
+              80
+            ],
+            "insecure_allow_all": false
+          }
+        },
+        "read": [],
+        "write": []
+      },
+      "provenance": {
+        "cert_issuer": "https://token.actions.githubusercontent.com",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "runner_environment": "github-hosted",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev"
+      },
+      "repository_url": "https://github.com/blazickjp/arxiv-mcp-server",
+      "status": "Active",
+      "tags": [
+        "research",
+        "academic",
+        "papers",
+        "arxiv",
+        "search"
+      ],
+      "tier": "Community",
+      "tools": [
+        "search_papers",
+        "download_paper",
+        "list_papers",
+        "read_paper"
+      ],
+      "transport": "stdio"
+    },
     "atlassian": {
       "args": [],
       "description": "Connect to Atlassian products like Confluence, Jira Cloud and Server/Data deployments.",

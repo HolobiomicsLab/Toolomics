@@ -90,12 +90,14 @@ SERVERS=(
     "toolomics-browser" 
     "toolomics-csv"
     "toolomics-search"
+    
     "toolomics-pdf"
     "toolomics-shell"
     "fetch"
     "git"
     "filesystem"
     "time"
+    "arxiv-mcp-server"
 )
 
 # Function to stop all servers on exit

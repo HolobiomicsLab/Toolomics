@@ -15,7 +15,7 @@ Before starting, ensure you have:
 Toolomics uses a standardized architecture where all MCP servers:
 1. Are located in `mcp_host/your_tool_name/` directory
 2. Run in Docker containers managed by ToolHive
-3. Share a centralized `/workspace` directory
+3. Share a centralized workspace (mounted as `/projects` in containers)
 4. Use standardized response patterns via `shared.py` utilities
 5. Are registered in `registry.json` for ToolHive management
 
@@ -98,8 +98,8 @@ def your_main_tool(input_param: str, optional_param: Optional[str] = None) -> Di
     """
     try:
         # Your tool logic here
-        # Use /workspace for file operations:
-        workspace_path = Path("/workspace")
+        # Use /projects for file operations (mounted from host workspace/):
+        workspace_path = Path("/projects")
         
         # Example: Create a file in workspace
         output_file = workspace_path / "your_tool_output.txt"
@@ -135,7 +135,7 @@ def list_workspace_files() -> Dict[str, Any]:
         dict: CommandResult with list of files in workspace
     """
     try:
-        workspace_path = Path("/workspace")
+        workspace_path = Path("/projects")
         if not workspace_path.exists():
             return CommandResult(
                 status="error",
@@ -219,7 +219,9 @@ Add your server to `registry.json`:
 Add your server to the `SERVERS` array in `start.sh`:
 
 ```bash
-# List of servers to start (all toolomics servers)
+# List of servers to start (Toolomics + Essential MCP servers)
+# Note: The registry contains many more MCP servers available.
+# Use 'thv run <server-name>' to start additional servers as needed.
 SERVERS=(
     "toolomics-rscript"
     "toolomics-browser" 
@@ -228,12 +230,17 @@ SERVERS=(
     "toolomics-pdf"
     "toolomics-shell"
     "toolomics-your-tool"    # Add your server here
+    "fetch"
+    "git"
+    "filesystem"
+    "time"
+    "arxiv-mcp-server"
 )
 ```
 
 ## Step 5: Create a Test Script
 
-Create `tests/your_tool_test.py`:
+Create `tests/toolomics_your_tool_test.py` following the comprehensive test pattern:
 
 ```python
 #!/usr/bin/env python3
@@ -328,22 +335,28 @@ Look for `toolomics-your-tool` in the output.
 thv logs toolomics-your-tool
 ```
 
-3. **Run your test script** (update port number from `thv list`):
+3. **Run your test script using the test runner**:
 ```bash
-# Update the port in your test file first
-python tests/your_tool_test.py
+# Run with the comprehensive test runner
+python tests/run_all_mcp_tests.py --server your-tool
+
+# Or run your test file directly
+python tests/toolomics_your_tool_test.py
+
+# Or use the convenience script
+./test_all_mcps.sh your-tool
 ```
 
 ## Common Patterns and Best Practices
 
 ### File Operations
-Always use the `/workspace` directory for file operations to ensure compatibility with other MCP servers:
+Always use the `/projects` directory for file operations to ensure compatibility with other MCP servers (this is mounted from the host `workspace/` directory):
 
 ```python
 from pathlib import Path
 
 # Correct way to handle files
-workspace = Path("/workspace")
+workspace = Path("/projects")
 input_file = workspace / "input.txt"
 output_file = workspace / "output.json"
 
@@ -497,7 +510,7 @@ def get_mcp_name() -> str:
 def count_words(filename: str) -> Dict[str, Any]:
     """Count words, lines, and characters in a text file."""
     try:
-        filepath = Path("/workspace") / filename
+        filepath = Path("/projects") / filename
         if not filepath.exists():
             return CommandResult(
                 status="error",
@@ -535,7 +548,7 @@ def count_words(filename: str) -> Dict[str, Any]:
 def find_pattern(filename: str, pattern: str) -> Dict[str, Any]:
     """Find regex pattern matches in a text file."""
     try:
-        filepath = Path("/workspace") / filename
+        filepath = Path("/projects") / filename
         if not filepath.exists():
             return CommandResult(
                 status="error",
@@ -586,14 +599,28 @@ if __name__ == "__main__":
 }
 ```
 
+## Step 8: Add to Test Suite
+
+Integrate your server with the comprehensive test runner by adding it to `tests/run_all_mcp_tests.py`:
+
+```python
+# Add your server to the SERVER_CONFIGS dictionary
+"your-tool": {
+    "test_file": "toolomics_your_tool_test.py", 
+    "name_variants": ["your-tool", "yourtool"],
+    "expected_tools": ["get_mcp_name", "your_main_tool", "list_workspace_files"]
+}
+```
+
 ## Next Steps
 
 After successfully creating and testing your MCP server:
 
 1. **Document your tools** - Add descriptions to your tool functions
-2. **Add comprehensive tests** - Cover edge cases and error conditions  
+2. **Add comprehensive tests** - Follow the 4-phase test pattern (Discovery, Tools, Use Cases, Health)
 3. **Update documentation** - Add your server to README.md if it's a major addition
 4. **Consider dependencies** - Add any new Python packages to `requirements.txt`
 5. **Test integration** - Verify your server works well with other MCP servers in the workspace
+6. **Run full test suite** - Ensure all tests pass with your new server: `./test_all_mcps.sh`
 
 Your new MCP server is now ready to be used by AI agents through ToolHive! 🎉
