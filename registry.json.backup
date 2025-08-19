@@ -1,0 +1,90 @@
+{
+  "servers": {
+    "toolomics-rscript": {
+      "description": "R Script execution MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/Rscript/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "rscript"
+        }
+      ]
+    },
+    "toolomics-browser": {
+      "description": "Web browser automation and search MCP server", 
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/browser/server.py"],
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "browser"
+        }
+      ]
+    },
+    "toolomics-csv": {
+      "description": "CSV data processing MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/csv/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "csv"
+        }
+      ]
+    },
+    "toolomics-search": {
+      "description": "MCP server registry search and discovery",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/mcp_search/server.py"],
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "search"
+        }
+      ]
+    },
+    "toolomics-pdf": {
+      "description": "PDF processing and navigation MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/pdf/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "pdf"
+        }
+      ]
+    },
+    "toolomics-shell": {
+      "description": "Shell command execution MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/shell/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "shell"
+        }
+      ]
+    }
+  }
+}

@@ -1,31 +1,50 @@
-FROM python:3.10
+FROM python:3.10-slim
 
-# Install sudo
-RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
-
-# Create a user with sudo privileges and no password requirement
-RUN useradd -m -s /bin/bash dockeruser && \
-    echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-# Set the working directory
+# Set working directory early
 WORKDIR /app
 
-COPY workspace /app/workspace
+# Copy only requirements first for better layer caching
+COPY requirements.txt .
 
-# Copy the application code
-COPY requirements.txt /app/requirements.txt
+# Install all dependencies in a single layer to minimize image size
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        sudo \
+        curl \
+        wget \
+        git \
+        ca-certificates \
+        gnupg \
+        unzip \
+        chromium \
+        chromium-driver \
+        xvfb \
+        libnss3-dev \
+        libatk-bridge2.0-0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxrandr2 \
+        libxss1 \
+        libxtst6 \
+    && curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
+    && chmod +x /usr/local/bin/docker-compose \
+    && ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose \
+    && pip install --no-cache-dir -r requirements.txt \
+    && useradd -m -s /bin/bash dockeruser \
+    && echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+    && mkdir -p /projects \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Install Python dependencies
-RUN pip3 install -r /app/requirements.txt
+# Copy application code (dockerignore excludes .venv, workspace, etc)
+COPY . .
 
-# Change ownership of the app directory to dockeruser
-RUN chown -R dockeruser:dockeruser /app
+# Set environment for headless Chrome
+ENV DISPLAY=:99
 
-# Switch to the dockeruser
+# Set final permissions and switch to non-root user
+RUN chown -R dockeruser:dockeruser /app /projects
 USER dockeruser
+WORKDIR /projects
 
-# Expose ports, from 5100 to 5200 as MCP might use all this range depending on number of tools deployed
-EXPOSE 5100-5200
-
-# Command to run the application
-CMD ["python3", "deploy.py", "--config", "config.json", "--mcp-dir", "mcp_docker", "--starting-port", "5100"]
+# No CMD directive needed - ToolHive manages container execution via registry.json

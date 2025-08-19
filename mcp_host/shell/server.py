@@ -8,13 +8,10 @@ Provides tools for shell navigation and interaction.
 Author: Martin Legrand - HolobiomicsLab, CNRS
 """
 
-
 import os
 import sys
 from fastmcp import FastMCP
-from typing import Optional
 import shlex
-import sys
 from pathlib import Path
 
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -33,14 +30,17 @@ mcp = FastMCP(
     instructions=description,
 )
 
+
 @mcp.tool
 def get_mcp_name() -> str:
+    """Get the name of this MCP server"""
     return "Bash command MCP"
+
 
 @mcp.tool
 @return_as_dict
 def execute_command(command: str) -> dict:
-    f"""
+    """
     Execute a shell command and return the output with better error handling and security.
     You should NEVER use this tool to execute Rscript, use the dedicated Rscript tool instead.
     execute_command does not support multiple positional arguments or combined positional and keyword arguments
@@ -54,20 +54,27 @@ def execute_command(command: str) -> dict:
     Example:
         execute_command(command="ls -la /tmp")
     """
-    
+
     print(f"Executing command: {command}")
 
     dangerous_patterns = [
-        ['rm', '-r'], ['rm', '-rf'], ['rm', '-f'],
-        ['kill', '-9'], ['chmod', '777'],
-        ['mv', '/etc'], ['cp', '/etc'], ['rm', '/etc'], 
-        ['rm', '/usr'], ['rm', '/var'], ['rm', '/']
+        ["rm", "-r"],
+        ["rm", "-rf"],
+        ["rm", "-f"],
+        ["kill", "-9"],
+        ["chmod", "777"],
+        ["mv", "/etc"],
+        ["cp", "/etc"],
+        ["rm", "/etc"],
+        ["rm", "/usr"],
+        ["rm", "/var"],
+        ["rm", "/"],
     ]
     try:
         command_words = shlex.split(command.lower())
     except ValueError:
         command_words = command.lower().split()
-    
+
     # Check for dangerous command patterns
     for pattern in dangerous_patterns:
         if all(word in command_words for word in pattern):
@@ -75,14 +82,29 @@ def execute_command(command: str) -> dict:
                 status="error",
                 stdout="Command blocked for security reasons",
                 stderr="Command blocked for security reasons",
-                exit_code=-1
+                exit_code=-1,
             )
-    
+
     return run_bash_subprocess(command, timeout=1800)
 
-if len(sys.argv) > 1 and sys.argv[1].isdigit():
-    port = int(sys.argv[1])
-else:
-    port = int(input("Enter port number: "))
-print(f"Running Shell MCP server on port {port}")
-mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
+
+print("Starting Shell MCP server with streamable-http transport...")
+if __name__ == "__main__":
+    # Get port from environment variable (set by ToolHive) or command line argument as fallback
+    port = None
+    if "MCP_PORT" in os.environ:
+        port = int(os.environ["MCP_PORT"])
+        print(f"Using port from MCP_PORT environment variable: {port}")
+    elif "FASTMCP_PORT" in os.environ:
+        port = int(os.environ["FASTMCP_PORT"])
+        print(f"Using port from FASTMCP_PORT environment variable: {port}")
+    elif len(sys.argv) == 2:
+        port = int(sys.argv[1])
+        print(f"Using port from command line argument: {port}")
+    else:
+        print("Usage: python server.py <port>")
+        print("Or set MCP_PORT/FASTMCP_PORT environment variable")
+        sys.exit(1)
+
+    print(f"Starting server on port {port}")
+    mcp.run(transport="streamable-http", port=port, host="0.0.0.0")

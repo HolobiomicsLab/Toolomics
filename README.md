@@ -17,39 +17,56 @@ python3.10 -m pip install -r requirements.txt
 uv pip install -r requirements.txt
 ```
 
+## Requirements
+
+### ToolHive
+Toolomics uses ToolHive for container orchestration and MCP server management. Install ToolHive:
+
+```bash
+curl -sSL https://get.toolhive.dev | sh
+```
+
+### UV Package Manager (Optional but Recommended)
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ## Deploying Tools
 
-### Deploy all tools automatically (docker+host)
+### Start All Services
 
 ```bash
 ./start.sh
 ```
 
-### Deploy docker Tools only
+This will:
+- Build the Docker image if needed
+- Start SearxNG services for web search
+- Deploy all MCP servers via ToolHive
+- Create the centralized workspace directory
 
-To deploy all docker-tools:
+### Rebuild and Start
 
 ```bash
-docker build -t toolomics .
-docker run -it -p 5100-5200:5100-5200 toolomics
+./start.sh --rebuild
 ```
 
-By default we use port 5100 to 5200 for MCPs running **in docker**.
+Forces a rebuild of the Docker image before starting services.
 
-### Deploy host Tools only
-
-To deploy all the on-host tools, use the following command:
+### Managing Services
 
 ```bash
-python3.10 deploy.py --config <config path>
-```
+# List running servers
+thv list
 
-By default we use port 5000 to 5100 for MCPs running **on host**.
+# Check server logs
+thv logs <server-name>
 
-For example : 
+# Stop specific server
+thv stop <server-name>
 
-```bash
-python3.10 deploy.py --config config.json 
+# Stop all servers
+thv stop --all
 ```
 
 ## Centralized File Management
@@ -62,36 +79,30 @@ All MCP servers execute in a centralized **workspace directory** (default: `work
 
 This centralized approach ensures that AI agents can easily find and work with files across different MCP tools without needing to track file locations.
 
-### Intelligent Port Management
+## Available MCP Servers
 
-Each MCP server is automatically assigned an available port, which is recorded in the `config.json` file. The system uses intelligent port detection to avoid conflicts:
+All servers are located in `mcp_host/` and run in Docker containers managed by ToolHive:
 
-- **Host servers** use ports 5000-5099
-- **Docker servers** use ports 5100-5199
-- **Automatic conflict resolution**: If a port is already in use, the system finds the next available port
-- **Persistent configuration**: Port assignments are saved and reused across deployments
-- **No process killing**: Unlike previous versions, the system works around existing processes instead of terminating them
+- **browser**: Web automation with Selenium and SearxNG search integration
+- **csv**: CSV data processing, manipulation, and analysis
+- **pdf**: PDF text extraction and document processing
+- **Rscript**: R script execution environment for statistical computing
+- **mcp_search**: MCP server registry search and discovery
+- **shell**: Secure shell command execution with safety filters
 
-Example configuration:
-```json
-[
-    {
-        "mcp_host/browser/server.py": 5002
-    },
-    {
-        "mcp_host/Rscript/server.py": 5001
-    },
-    {
-        "mcp_docker/shell/server.py": 5101
-    }
-]
-```
+All servers share the same containerized environment with the centralized workspace mounted for seamless file sharing.
 
-The deployment system will automatically:
-- Check which ports are currently available
-- Reassign ports if previously assigned ones are no longer available
-- Log all port assignments and conflicts for transparency
-- Update the configuration file only when changes are made
+### ToolHive Service Management
+
+All MCP servers are managed through ToolHive, which handles:
+
+- **Automatic port assignment**: ToolHive dynamically assigns available ports
+- **Service discovery**: AI agents connect through ToolHive's registry system
+- **Container orchestration**: Docker containers are managed automatically
+- **Network integration**: All services are connected to the SearxNG network
+- **Workspace mounting**: The centralized workspace is automatically mounted in all containers
+
+Server configurations are defined in `registry.json` and managed by ToolHive.
 
 ## Adding a New MCP
 
@@ -99,35 +110,51 @@ You can easily add a new tool as an MCP server.
 
 ### Steps to Add a New MCP
 
-#### 1. Choose the Right Location
+#### 1. Create Your MCP Server
 
-- **`mcp_host/your_tool_name/`**: For safe tools that run directly on the host (ports 5000-5099)
-  - Use for data processing, file manipulation, API calls
-  
-- **`mcp_docker/your_tool_name/`**: For potentially unsafe tools that need containerization (ports 5100-5199)
-  - Use for shell commands, system operations, or untrusted code execution
+Create your MCP server in the `mcp_host/` directory:
 
-#### 2. Create Your MCP Server
+```
+mcp_host/
+└── your_tool_name/
+    └── server.py
+```
+
+#### 2. Implement Your Server
 
 Create a `server.py` file in your chosen directory following the required pattern:
 
-- Must accept port number as first command line argument
 - Use the centralized `workspace/` directory for file operations
-- Return structured responses with proper error handling
+- Import shared utilities from `shared.py`
+- Use `@return_as_dict` decorator for standardized responses
+- Follow FastMCP patterns with proper error handling
 
-#### 3. Deploy Automatically
+#### 3. Register with ToolHive
 
-Run the deployment script to discover and start your new MCP server:
+Add your new server to `registry.json` following the existing pattern:
 
-```bash
-python3.10 deploy.py --config config.json
+```json
+{
+  "servers": {
+    "toolomics-your-tool": {
+      "description": "Your tool description",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/your_tool/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "value": "your-tool"
+        }
+      ]
+    }
+  }
+}
 ```
 
-The script will automatically:
-- Find your new `server.py` file
-- Assign an appropriate port
-- Update `config.json` with the port mapping
-- Start your server
+#### 4. Deploy
+
+Run `./start.sh` to deploy your new server with all others.
 
 ### Example MCP Implementation
 
@@ -146,10 +173,10 @@ from pathlib import Path
 from typing import Dict, Any
 from fastmcp import FastMCP
 
-# mandatory
+# Add project root to path for shared imports
 project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(project_root))  # Add 'a/' to Python's search path
-from workspace.shared.shared import CommandResult, run_bash_subprocess, return_as_dict
+sys.path.append(str(project_root))
+from shared import CommandResult, run_bash_subprocess, return_as_dict
 
 mcp = FastMCP(
     name="Text Processing MCP",
@@ -176,23 +203,29 @@ def count_words_in_file(file_path: str) -> Dict[str, Any]:
     word_count = len(content.split())
     return CommandResult(
         status="success",
-        stdout=word_count
+        stdout=word_count,
         exit_code=0
     )
 
-# Required: Port handling for deployment
-if len(sys.argv) > 1 and sys.argv[1].isdigit():
+# ToolHive will provide the port via environment or arguments
+if len(sys.argv) > 1:
     port = int(sys.argv[1])
 else:
-    port = int(input("Enter port number: "))
+    port = 8000  # Default fallback
 
 print(f"Starting Text Processing MCP server on port {port}...")
 mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
 ```
 
-### Automatic Port Assignment
+### Testing Your MCP Server
 
-When you run the `deploy.py` script for the first time, it will automatically assign a port to your new MCP server and save the mapping in the `config.json` file.
+You can test individual MCP servers using the test scripts in the `tests/` directory:
+
+```bash
+python tests/csv_test.py
+python tests/R_test.py
+python tests/shell_test.py
+```
 
 ### Learn More
 

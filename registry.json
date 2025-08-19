@@ -1,0 +1,1031 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stacklok/toolhive/main/docs/registry/schema.json",
+  "last_updated": "2025-08-13T00:00:00Z",
+  "servers": {
+    "toolomics-rscript": {
+      "description": "R Script execution MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/Rscript/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": ["toolomics", "rlanguage", "statistics", "data-analysis"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "execute_r_code", "write_r_script", "list_workspace_files", "list_script_files", "execute_r_script_file"]
+    },
+    "toolomics-browser": {
+      "description": "Web browser automation and search MCP server", 
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/browser/server.py"],
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": ["toolomics", "browser", "selenium", "web-automation", "searxng"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "search", "navigate", "get_links", "get_downloadable_links", "download_file", "take_screenshot"]
+    },
+    "toolomics-csv": {
+      "description": "CSV data processing MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/csv/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": ["toolomics", "csv", "data-processing", "pandas"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "create_csv", "load_csv_from_path", "get_csv_data", "add_csv_row", "update_csv_row", "delete_csv_row", "list_csv_datasets", "delete_csv_dataset", "query_csv", "get_csv_stats"]
+    },
+    "toolomics-pdf": {
+      "description": "PDF processing and navigation MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/pdf/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": ["toolomics", "pdf", "document-processing", "text-extraction"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "list_pdf_files", "initialize_pdf_navigation", "navigate_to_page", "get_current_page", "navigate_next_page", "navigate_previous_page", "add_bookmark", "search_in_current_session", "rag_query_current_session", "get_navigation_status", "close_navigation_session", "extract_text_from_pdf", "search_keywords_in_pdf"]
+    },
+    "toolomics-shell": {
+      "description": "Shell command execution MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/shell/server.py"],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": ["toolomics", "shell", "command-execution", "system"],
+      "status": "Active",
+      "tools": ["get_mcp_name", "execute_command"]
+    },
+    "arxiv-mcp-server": {
+      "args": [
+        "--storage-path",
+        "/arxiv-papers"
+      ],
+      "description": "Enables AI assistants to search and access arXiv research papers through MCP protocol. Mount a volume to /arxiv-papers for persistent paper storage.",
+      "env_vars": [
+        {
+          "default": "/arxiv-papers",
+          "description": "Directory path where downloaded papers will be stored",
+          "name": "ARXIV_STORAGE_PATH",
+          "required": false
+        }
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/arxiv-mcp-server:0.3.0",
+      "metadata": {
+        "last_updated": "2025-08-14T06:56:18Z",
+        "pulls": 154,
+        "stars": 1564
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "arxiv.org",
+              "export.arxiv.org"
+            ],
+            "allow_port": [
+              443,
+              80
+            ],
+            "insecure_allow_all": false
+          }
+        },
+        "read": [],
+        "write": []
+      },
+      "provenance": {
+        "cert_issuer": "https://token.actions.githubusercontent.com",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "runner_environment": "github-hosted",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev"
+      },
+      "repository_url": "https://github.com/blazickjp/arxiv-mcp-server",
+      "status": "Active",
+      "tags": [
+        "research",
+        "academic",
+        "papers",
+        "arxiv",
+        "search"
+      ],
+      "tier": "Community",
+      "tools": [
+        "search_papers",
+        "download_paper",
+        "list_papers",
+        "read_paper"
+      ],
+      "transport": "stdio"
+    },
+    "atlassian": {
+      "args": [],
+      "description": "Connect to Atlassian products like Confluence, Jira Cloud and Server/Data deployments.",
+      "env_vars": [
+        {
+          "description": "Confluence URL (e.g., https://your-domain.atlassian.net/wiki)",
+          "name": "CONFLUENCE_URL",
+          "required": false
+        },
+        {
+          "description": "Confluence username/email for Cloud deployments",
+          "name": "CONFLUENCE_USERNAME",
+          "required": false
+        },
+        {
+          "description": "Confluence API token for Cloud deployments",
+          "name": "CONFLUENCE_API_TOKEN",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "Confluence Personal Access Token for Server/Data Center deployments",
+          "name": "CONFLUENCE_PERSONAL_TOKEN",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "Verify SSL certificates for Confluence Server/Data Center (true/false)",
+          "name": "CONFLUENCE_SSL_VERIFY",
+          "required": false
+        },
+        {
+          "description": "Comma-separated list of Confluence space keys to filter search results",
+          "name": "CONFLUENCE_SPACES_FILTER",
+          "required": false
+        },
+        {
+          "description": "Jira URL (e.g., https://your-domain.atlassian.net)",
+          "name": "JIRA_URL",
+          "required": false
+        },
+        {
+          "description": "Jira username/email for Cloud deployments",
+          "name": "JIRA_USERNAME",
+          "required": false
+        },
+        {
+          "description": "Jira API token for Cloud deployments",
+          "name": "JIRA_API_TOKEN",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "Jira Personal Access Token for Server/Data Center deployments",
+          "name": "JIRA_PERSONAL_TOKEN",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "Verify SSL certificates for Jira Server/Data Center (true/false)",
+          "name": "JIRA_SSL_VERIFY",
+          "required": false
+        },
+        {
+          "description": "Comma-separated list of Jira project keys to filter search results",
+          "name": "JIRA_PROJECTS_FILTER",
+          "required": false
+        },
+        {
+          "description": "Run in read-only mode (disables all write operations)",
+          "name": "READ_ONLY_MODE",
+          "required": false
+        },
+        {
+          "description": "Increase logging verbosity",
+          "name": "MCP_VERBOSE",
+          "required": false
+        },
+        {
+          "description": "Comma-separated list of tool names to enable (if not set, all tools are enabled)",
+          "name": "ENABLED_TOOLS",
+          "required": false
+        }
+      ],
+      "image": "ghcr.io/sooperset/mcp-atlassian:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:20Z",
+        "pulls": 11749,
+        "stars": 2673
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".atlassian.net",
+              ".atlassian.com"
+            ],
+            "allow_port": [
+              443
+            ],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/sooperset/mcp-atlassian",
+      "status": "Active",
+      "tags": [
+        "atlassian",
+        "confluence",
+        "jira",
+        "wiki",
+        "issue-tracking",
+        "project-management",
+        "documentation",
+        "cloud",
+        "server",
+        "data-center"
+      ],
+      "tier": "Community",
+      "transport": "stdio",
+      "tools": ["confluence_search", "confluence_create_page", "confluence_update_page", "jira_search", "jira_create_issue", "jira_update_issue"]
+    },
+    "aws-pricing": {
+      "args": [],
+      "description": "Generate upfront AWS service cost estimates and cost insights.",
+      "env_vars": [
+        {
+          "description": "AWS access key ID with access to the AWS Pricing API",
+          "name": "AWS_ACCESS_KEY_ID",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "AWS secret access key",
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "AWS sesison token for temporary credentials",
+          "name": "AWS_SESSION_TOKEN",
+          "required": false,
+          "secret": true
+        },
+        {
+          "default": "us-east-1",
+          "description": "AWS region for the Pricing API endpoint (us-east-1, eu-central-1, ap-southeast-1)",
+          "name": "AWS_REGION",
+          "required": false
+        },
+        {
+          "default": "ERROR",
+          "description": "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+          "name": "FASTMCP_LOG_LEVEL",
+          "required": false
+        }
+      ],
+      "image": "public.ecr.aws/f3y8w4n0/awslabs/aws-pricing-mcp-server:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:21Z",
+        "pulls": 7439,
+        "stars": 5186
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "aws.amazon.com",
+              "pricing.us-east-1.amazonaws.com",
+              "api.pricing.us-east-1.amazonaws.com",
+              "api.pricing.eu-central-1.amazonaws.com",
+              "api.pricing.ap-southeast-1.amazonaws.com"
+            ],
+            "allow_port": [
+              443
+            ],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/awslabs/mcp",
+      "status": "Active",
+      "tags": [
+        "aws",
+        "cost-analysis",
+        "pricing",
+        "estimates",
+        "cost-insights",
+        "aws-costs",
+        "aws-pricing"
+      ],
+      "tier": "Official",
+      "transport": "stdio",
+      "tools": ["get_aws_pricing", "get_service_pricing", "estimate_costs", "list_services", "get_pricing_details"]
+    },
+    "azure": {
+      "args": [],
+      "description": "The Azure MCP Server, bringing the power of Azure to your agents.",
+      "env_vars": [
+        {
+          "description": "Your Azure tenant ID",
+          "name": "AZURE_TENANT_ID",
+          "required": true,
+          "secret": true
+        },
+        {
+          "description": "Your Azure client ID for authentication",
+          "name": "AZURE_CLIENT_ID",
+          "required": true,
+          "secret": true
+        },
+        {
+          "description": "Your Azure client secret for authentication",
+          "name": "AZURE_CLIENT_SECRET",
+          "required": true,
+          "secret": true
+        },
+        {
+          "description": "HTTP proxy URL for outbound requests (optional)",
+          "name": "HTTP_PROXY",
+          "required": false
+        },
+        {
+          "description": "HTTPS proxy URL for outbound requests (optional)",
+          "name": "HTTPS_PROXY",
+          "required": false
+        },
+        {
+          "description": "Comma-separated list of hosts to exclude from proxying (optional)",
+          "name": "NO_PROXY",
+          "required": false
+        }
+      ],
+      "image": "mcr.microsoft.com/azure-sdk/azure-mcp:0.5.1",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:19Z",
+        "pulls": 799,
+        "stars": 1068
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "login.microsoftonline.com",
+              "login.windows.net",
+              "management.azure.com",
+              "graph.microsoft.com",
+              ".blob.core.windows.net",
+              ".table.core.windows.net",
+              ".vault.azure.net",
+              ".documents.azure.com",
+              ".servicebus.windows.net"
+            ],
+            "allow_port": [
+              443
+            ],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/Azure/azure-mcp",
+      "status": "Active",
+      "tags": [
+        "azure",
+        "microsoft",
+        "cloud",
+        "iaas",
+        "paas",
+        "infrastructure",
+        "database",
+        "storage"
+      ],
+      "tier": "Official",
+      "transport": "stdio",
+      "tools": ["azure_vm_list", "azure_storage_create", "azure_database_query", "azure_resource_group_create", "azure_key_vault_get_secret"]
+    },
+    "elasticsearch": {
+      "args": [
+        "http"
+      ],
+      "description": "Connect to your Elasticsearch data.",
+      "env_vars": [
+        {
+          "description": "Your Elasticsearch instance URL",
+          "name": "ES_URL",
+          "required": true
+        },
+        {
+          "description": "Elasticsearch API key for authentication",
+          "name": "ES_API_KEY",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "Elasticsearch username for basic authentication",
+          "name": "ES_USERNAME",
+          "required": false
+        },
+        {
+          "description": "Elasticsearch password for basic authentication",
+          "name": "ES_PASSWORD",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "Path to custom CA certificate for Elasticsearch SSL/TLS",
+          "name": "ES_CA_CERT",
+          "required": false
+        },
+        {
+          "description": "Set to '1' or 'true' to skip SSL certificate verification",
+          "name": "ES_SSL_SKIP_VERIFY",
+          "required": false
+        },
+        {
+          "description": "Path prefix for Elasticsearch instance exposed at a non-root path",
+          "name": "ES_PATH_PREFIX",
+          "required": false
+        },
+        {
+          "description": "Server assumes Elasticsearch 9.x. Set to 8 target Elasticsearch 8.x",
+          "name": "ES_VERSION",
+          "required": false
+        }
+      ],
+      "image": "mcp/elasticsearch:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:23Z",
+        "pulls": 9785,
+        "stars": 393
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [
+              443,
+              9200
+            ],
+            "insecure_allow_all": true
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/elastic/mcp-server-elasticsearch",
+      "status": "Active",
+      "tags": [
+        "elasticsearch",
+        "search",
+        "analytics",
+        "data",
+        "alerting",
+        "observability",
+        "metrics",
+        "logs"
+      ],
+      "target_port": 8080,
+      "tier": "Official",
+      "transport": "streamable-http",
+      "tools": ["elasticsearch_search", "elasticsearch_index", "elasticsearch_query", "elasticsearch_bulk_insert", "elasticsearch_get_mapping"]
+    },
+    "fetch": {
+      "args": [],
+      "description": "Allows you to fetch content from the web",
+      "env_vars": [],
+      "image": "ghcr.io/stackloklabs/gofetch/server:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:25Z",
+        "pulls": 11670,
+        "stars": 16
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [
+              443
+            ],
+            "insecure_allow_all": true
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/stackloklabs/gofetch",
+      "status": "Active",
+      "tags": [
+        "content",
+        "html",
+        "markdown",
+        "fetch",
+        "fetching",
+        "get",
+        "wget",
+        "json",
+        "curl",
+        "modelcontextprotocol"
+      ],
+      "tier": "Community",
+      "transport": "streamable-http",
+      "tools": ["fetch_url", "fetch_html", "fetch_json", "fetch_text", "fetch_xml"]
+    },
+    "filesystem": {
+      "args": [
+        "/projects"
+      ],
+      "description": "Allows you to do filesystem operations. Mount paths under /projects using --volume.",
+      "env_vars": [],
+      "image": "mcp/filesystem:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:22Z",
+        "pulls": 19189,
+        "stars": 62859
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "status": "Active",
+      "tags": [
+        "create_directory",
+        "edit_file",
+        "filesystem",
+        "get_file_info",
+        "implementing",
+        "list_allowed_directories",
+        "list_directory",
+        "move_file",
+        "node",
+        "operations"
+      ],
+      "tier": "Community",
+      "transport": "stdio",
+      "tools": ["create_directory", "list_directory", "read_file", "write_file", "move_file", "delete_file", "get_file_info"]
+    },
+    "git": {
+      "args": [],
+      "description": "Provides support for interacting with Git repositories",
+      "env_vars": [],
+      "image": "mcp/git:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:23Z",
+        "pulls": 9664,
+        "stars": 62859
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "status": "Active",
+      "tags": [
+        "adds",
+        "automation",
+        "git",
+        "interaction",
+        "records",
+        "repository",
+        "shows",
+        "tools",
+        "unstages"
+      ],
+      "tier": "Community",
+      "transport": "stdio",
+      "tools": ["git_status", "git_add", "git_commit", "git_push", "git_pull", "git_branch", "git_checkout", "git_diff", "git_log"]
+    },
+    "github": {
+      "args": [],
+      "description": "Provides integration with GitHub's APIs",
+      "env_vars": [
+        {
+          "description": "GitHub personal access token with appropriate permissions",
+          "name": "GITHUB_PERSONAL_ACCESS_TOKEN",
+          "required": true,
+          "secret": true
+        },
+        {
+          "description": "GitHub Enterprise Server hostname (optional)",
+          "name": "GH_HOST",
+          "required": false
+        }
+      ],
+      "image": "ghcr.io/github/github-mcp-server:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:20Z",
+        "pulls": 5000,
+        "stars": 20123
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".github.com",
+              ".githubusercontent.com"
+            ],
+            "allow_port": [
+              443
+            ],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/github/github-mcp-server",
+      "status": "Active",
+      "tags": [
+        "api",
+        "create",
+        "fork",
+        "github",
+        "list",
+        "pull-request",
+        "push",
+        "repository",
+        "search",
+        "update",
+        "issues"
+      ],
+      "tier": "Official",
+      "transport": "stdio",
+      "tools": ["github_search_repositories", "github_create_repository", "github_get_file", "github_create_or_update_file", "github_create_issue", "github_create_pull_request", "github_list_issues", "github_get_issue", "github_update_issue"]
+    },
+    "memory": {
+      "args": [],
+      "description": "Provides persistent memory to an LLMs application for storing information about the user across chats. Implemented using a local knowledge graph.",
+      "env_vars": [
+        {
+          "description": "Path to the memory storage JSON file (default: memory.json in the server directory)",
+          "name": "MEMORY_FILE_PATH",
+          "required": false
+        }
+      ],
+      "image": "mcp/memory:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:21Z",
+        "pulls": 14704,
+        "stars": 62859
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [
+              443
+            ],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "status": "Active",
+      "tags": [
+        "entities",
+        "graph",
+        "knowledge",
+        "memory",
+        "observations",
+        "persistent",
+        "relations"
+      ],
+      "tier": "Community",
+      "transport": "stdio",
+      "tools": ["create_entity", "add_observation", "delete_entity", "search_memory", "get_entities", "get_observations"]
+    },
+    "postgres-mcp-pro": {
+      "args": [
+        "--transport=sse",
+        "--sse-host=0.0.0.0",
+        "--sse-port=8000"
+      ],
+      "description": "Provides configurable read/write access and performance analysis for PostgreSQL databases.",
+      "env_vars": [
+        {
+          "description": "PostgreSQL connection string, like 'postgresql://username:password@host.docker.internal:5432/dbname'",
+          "name": "DATABASE_URI",
+          "required": true,
+          "secret": true
+        },
+        {
+          "description": "OpenAI API key for experimental index tuning by LLM",
+          "name": "OPENAI_API_KEY",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "image": "crystaldba/postgres-mcp:0.3.0",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:19Z",
+        "pulls": 9563,
+        "stars": 842
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [],
+            "insecure_allow_all": true
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/crystaldba/postgres-mcp",
+      "status": "Active",
+      "tags": [
+        "database",
+        "data",
+        "postgres",
+        "postgresql",
+        "sql",
+        "query",
+        "storage",
+        "analytics",
+        "performance",
+        "monitoring"
+      ],
+      "target_port": 8000,
+      "tier": "Official",
+      "transport": "sse",
+      "tools": ["postgres_query", "postgres_insert", "postgres_update", "postgres_delete", "postgres_analyze_performance", "postgres_create_index"]
+    },
+    "redis": {
+      "args": [],
+      "description": "Enables LLMs to interact with Redis key-value databases through a set of standardized tools.",
+      "env_vars": [
+        {
+          "description": "Redis IP or hostname (default \"127.0.0.1\")",
+          "name": "REDIS_HOST",
+          "required": true
+        },
+        {
+          "description": "Redis port (default 6379)",
+          "name": "REDIS_PORT",
+          "required": false
+        },
+        {
+          "description": "Redis database number (default 0)",
+          "name": "REDIS_DB",
+          "required": false
+        },
+        {
+          "description": "Redis username (default \"default\")",
+          "name": "REDIS_USERNAME",
+          "required": false
+        },
+        {
+          "description": "Redis password (default empty)",
+          "name": "REDIS_PWD",
+          "required": false,
+          "secret": true
+        },
+        {
+          "description": "Redis TLS connection (True|False, default False)",
+          "name": "REDIS_SSL",
+          "required": false
+        },
+        {
+          "description": "CA certificate for verifying server",
+          "name": "REDIS_CA_PATH",
+          "required": false
+        },
+        {
+          "description": "Client's private key file for client authentication",
+          "name": "REDIS_SSL_KEYFILE",
+          "required": false
+        },
+        {
+          "description": "Client's certificate file for client authentication",
+          "name": "REDIS_SSL_CERTFILE",
+          "required": false
+        },
+        {
+          "description": "Whether the client should verify the server's certificate (default \"required\")",
+          "name": "REDIS_CERT_REQS",
+          "required": false
+        },
+        {
+          "description": "Path to the trusted CA certificates file",
+          "name": "REDIS_CA_CERTS",
+          "required": false
+        },
+        {
+          "description": "Enable Redis Cluster mode (True|False, default False)",
+          "name": "REDIS_CLUSTER_MODE",
+          "required": false
+        },
+        {
+          "description": "Use the stdio or sse transport (default stdio)",
+          "name": "MCP_TRANSPORT",
+          "required": false
+        }
+      ],
+      "image": "mcp/redis:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:24Z",
+        "pulls": 9516,
+        "stars": 187
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [
+              443,
+              6379
+            ],
+            "insecure_allow_all": true
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/redis/mcp-redis",
+      "status": "Active",
+      "tags": [
+        "redis",
+        "database",
+        "key-value",
+        "storage",
+        "cache",
+        "data"
+      ],
+      "tier": "Official",
+      "transport": "stdio",
+      "tools": ["redis_get", "redis_set", "redis_delete", "redis_list_keys", "redis_exists", "redis_expire", "redis_ttl"]
+    },
+    "sqlite": {
+      "args": [],
+      "description": "Provides tools and resources for querying SQLite databases.",
+      "env_vars": [],
+      "image": "ghcr.io/stackloklabs/sqlite-mcp/server:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:21Z",
+        "pulls": 3132,
+        "stars": 9
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/StacklokLabs/sqlite-mcp",
+      "status": "Active",
+      "tags": [
+        "data",
+        "database",
+        "query",
+        "sql",
+        "sqlite"
+      ],
+      "tier": "Community",
+      "transport": "sse",
+      "tools": ["sqlite_query", "sqlite_execute", "sqlite_create_table", "sqlite_insert", "sqlite_update", "sqlite_delete"]
+    },
+    "terraform": {
+      "args": [],
+      "description": "Provides integration with the Terraform ecosystem and interaction capabilities for Infrastructure as Code (IaC) development.",
+      "env_vars": [],
+      "image": "hashicorp/terraform-mcp-server:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:23Z",
+        "pulls": 8320,
+        "stars": 785
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "registry.terraform.io"
+            ],
+            "allow_port": [
+              443
+            ],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/hashicorp/terraform-mcp-server",
+      "status": "Active",
+      "tags": [
+        "terraform",
+        "iac",
+        "infrastructure",
+        "automation",
+        "providers",
+        "modules",
+        "hcl",
+        "plan",
+        "apply",
+        "destroy",
+        "aws",
+        "gcp",
+        "azure"
+      ],
+      "tier": "Official",
+      "transport": "stdio",
+      "tools": ["tf_plan", "tf_apply", "tf_destroy", "tf_init", "tf_validate", "tf_fmt", "tf_show", "tf_output"]
+    },
+    "time": {
+      "args": [],
+      "description": "Provides time information and IANA timezone conversions with auto system timezone detection.",
+      "env_vars": [],
+      "image": "mcp/time:latest",
+      "metadata": {
+        "last_updated": "2025-08-05T00:24:22Z",
+        "pulls": 10176,
+        "stars": 62859
+      },
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [],
+            "allow_port": [],
+            "insecure_allow_all": false
+          }
+        },
+        "read": ["/dev/null"],
+        "write": ["/dev/null"]
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "status": "Active",
+      "tags": [
+        "auto",
+        "available",
+        "configuration",
+        "conversions",
+        "convert_time",
+        "customization",
+        "details",
+        "detection",
+        "example",
+        "examples"
+      ],
+      "tier": "Community",
+      "transport": "stdio",
+      "tools": ["get_current_time", "convert_timezone", "format_time", "parse_time", "get_timezone_info"]
+    }
+  },
+  "version": "1.0.0"
+}

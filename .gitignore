@@ -331,6 +331,7 @@ ui_*.h
 *.jsc
 Makefile*
 *build-*
+!build-toolhive.sh
 *.qm
 *.prl
 
@@ -513,3 +514,8 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+
+
+CLAUDE.md
+
+!build-optimized.sh
