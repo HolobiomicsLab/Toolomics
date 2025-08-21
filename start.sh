@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Determine which docker compose command to use
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # On Linux, use docker compose (new syntax)
+    DOCKER_COMPOSE_CMD="docker compose"
+else
+    # On other systems (macOS, Windows), use docker-compose (old syntax)
+    DOCKER_COMPOSE_CMD="docker-compose"
+fi
+
 echo "🚀 Starting Toolomics MCP Servers with ToolHive"
 echo "=============================================="
 
@@ -71,7 +80,7 @@ echo "🔍 Starting SearxNG services..."
 SEARXNG_DIR="mcp_host/browser/searxng"
 if [[ -f "$SEARXNG_DIR/docker-compose.yml" ]]; then
     cd "$SEARXNG_DIR"
-    docker compose up -d
+    $DOCKER_COMPOSE_CMD up -d
     if [ $? -eq 0 ]; then
         echo "✅ SearxNG services started successfully"
     else
@@ -115,7 +124,7 @@ cleanup() {
     SEARXNG_DIR="mcp_host/browser/searxng"
     if [[ -f "$SEARXNG_DIR/docker-compose.yml" ]]; then
         cd "$SEARXNG_DIR"
-        docker-compose down 2>/dev/null || true
+        $DOCKER_COMPOSE_CMD down 2>/dev/null || true
         cd ../../..
         echo "✅ SearxNG services stopped"
     fi
