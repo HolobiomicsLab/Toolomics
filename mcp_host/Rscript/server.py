@@ -58,7 +58,16 @@ def run_rscript(script_path: str) -> CommandResult:
         CommandResult containing the status, stdout, stderr, and exit code.
     """
     cmd = f"docker exec xcmsrocker Rscript {script_path}"
-    return run_bash_subprocess(cmd, timeout=60)
+    result = run_bash_subprocess(cmd, timeout=60)
+    
+    # Limit stdout and stderr to 4000 characters
+    if len(result.stdout) > 4000:
+        result.stdout = result.stdout[:4000] + "\n... (output truncated to 4000 characters)"
+    
+    if len(result.stderr) > 4000:
+        result.stderr = result.stderr[:4000] + "\n... (error output truncated to 4000 characters)"
+    
+    return result   
 
 
 @mcp.tool
@@ -86,7 +95,7 @@ def execute_r_code(r_code: str) -> Dict[str, Any]:
     try:
         # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
         script_name = f"rscript_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.R"
-        script_path = SCRIPT_DIR / script_name
+        script_path = script_name
         with open(script_path, "w") as f:
             f.write(r_code)
     except Exception as e:
@@ -122,7 +131,7 @@ def write_r_script(r_code: str, filename: str) -> str:
     try:
         # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
         # script_name = f"rscript_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.R"
-        script_path = SCRIPT_DIR / filename
+        script_path = filename
         with open(script_path, "w") as f:
             f.write(r_code)
         return "Script written successfully: " + str(script_path)
@@ -157,7 +166,7 @@ def list_script_files() -> List[str]:
         >>> list_script_files()
         ["analysis.r", "preprocessing.r", "visualization.r"]
     """
-    return [f.name for f in SCRIPT_DIR.iterdir() if f.is_file()]
+    return [f.name for f in Path(".").iterdir() if f.is_file()]
 
 
 @mcp.tool
@@ -181,7 +190,7 @@ def execute_r_script_file(filename: str) -> Dict[str, Any]:
             "exit_code": 0
         }}
     """
-    script_path = SCRIPT_DIR / filename
+    script_path =  filename
     if not script_path.exists() or not script_path.is_file():
         return f"File '{filename}' does not exist in script dir."
 

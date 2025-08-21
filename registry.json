@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/stacklok/toolhive/main/docs/registry/schema.json",
+  "schema": "https://raw.githubusercontent.com/stacklok/toolhive/main/docs/registry/schema.json",
   "last_updated": "2025-08-13T00:00:00Z",
   "servers": {
     "toolomics-rscript": {

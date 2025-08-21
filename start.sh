@@ -6,7 +6,13 @@ echo "=============================================="
 # Check if ToolHive is installed
 if ! command -v thv &> /dev/null; then
     echo "❌ ToolHive (thv) not found. Please install ToolHive first:"
-    echo "   curl -sSL https://get.toolhive.dev | sh"
+    echo "For macOS or Linux:"
+    echo "   /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\" # If brew is not installed"
+    echo "   brew tap stacklok/tap"
+    echo "   brew install thv"
+    echo ""
+    echo "For Windows:"
+    echo "   winget install stacklok.thv"
     exit 1
 fi
 
@@ -65,7 +71,7 @@ echo "🔍 Starting SearxNG services..."
 SEARXNG_DIR="mcp_host/browser/searxng"
 if [[ -f "$SEARXNG_DIR/docker-compose.yml" ]]; then
     cd "$SEARXNG_DIR"
-    docker-compose up -d
+    docker compose up -d
     if [ $? -eq 0 ]; then
         echo "✅ SearxNG services started successfully"
     else
@@ -88,9 +94,7 @@ mkdir -p workspace
 SERVERS=(
     "toolomics-rscript"
     "toolomics-browser" 
-    "toolomics-csv"
-    "toolomics-search"
-    
+    "toolomics-csv"    
     "toolomics-pdf"
     "toolomics-shell"
     "fetch"
@@ -137,6 +141,8 @@ for server in "${SERVERS[@]}"; do
     if thv run "$server" --volume "$(pwd)/workspace:/projects" --detach; then
         echo "✅ $server started successfully"
         successful_servers+=("$server")
+        thv restart "$server" 
+        echo "🔄 Restarted $server to ensure proper initialization"
     else
         echo "❌ Failed to start $server"
         failed_servers+=("$server")

@@ -22,9 +22,19 @@ uv pip install -r requirements.txt
 ### ToolHive
 Toolomics uses ToolHive for container orchestration and MCP server management. Install ToolHive:
 
+macOS or Linux:
 ```bash
-curl -sSL https://get.toolhive.dev | sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" # If brew is not installed
+
+brew tap stacklok/tap
+brew install thv
 ```
+
+Windows:
+```bash
+winget install stacklok.thv
+```
+
 
 ### UV Package Manager (Optional but Recommended)
 ```bash
