@@ -52,7 +52,8 @@ COPY --chown=dockeruser:dockeruser . .
 # Keep the container running
 #CMD ["rserver"]
 RUN usermod -u 1001 dockeruser && \
-    groupmod -g 1001 dockeruser
+    groupmod -g 1001 dockeruser && \
+    chown -R dockeruser:dockeruser /projects /app
 
 USER dockeruser
 WORKDIR /projects
