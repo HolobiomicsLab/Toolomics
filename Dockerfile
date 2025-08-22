@@ -41,7 +41,7 @@ COPY --chown=dockeruser:dockeruser . .
 
 RUN usermod -u 1001 dockeruser && \
     groupmod -g 1001 dockeruser && \
-    chown -R dockeruser:dockeruser /project /app
+    chown -R dockeruser:dockeruser /projects /app
 
 # Set environment for headless Chrome
 ENV DISPLAY=:99

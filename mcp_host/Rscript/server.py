@@ -57,7 +57,7 @@ def run_rscript(script_path: str) -> CommandResult:
     Returns:
         CommandResult containing the status, stdout, stderr, and exit code.
     """
-    cmd = f"docker exec xcmsrocker Rscript {script_path}"
+    cmd = f"Rscript {script_path}"
     result = run_bash_subprocess(cmd, timeout=60)
     
     # Limit stdout and stderr to 4000 characters
@@ -190,7 +190,7 @@ def execute_r_script_file(filename: str) -> Dict[str, Any]:
             "exit_code": 0
         }}
     """
-    script_path =  filename
+    script_path =  Path(".") / filename
     if not script_path.exists() or not script_path.is_file():
         return f"File '{filename}' does not exist in script dir."
 
