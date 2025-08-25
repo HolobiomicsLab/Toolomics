@@ -519,3 +519,4 @@ CMakeUserPresets.json
 CLAUDE.md
 
 !build-optimized.sh
+mcp_host/browser/searxng/searxng/settings.yml.new

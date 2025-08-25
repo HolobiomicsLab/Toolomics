@@ -90,7 +90,6 @@ SERVERS=(
     "toolomics-browser" 
     "toolomics-csv"
     "toolomics-search"
-    
     "toolomics-pdf"
     "toolomics-shell"
     "fetch"
