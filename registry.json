@@ -4,7 +4,7 @@
   "servers": {
     "toolomics-rscript": {
       "description": "R Script execution MCP server",
-      "image": "holobiomicslab/toolomics:latest",
+      "image": "holobiomicslab/rscript:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/Rscript/server.py"],
       "env_vars": [

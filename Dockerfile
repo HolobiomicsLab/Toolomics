@@ -37,13 +37,17 @@ RUN apt-get update \
     && apt-get clean
 
 # Copy application code (dockerignore excludes .venv, workspace, etc)
-COPY . .
+COPY --chown=dockeruser:dockeruser . .
+
+RUN usermod -u 1001 dockeruser && \
+    groupmod -g 1001 dockeruser && \
+    chown -R dockeruser:dockeruser /projects /app
 
 # Set environment for headless Chrome
 ENV DISPLAY=:99
 
 # Set final permissions and switch to non-root user
-RUN chown -R dockeruser:dockeruser /app /projects
+#RUN chown -R dockeruser:dockeruser /app /projects
 USER dockeruser
 WORKDIR /projects
 

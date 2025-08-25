@@ -57,6 +57,31 @@ else
     exit 1
 fi
 
+# Rscript configuration
+RSCRIPT_IMAGE_NAME="holobiomicslab/rscript"
+RSCRIPT_IMAGE_TAG="latest"
+RSCRIPT_FULL_IMAGE_NAME="${RSCRIPT_IMAGE_NAME}:${RSCRIPT_IMAGE_TAG}"
+
+# Build the Rscript Docker image
+echo ""
+echo "🏗️  Building Rscript Docker image: $RSCRIPT_FULL_IMAGE_NAME"
+echo "============================================"
+
+if docker build -t "$RSCRIPT_FULL_IMAGE_NAME" . -f rscript.Dockerfile; then
+    echo "✅ Rscript Docker image built successfully: $RSCRIPT_FULL_IMAGE_NAME"
+else
+    echo "❌ Rscript Docker build failed"
+    exit 1
+fi
+
+# Verify the Rscript image exists
+if docker images "$RSCRIPT_FULL_IMAGE_NAME" --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}" | grep -v "REPOSITORY"; then
+    echo "✅ Rscript image verified in local Docker registry"
+else
+    echo "❌ Rscript image not found in local Docker registry"
+    exit 1
+fi
+
 # Check if ToolHive CLI is available for registry validation
 if command -v thv &> /dev/null; then
     echo ""
@@ -89,7 +114,7 @@ fi
 echo ""
 echo "🎉 Build Process Complete!"
 echo "=========================="
-echo "🐳 Docker image: $FULL_IMAGE_NAME"
+echo "🐳 Docker images: $FULL_IMAGE_NAME, $RSCRIPT_FULL_IMAGE_NAME"
 echo "📋 Registry file: $REGISTRY_FILE"
 echo ""
 echo "🚀 Next steps:"
