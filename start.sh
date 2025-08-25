@@ -152,7 +152,7 @@ for server in "${SERVERS[@]}"; do
         successful_servers+=("$server")
         thv restart "$server" 
         echo "🔄 Restarted $server to ensure proper initialization"
-    else
+    elseth
         echo "❌ Failed to start $server"
         failed_servers+=("$server")
     fi
