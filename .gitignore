@@ -520,4 +520,4 @@ CLAUDE.md
 
 !build-optimized.sh
 mcp_host/browser/searxng/searxng/settings.yml.new
-mcp_host/browser/searxng/searxng/settings.yml.new
+*/settings.yml.new
