@@ -519,5 +519,22 @@ CMakeUserPresets.json
 CLAUDE.md
 
 !build-optimized.sh
+
+# SearXNG configuration files with sensitive data
+# mcp_host/browser/searxng/searxng/settings.yml
+# mcp_host/browser/searxng/searxng/limiter.toml
+# mcp_host/browser/searxng/searxng/uwsgi.ini
 mcp_host/browser/searxng/searxng/settings.yml.new
 */settings.yml.new
+
+
+
+*.db
+*.sqlite
+*.sqlite3
+
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+docker-compose.override.yml
