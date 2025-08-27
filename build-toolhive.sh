@@ -10,9 +10,9 @@ echo "================================================"
 
 # Configuration
 IMAGE_NAME="holobiomicslab/toolomics"
-IMAGE_TAG="latest"
+IMAGE_TAG="local"
 FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
-REGISTRY_FILE="$(pwd)/registry.json"
+REGISTRY_FILE="$(pwd)/registry/registry.json"
 
 # Check if Docker is running
 if ! docker info >/dev/null 2>&1; then
@@ -26,7 +26,7 @@ if [[ ! -f "Dockerfile" ]]; then
     exit 1
 fi
 
-# Check if registry.json exists
+# Check if registry/registry.json exists
 if [[ ! -f "$REGISTRY_FILE" ]]; then
     echo "❌ Registry file not found: $REGISTRY_FILE"
     echo "💡 Run this script from the toolomics root directory"
@@ -59,7 +59,7 @@ fi
 
 # Rscript configuration
 RSCRIPT_IMAGE_NAME="holobiomicslab/rscript"
-RSCRIPT_IMAGE_TAG="latest"
+RSCRIPT_IMAGE_TAG="local"
 RSCRIPT_FULL_IMAGE_NAME="${RSCRIPT_IMAGE_NAME}:${RSCRIPT_IMAGE_TAG}"
 
 # Build the Rscript Docker image

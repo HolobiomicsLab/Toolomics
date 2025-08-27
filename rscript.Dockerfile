@@ -1,7 +1,8 @@
 # Dockerfile for Rscript service
 # Based on yufree/xcmsrocker:latest
 
-FROM --platform=linux/amd64 yufree/xcmsrocker:latest
+ARG TARGETPLATFORM=linux/amd64
+FROM --platform=$TARGETPLATFORM yufree/xcmsrocker:latest
 
 # Set working directory
 WORKDIR /app
