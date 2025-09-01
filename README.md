@@ -3,20 +3,6 @@
 
 *A suite of tools from the Holobiomics Lab for Agents, organized as a set of MCP servers.*
 
-## Installation
-
-To install the required dependencies, you can use either pip or the faster UV package manager:
-
-### Using pip (traditional)
-```bash
-python3.10 -m pip install -r requirements.txt
-```
-
-### Using UV (recommended, faster)
-```bash
-uv pip install -r requirements.txt
-```
-
 ## Requirements
 
 ### ToolHive
