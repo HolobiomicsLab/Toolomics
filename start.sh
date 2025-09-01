@@ -106,12 +106,12 @@ SERVERS=(
     "toolomics-csv"    
     "toolomics-pdf"
     "toolomics-shell"
-
+    "toolomics-graphrag"
     # Additional available servers :
     # "fetch"
     "git"
     "filesystem"
-    "time"
+    #"time"
     "arxiv-mcp-server"
     # "adb-mysql-mcp-server"
     # "agentql-mcp"
@@ -209,6 +209,7 @@ successful_servers=()
 
 for server in "${SERVERS[@]}"; do
     echo "🔄 Starting $server..."
+    
     
     # Mount workspace directory to /projects in container (filesystem server standard)
     # Network configuration is handled by ToolHive registry

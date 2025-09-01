@@ -25,7 +25,6 @@ from shared import CommandResult, return_as_dict
 
 # PDF processing imports
 try:
-    import PyPDF2
     import fitz  # PyMuPDF
     from sentence_transformers import SentenceTransformer
     import numpy as np

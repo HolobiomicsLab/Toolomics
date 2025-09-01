@@ -170,7 +170,7 @@
       ],
       "tier": "Community",
       "tags": [
-        "toolomics",
+       "toolomics",
         "shell",
         "command-execution",
         "system"
@@ -181,6 +181,32 @@
         "execute_command"
       ]
     },
+    "toolomics-graphrag": {
+     "description": "GraphRAG MCP server",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/graph_rag/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+       "toolomics",
+        "graphrag"
+      ],
+      "status": "Active",
+      "tools": [
+        "files_to_graph",
+        "query"
+      ]
+  },
     "adb-mysql-mcp-server": {
       "description": "Official MCP server for AnalyticDB for MySQL of Alibaba Cloud",
       "tier": "Official",
