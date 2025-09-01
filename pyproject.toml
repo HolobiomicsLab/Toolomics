@@ -4,4 +4,20 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = "==3.10.18"
-dependencies = []
+dependencies = [
+    "aiohttp>=3.12.15",
+    "fastmcp>=2.11.3",
+    "flask>=3.1.2",
+    "helium==5.1.1",
+    "markdownify>=1.1.0",
+    "matplotlib>=3.9.0",
+    "numpy>=2.2.6",
+    "pandas>=2.3.1",
+    "pymupdf>=1.26.3",
+    "pypdf2>=3.0.1",
+    "requests>=2.31.0",
+    "scikit-learn>=1.7.1",
+    "selenium>=4.0.0",
+    "sentence-transformers>=5.1.0",
+    "webdriver-manager>=4.0.0",
+]
