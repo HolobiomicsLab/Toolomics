@@ -207,6 +207,49 @@
         "query"
       ]
   },
+    "toolomics-chunkr": {
+      "description": "Document intelligence MCP server using Chunkr for RAG-ready document processing",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/chunkr/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        },
+        {
+          "name": "CHUNKR_API_KEY",
+          "description": "Chunkr API key for document processing",
+          "required": true
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+        "toolomics",
+        "chunkr",
+        "document-intelligence",
+        "rag",
+        "ocr",
+        "semantic-chunking"
+      ],
+      "status": "Active",
+      "tools": [
+        "get_mcp_name",
+        "list_workspace_documents",
+        "upload_document",
+        "upload_document_from_url",
+        "get_task_status",
+        "export_to_html",
+        "export_to_markdown",
+        "export_to_json",
+        "get_document_chunks",
+        "search_document_content"
+      ]
+    },
     "adb-mysql-mcp-server": {
       "description": "Official MCP server for AnalyticDB for MySQL of Alibaba Cloud",
       "tier": "Official",

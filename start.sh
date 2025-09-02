@@ -93,6 +93,12 @@ else
     exit 1
 fi
 
+# Load environment variables from .env file
+if [[ -f .env ]]; then
+    echo "🔧 Loading environment variables from .env file..."
+    export $(cat .env | grep -E '^[A-Z]' | xargs)
+fi
+
 # Create workspace directory
 echo "📁 Creating workspace directory..."
 mkdir -p workspace
@@ -100,13 +106,25 @@ mkdir -p workspace
 # List of servers to start (Toolomics + Essential MCP servers)
 # Note: The registry contains many more MCP servers available.
 # Use 'thv run <server-name>' to start additional servers as needed.
+# Check if Chunkr API key is available to conditionally include the server
+CHUNKR_ENABLED=false
+if [[ -n "$CHUNKR_API_KEY" && "$CHUNKR_API_KEY" != "" ]]; then
+    CHUNKR_ENABLED=true
+    echo "✅ CHUNKR_API_KEY found - Chunkr server will be started"
+else
+    echo "⚠️  CHUNKR_API_KEY not found - Chunkr server will be skipped"
+    echo "   💡 Set CHUNKR_API_KEY in .env file to enable document intelligence features"
+fi
+
 SERVERS=(
     "toolomics-rscript"
-    "toolomics-browser" 
+    # "toolomics-browser" 
     "toolomics-csv"    
     "toolomics-pdf"
     "toolomics-shell"
-    "toolomics-graphrag"
+    "toolomics-graphrag"   
+    "toolomics-chunkr"
+
     # Additional available servers :
     # "fetch"
     "git"
@@ -153,7 +171,7 @@ SERVERS=(
     # "mcp-server-box"
     # "mcp-server-circleci"
     # "mcp-server-neon"
-    # "memory"
+    "memory"
     # "mongodb"
     # "netbird"
     # "notion"
@@ -177,6 +195,9 @@ SERVERS=(
     # "tavily-mcp"
     # "terraform"
 )
+
+# Note: toolomics-chunkr is included in main SERVERS list above
+# and will be automatically skipped if CHUNKR_API_KEY is not available
 
 # Function to stop all servers on exit
 cleanup() {
@@ -213,14 +234,30 @@ for server in "${SERVERS[@]}"; do
     
     # Mount workspace directory to /projects in container (filesystem server standard)
     # Network configuration is handled by ToolHive registry
-    if thv run "$server" --volume "$(pwd)/workspace:/projects" --detach; then
-        echo "✅ $server started successfully"
-        successful_servers+=("$server")
-        # thv restart "$server" 
-        # echo "🔄 Restarted $server to ensure proper initialization"
+    
+    # Special handling for servers that need environment variables
+    if [[ "$server" == "toolomics-chunkr" ]]; then
+        if [[ -n "$CHUNKR_API_KEY" ]]; then
+            if thv run "$server" --volume "$(pwd)/workspace:/projects" --env "CHUNKR_API_KEY=$CHUNKR_API_KEY" --detach; then
+                echo "✅ $server started successfully"
+                successful_servers+=("$server")
+
+                thv restart "$server"
+            else
+                echo "❌ Failed to start $server"
+                failed_servers+=("$server")
+            fi
+        else
+            echo "⚠️  Skipping $server - CHUNKR_API_KEY not found"
+        fi
     else
-        echo "❌ Failed to start $server"
-        failed_servers+=("$server")
+        if thv run "$server" --volume "$(pwd)/workspace:/projects" --detach; then
+            echo "✅ $server started successfully"
+            successful_servers+=("$server")
+        else
+            echo "❌ Failed to start $server"
+            failed_servers+=("$server")
+        fi
     fi
     
     # Small delay between starts
