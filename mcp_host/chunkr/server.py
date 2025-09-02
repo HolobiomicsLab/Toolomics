@@ -139,7 +139,7 @@ def list_workspace_documents() -> Dict[str, Any]:
 
 @mcp.tool
 @return_as_dict
-def upload_document(filename: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+async def upload_document(filename: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Upload a document to Chunkr for processing
     
     Args:
@@ -177,7 +177,7 @@ def upload_document(filename: str, processing_config: Optional[Dict[str, Any]] =
         
         # Upload file
         with open(file_path, 'rb') as f:
-            task = client.upload(f, config=processing_config)
+            task = await client.upload(f, config=processing_config)
         
         task_info = {
             "task_id": task.task_id,
@@ -206,7 +206,7 @@ def upload_document(filename: str, processing_config: Optional[Dict[str, Any]] =
 
 @mcp.tool
 @return_as_dict
-def upload_document_from_url(url: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+async def upload_document_from_url(url: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Upload a document from URL to Chunkr for processing
     
     Args:
@@ -228,7 +228,7 @@ def upload_document_from_url(url: str, processing_config: Optional[Dict[str, Any
         client = get_chunkr_client()
         
         # Upload from URL
-        task = client.upload(url, config=processing_config)
+        task = await client.upload(url, config=processing_config)
         
         task_info = {
             "task_id": task.task_id,
@@ -256,7 +256,7 @@ def upload_document_from_url(url: str, processing_config: Optional[Dict[str, Any
 
 @mcp.tool
 @return_as_dict
-def get_task_status(task_id: str) -> Dict[str, Any]:
+async def get_task_status(task_id: str) -> Dict[str, Any]:
     """Get the processing status of a Chunkr task
     
     Args:
@@ -277,7 +277,7 @@ def get_task_status(task_id: str) -> Dict[str, Any]:
     
     try:
         client = get_chunkr_client()
-        task = client.get_task(task_id)
+        task = await client.get_task(task_id)
         
         task_info = {
             "task_id": task.task_id,
@@ -306,7 +306,7 @@ def get_task_status(task_id: str) -> Dict[str, Any]:
 
 @mcp.tool
 @return_as_dict
-def export_to_html(task_id: str, output_filename: Optional[str] = None) -> Dict[str, Any]:
+async def export_to_html(task_id: str, output_filename: Optional[str] = None) -> Dict[str, Any]:
     """Export processed document to HTML format
     
     Args:
@@ -328,7 +328,7 @@ def export_to_html(task_id: str, output_filename: Optional[str] = None) -> Dict[
     
     try:
         client = get_chunkr_client()
-        task = client.get_task(task_id)
+        task = await client.get_task(task_id)
         
         if task.status != "succeeded":
             return CommandResult(
@@ -372,7 +372,7 @@ def export_to_html(task_id: str, output_filename: Optional[str] = None) -> Dict[
 
 @mcp.tool
 @return_as_dict
-def export_to_markdown(task_id: str, output_filename: Optional[str] = None) -> Dict[str, Any]:
+async def export_to_markdown(task_id: str, output_filename: Optional[str] = None) -> Dict[str, Any]:
     """Export processed document to Markdown format
     
     Args:
@@ -394,7 +394,7 @@ def export_to_markdown(task_id: str, output_filename: Optional[str] = None) -> D
     
     try:
         client = get_chunkr_client()
-        task = client.get_task(task_id)
+        task = await client.get_task(task_id)
         
         if task.status != "succeeded":
             return CommandResult(
@@ -438,7 +438,7 @@ def export_to_markdown(task_id: str, output_filename: Optional[str] = None) -> D
 
 @mcp.tool
 @return_as_dict
-def export_to_json(task_id: str, output_filename: Optional[str] = None) -> Dict[str, Any]:
+async def export_to_json(task_id: str, output_filename: Optional[str] = None) -> Dict[str, Any]:
     """Export processed document to JSON format with chunks and metadata
     
     Args:
@@ -461,7 +461,7 @@ def export_to_json(task_id: str, output_filename: Optional[str] = None) -> Dict[
     
     try:
         client = get_chunkr_client()
-        task = client.get_task(task_id)
+        task = await client.get_task(task_id)
         
         if task.status != "succeeded":
             return CommandResult(
@@ -511,7 +511,7 @@ def export_to_json(task_id: str, output_filename: Optional[str] = None) -> Dict[
 
 @mcp.tool
 @return_as_dict
-def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str, Any]:
+async def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str, Any]:
     """Get processed chunks from a Chunkr task
     
     Args:
@@ -534,7 +534,7 @@ def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str, Any]
     
     try:
         client = get_chunkr_client()
-        task = client.get_task(task_id)
+        task = await client.get_task(task_id)
         
         if task.status != "succeeded":
             return CommandResult(
@@ -583,7 +583,7 @@ def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str, Any]
 
 @mcp.tool
 @return_as_dict
-def search_document_content(task_id: str, query: str, max_results: int = 10) -> Dict[str, Any]:
+async def search_document_content(task_id: str, query: str, max_results: int = 10) -> Dict[str, Any]:
     """Search for content within processed document chunks
     
     Args:
@@ -607,7 +607,7 @@ def search_document_content(task_id: str, query: str, max_results: int = 10) -> 
     
     try:
         # Get chunks from the task
-        chunks_result = get_document_chunks(task_id)
+        chunks_result = await get_document_chunks(task_id)
         if chunks_result["status"] != "success":
             return chunks_result
         
