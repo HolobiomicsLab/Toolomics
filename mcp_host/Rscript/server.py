@@ -29,10 +29,7 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server"""
-    return "R command MCP"
+
 
 
 # Ensure workspace directory exists

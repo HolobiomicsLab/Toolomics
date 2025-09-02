@@ -17,7 +17,7 @@
       "tier": "Community",
       "tags": ["toolomics", "rlanguage", "statistics", "data-analysis"],
       "status": "Active",
-      "tools": ["get_mcp_name", "execute_r_code", "write_r_script", "list_workspace_files", "list_script_files", "execute_r_script_file"]
+      "tools": ["execute_r_code", "write_r_script", "list_workspace_files", "list_script_files", "execute_r_script_file"]
     },
     "toolomics-browser": {
       "description": "Web browser automation and search MCP server", 
@@ -41,7 +41,7 @@
       "tier": "Community",
       "tags": ["toolomics", "browser", "selenium", "web-automation", "searxng"],
       "status": "Active",
-      "tools": ["get_mcp_name", "search", "navigate", "get_links", "get_downloadable_links", "download_file", "take_screenshot", "get_pool_status"]
+      "tools": ["search", "navigate", "get_links", "get_downloadable_links", "download_file", "take_screenshot", "get_pool_status"]
     },
     "toolomics-csv": {
       "description": "CSV data processing MCP server",
@@ -58,7 +58,7 @@
       "tier": "Community",
       "tags": ["toolomics", "csv", "data-processing", "pandas"],
       "status": "Active",
-      "tools": ["get_mcp_name", "create_csv", "load_csv_from_path", "get_csv_data", "add_csv_row", "update_csv_row", "delete_csv_row", "list_csv_datasets", "delete_csv_dataset", "query_csv", "get_csv_stats"]
+      "tools": ["create_csv", "load_csv_from_path", "get_csv_data", "add_csv_row", "update_csv_row", "delete_csv_row", "list_csv_datasets", "delete_csv_dataset", "query_csv", "get_csv_stats"]
     },
     "toolomics-pdf": {
       "description": "PDF processing and navigation MCP server",
@@ -75,7 +75,7 @@
       "tier": "Community",
       "tags": ["toolomics", "pdf", "document-processing", "text-extraction"],
       "status": "Active",
-      "tools": ["get_mcp_name", "list_pdf_files", "initialize_pdf_navigation", "navigate_to_page", "get_current_page", "navigate_next_page", "navigate_previous_page", "add_bookmark", "search_in_current_session", "rag_query_current_session", "get_navigation_status", "close_navigation_session", "extract_text_from_pdf", "search_keywords_in_pdf"]
+      "tools": ["list_pdf_files", "initialize_pdf_navigation", "navigate_to_page", "get_current_page", "navigate_next_page", "navigate_previous_page", "add_bookmark", "search_in_current_session", "rag_query_current_session", "get_navigation_status", "close_navigation_session", "extract_text_from_pdf", "search_keywords_in_pdf"]
     },
     "toolomics-shell": {
       "description": "Shell command execution MCP server",
@@ -92,7 +92,7 @@
       "tier": "Community",
       "tags": ["toolomics", "shell", "command-execution", "system"],
       "status": "Active",
-      "tools": ["get_mcp_name", "execute_command"]
+      "tools": ["execute_command"]
     },
     "arxiv-mcp-server": {
       "args": [

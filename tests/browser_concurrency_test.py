@@ -282,23 +282,6 @@ async def main():
     print("Browser MCP Server Concurrency Test")
     print("=" * 50)
     
-    # Test server availability
-    try:
-        async with BrowserMCPTester(server_url) as tester:
-            server_info = await tester.call_tool("get_mcp_name")
-            if "error" in server_info:
-                print(f"❌ Server not available at {server_url}")
-                print(f"Error: {server_info['error']}")
-                print("\nMake sure the browser MCP server is running:")
-                print(f"  python mcp_host/browser/server.py 8000")
-                return
-            else:
-                print(f"✅ Server available: {server_info}")
-                
-    except Exception as e:
-        print(f"❌ Failed to connect to server: {e}")
-        return
-    
     # Test 1: Basic concurrency test
     print(f"\n{'='*60}")
     print("TEST 1: Basic Concurrency (5 clients)")

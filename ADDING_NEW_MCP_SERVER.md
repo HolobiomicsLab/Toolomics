@@ -68,19 +68,6 @@ mcp = FastMCP(
 )
 
 @mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server
-    
-    Returns:
-        str: The name of this MCP server
-        
-    Example:
-        >>> get_mcp_name()
-        "Your Tool Name MCP"
-    """
-    return "Your Tool Name MCP"
-
-@mcp.tool
 @return_as_dict
 def your_main_tool(input_param: str, optional_param: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -272,10 +259,6 @@ async def test_your_tool_operations():
         print("=" * 50)
         print("TEST 1: Getting server name")
         print("=" * 50)
-        
-        result = await client.call_tool("get_mcp_name", {})
-        print(f"🏷️ Server name: {result[0].text}")
-        print()
         
         # Test 2: Test main functionality
         print("=" * 50)
@@ -502,10 +485,6 @@ mcp = FastMCP(
 )
 
 @mcp.tool
-def get_mcp_name() -> str:
-    return "Text Processing MCP"
-
-@mcp.tool
 @return_as_dict
 def count_words(filename: str) -> Dict[str, Any]:
     """Count words, lines, and characters in a text file."""
@@ -608,7 +587,7 @@ Integrate your server with the comprehensive test runner by adding it to `tests/
 "your-tool": {
     "test_file": "toolomics_your_tool_test.py", 
     "name_variants": ["your-tool", "yourtool"],
-    "expected_tools": ["get_mcp_name", "your_main_tool", "list_workspace_files"]
+    "expected_tools": ["your_main_tool", "list_workspace_files"]
 }
 ```
 

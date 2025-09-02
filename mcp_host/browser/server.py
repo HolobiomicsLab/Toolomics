@@ -39,21 +39,6 @@ mcp = FastMCP(
     instructions=description,
 )
 
-
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server
-
-    Returns:
-        str: The name of this MCP server ("Web Browser MCP")
-
-    Example:
-        >>> get_mcp_name()
-        "Web Browser MCP"
-    """
-    return "Web Browser MCP"
-
-
 @dataclass
 class BrowserSession:
     """Represents a browser session with metadata"""
