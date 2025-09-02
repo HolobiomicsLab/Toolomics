@@ -41,7 +41,7 @@
       "tier": "Community",
       "tags": ["toolomics", "browser", "selenium", "web-automation", "searxng"],
       "status": "Active",
-      "tools": ["get_mcp_name", "search", "navigate", "get_links", "get_downloadable_links", "download_file", "take_screenshot"]
+      "tools": ["get_mcp_name", "search", "navigate", "get_links", "get_downloadable_links", "download_file", "take_screenshot", "get_pool_status"]
     },
     "toolomics-csv": {
       "description": "CSV data processing MCP server",
