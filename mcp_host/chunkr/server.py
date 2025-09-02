@@ -68,6 +68,15 @@ def check_api_key_available():
     return api_key is not None and api_key.strip() != ""
 
 
+def serialize_datetime(dt):
+    """Convert datetime objects to ISO format strings for JSON serialization"""
+    if dt is None:
+        return None
+    if hasattr(dt, 'isoformat'):
+        return dt.isoformat()
+    return str(dt)
+
+
 @dataclass
 class ChunkrTask:
     """Information about a Chunkr processing task"""
@@ -184,7 +193,7 @@ async def upload_document(filename: str, processing_config: Optional[Dict[str, A
             "status": task.status,
             "filename": filename,
             "file_type": file_path.suffix[1:] if file_path.suffix else "unknown",
-            "created_at": task.created_at if hasattr(task, 'created_at') else None
+            "created_at": serialize_datetime(getattr(task, 'created_at', None))
         }
         
         return CommandResult(
@@ -234,7 +243,7 @@ async def upload_document_from_url(url: str, processing_config: Optional[Dict[st
             "task_id": task.task_id,
             "status": task.status,
             "source_url": url,
-            "created_at": task.created_at if hasattr(task, 'created_at') else None
+            "created_at": serialize_datetime(getattr(task, 'created_at', None))
         }
         
         return CommandResult(
@@ -283,9 +292,9 @@ async def get_task_status(task_id: str) -> Dict[str, Any]:
             "task_id": task.task_id,
             "status": task.status,
             "progress": getattr(task, 'progress', None),
-            "created_at": getattr(task, 'created_at', None),
-            "finished_at": getattr(task, 'finished_at', None),
-            "expires_at": getattr(task, 'expires_at', None),
+            "created_at": serialize_datetime(getattr(task, 'created_at', None)),
+            "finished_at": serialize_datetime(getattr(task, 'finished_at', None)),
+            "expires_at": serialize_datetime(getattr(task, 'expires_at', None)),
         }
         
         return CommandResult(
@@ -330,7 +339,7 @@ async def export_to_html(task_id: str, output_filename: Optional[str] = None) ->
         client = get_chunkr_client()
         task = await client.get_task(task_id)
         
-        if task.status != "succeeded":
+        if task.status.lower() != "succeeded":
             return CommandResult(
                 status="error",
                 stderr=f"Task is not completed. Status: {task.status}",
@@ -346,8 +355,15 @@ async def export_to_html(task_id: str, output_filename: Optional[str] = None) ->
         
         output_path = workspace_path / output_filename
         
+        # Debug: Log the paths being used
+        print(f"DEBUG: Workspace path: {workspace_path}")
+        print(f"DEBUG: Output path: {output_path}")
+        
         # Export to HTML
         html_content = task.html(output_file=str(output_path))
+        
+        # Debug: Check if file was actually created
+        print(f"DEBUG: File created: {output_path.exists()}")
         
         # Get content preview (first 500 chars)
         preview = html_content[:500] + "..." if len(html_content) > 500 else html_content
@@ -396,7 +412,7 @@ async def export_to_markdown(task_id: str, output_filename: Optional[str] = None
         client = get_chunkr_client()
         task = await client.get_task(task_id)
         
-        if task.status != "succeeded":
+        if task.status.lower() != "succeeded":
             return CommandResult(
                 status="error",
                 stderr=f"Task is not completed. Status: {task.status}",
@@ -412,8 +428,19 @@ async def export_to_markdown(task_id: str, output_filename: Optional[str] = None
         
         output_path = workspace_path / output_filename
         
+        # Debug: Log the paths being used
+        print(f"DEBUG: Workspace path: {workspace_path}")
+        print(f"DEBUG: Output path: {output_path}")
+        print(f"DEBUG: Workspace exists: {workspace_path.exists()}")
+        print(f"DEBUG: Current working directory: {Path.cwd()}")
+        
         # Export to Markdown
         markdown_content = task.markdown(output_file=str(output_path))
+        
+        # Debug: Check if file was actually created
+        print(f"DEBUG: File created: {output_path.exists()}")
+        if output_path.exists():
+            print(f"DEBUG: File size: {output_path.stat().st_size} bytes")
         
         # Get content preview (first 500 chars)
         preview = markdown_content[:500] + "..." if len(markdown_content) > 500 else markdown_content
@@ -463,7 +490,7 @@ async def export_to_json(task_id: str, output_filename: Optional[str] = None) ->
         client = get_chunkr_client()
         task = await client.get_task(task_id)
         
-        if task.status != "succeeded":
+        if task.status.lower() != "succeeded":
             return CommandResult(
                 status="error",
                 stderr=f"Task is not completed. Status: {task.status}",
@@ -536,7 +563,7 @@ async def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str
         client = get_chunkr_client()
         task = await client.get_task(task_id)
         
-        if task.status != "succeeded":
+        if task.status.lower() != "succeeded":
             return CommandResult(
                 status="error",
                 stderr=f"Task is not completed. Status: {task.status}",
