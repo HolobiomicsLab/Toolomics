@@ -9,6 +9,7 @@ COPY requirements.txt .
 # Install all dependencies in a single layer to minimize image size
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        g++ \
         sudo \
         curl \
         wget \
