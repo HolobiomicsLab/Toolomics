@@ -1,7 +1,8 @@
 # Dockerfile for Rscript service
 # Based on yufree/xcmsrocker:latest
 
-FROM --platform=linux/amd64 yufree/xcmsrocker:latest
+ARG TARGETPLATFORM=linux/amd64
+FROM --platform=$TARGETPLATFORM yufree/xcmsrocker:latest
 
 # Set working directory
 WORKDIR /app
@@ -29,10 +30,7 @@ RUN apt-get update \
     python3 \
     python3-pip \
     python-is-python3 \
-&& curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
-&& chmod +x /usr/local/bin/docker-compose \
-&& ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose \
-&& pip install --no-cache-dir --break-system-packages fastmcp \
+&& pip install --break-system-packages fastmcp \
 && useradd -m -s /bin/bash dockeruser \
 && echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
 && mkdir -p /projects \
@@ -41,19 +39,12 @@ RUN apt-get update \
 
 
 # Copy the server.py file
-COPY --chown=dockeruser:dockeruser . .
+COPY . .
 
 
-# Expose port for the MCP server (adjust if needed)
-#EXPOSE 8000
-
-# The base image already exposes port 8787 for RStudio Server
-
-# Keep the container running
-#CMD ["rserver"]
 RUN usermod -u 1001 dockeruser && \
-    groupmod -g 1001 dockeruser && \
-    chown -R dockeruser:dockeruser /projects /app
+    groupmod -g 1001 dockeruser 
 
 USER dockeruser
+
 WORKDIR /projects

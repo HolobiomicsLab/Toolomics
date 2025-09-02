@@ -42,7 +42,7 @@ else
 fi
 
 # Set registry configuration
-REGISTRY_FILE="$(pwd)/registry.json"
+REGISTRY_FILE="$(pwd)/registry/registry.json"
 echo "📋 Using registry file: $REGISTRY_FILE"
 
 # Check if registry file exists
@@ -106,11 +106,76 @@ SERVERS=(
     "toolomics-csv"    
     "toolomics-pdf"
     "toolomics-shell"
-    "fetch"
+    "toolomics-graphrag"
+    # Additional available servers :
+    # "fetch"
     "git"
     "filesystem"
-    "time"
+    #"time"
     "arxiv-mcp-server"
+    # "adb-mysql-mcp-server"
+    # "agentql-mcp"
+    # "astra-db-mcp"
+    # "atlassian"
+    # "aws-diagram"
+    # "aws-documentation"
+    # "aws-pricing"
+    # "azure"
+    # "brightdata-mcp"
+    # "browserbase"
+    # "browserbase-mcp-server"
+    # "buildkite"
+    # "chroma-mcp"
+    # "cloud-run"
+    # "context7"
+    # "crowdstrike-falcon"
+    # "dolt"
+    # "elasticsearch"
+    # "everything"
+    # "firecrawl"
+    # "genai-toolbox"
+    # "github"
+    # "grafana"
+    # "graphlit"
+    # "graphlit-mcp-server"
+    # "hass-mcp"
+    # "heroku"
+    # "heroku-mcp-server"
+    # "ida-pro-mcp"
+    # "k8s"
+    # "kyverno"
+    # "magic-mcp"
+    # "mcp-clickhouse"
+    # "mcp-jetbrains"
+    # "mcp-neo4j-aura-manager"
+    # "mcp-neo4j-cypher"
+    # "mcp-neo4j-memory"
+    # "mcp-server-box"
+    # "mcp-server-circleci"
+    # "mcp-server-neon"
+    # "memory"
+    # "mongodb"
+    # "netbird"
+    # "notion"
+    # "oci-registry"
+    # "onchain-mcp"
+    # "osv"
+    # "perplexity-ask"
+    # "phoenix"
+    "playwright"
+    "plotting"
+    # "postgres-mcp-pro"
+    # "redis"
+    # "semgrep"
+    # "sentry"
+    # "sentry-mcp-server"
+    # "sequentialthinking"
+    # "sqlite"
+    # "stripe"
+    # "supabase"
+    # "supabase-mcp-server"
+    # "tavily-mcp"
+    # "terraform"
 )
 
 # Function to stop all servers on exit
@@ -145,13 +210,14 @@ successful_servers=()
 for server in "${SERVERS[@]}"; do
     echo "🔄 Starting $server..."
     
+    
     # Mount workspace directory to /projects in container (filesystem server standard)
     # Network configuration is handled by ToolHive registry
     if thv run "$server" --volume "$(pwd)/workspace:/projects" --detach; then
         echo "✅ $server started successfully"
         successful_servers+=("$server")
-        thv restart "$server" 
-        echo "🔄 Restarted $server to ensure proper initialization"
+        # thv restart "$server" 
+        # echo "🔄 Restarted $server to ensure proper initialization"
     else
         echo "❌ Failed to start $server"
         failed_servers+=("$server")

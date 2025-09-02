@@ -26,29 +26,31 @@ RUN apt-get update \
         libxrandr2 \
         libxss1 \
         libxtst6 \
-    && curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose \
-    && chmod +x /usr/local/bin/docker-compose \
-    && ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose \
-    && pip install --no-cache-dir -r requirements.txt \
-    && useradd -m -s /bin/bash dockeruser \
-    && echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+    && pip install -r requirements.txt \
     && mkdir -p /projects \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && apt-get clean \
+    && useradd -m -s /bin/bash dockeruser \
+    && echo "dockeruser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Copy application code (dockerignore excludes .venv, workspace, etc)
-COPY --chown=dockeruser:dockeruser . .
+COPY . .
 
-RUN usermod -u 1001 dockeruser && \
-    groupmod -g 1001 dockeruser && \
-    chown -R dockeruser:dockeruser /projects /app
-
+#RUN usermod -u 1001 dockeruser && \
+#    groupmod -g 1001 dockeruser && \
+#    chown -R dockeruser:dockeruser /projects /app
 # Set environment for headless Chrome
 ENV DISPLAY=:99
 
 # Set final permissions and switch to non-root user
 #RUN chown -R dockeruser:dockeruser /app /projects
+# USER dockeruser
+
+RUN usermod -u 1001 dockeruser && \
+    groupmod -g 1001 dockeruser 
+
 USER dockeruser
+
 WORKDIR /projects
 
 # No CMD directive needed - ToolHive manages container execution via registry.json
