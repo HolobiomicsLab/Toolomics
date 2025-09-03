@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import CommandResult, return_as_dict
+from shared import CommandResult, return_as_dict, get_workspace_path
 
 # Chunkr imports
 try:
@@ -111,9 +111,7 @@ def list_workspace_documents() -> Dict[str, Any]:
             - supported_types: List of supported file extensions
     """
     try:
-        workspace_path = Path("/workspace")
-        if not workspace_path.exists():
-            workspace_path = Path.cwd()
+        workspace_path = get_workspace_path()
         
         # Supported file types by Chunkr
         supported_extensions = ['.pdf', '.ppt', '.pptx', '.doc', '.docx', '.png', '.jpg', '.jpeg']
@@ -169,9 +167,7 @@ async def upload_document(filename: str, processing_config: Optional[Dict[str, A
         )
     
     try:
-        workspace_path = Path("/workspace")
-        if not workspace_path.exists():
-            workspace_path = Path.cwd()
+        workspace_path = get_workspace_path()
             
         file_path = workspace_path / filename
         if not file_path.exists():
@@ -346,9 +342,7 @@ async def export_to_html(task_id: str, output_filename: Optional[str] = None) ->
                 exit_code=1
             )
         
-        workspace_path = Path("/workspace")
-        if not workspace_path.exists():
-            workspace_path = Path.cwd()
+        workspace_path = get_workspace_path()
         
         if output_filename is None:
             output_filename = f"{task_id}.html"
@@ -419,9 +413,7 @@ async def export_to_markdown(task_id: str, output_filename: Optional[str] = None
                 exit_code=1
             )
         
-        workspace_path = Path("/workspace")
-        if not workspace_path.exists():
-            workspace_path = Path.cwd()
+        workspace_path = get_workspace_path()
         
         if output_filename is None:
             output_filename = f"{task_id}.md"
@@ -497,9 +489,7 @@ async def export_to_json(task_id: str, output_filename: Optional[str] = None) ->
                 exit_code=1
             )
         
-        workspace_path = Path("/workspace")
-        if not workspace_path.exists():
-            workspace_path = Path.cwd()
+        workspace_path = get_workspace_path()
         
         if output_filename is None:
             output_filename = f"{task_id}.json"

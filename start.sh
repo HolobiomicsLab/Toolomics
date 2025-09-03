@@ -118,7 +118,7 @@ fi
 
 SERVERS=(
     "toolomics-rscript"
-    # "toolomics-browser" 
+    "toolomics-browser" 
     "toolomics-csv"    
     "toolomics-pdf"
     "toolomics-shell"
@@ -130,7 +130,7 @@ SERVERS=(
     "git"
     "filesystem"
     #"time"
-    "arxiv-mcp-server"
+    # "arxiv-mcp-server"
     # "adb-mysql-mcp-server"
     # "agentql-mcp"
     # "astra-db-mcp"
@@ -171,7 +171,7 @@ SERVERS=(
     # "mcp-server-box"
     # "mcp-server-circleci"
     # "mcp-server-neon"
-    "memory"
+    # "memory"
     # "mongodb"
     # "netbird"
     # "notion"
