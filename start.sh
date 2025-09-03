@@ -106,6 +106,7 @@ SERVERS=(
     "toolomics-csv"    
     "toolomics-pdf"
     "toolomics-shell"
+    "toolomics-python-editor"
     "fetch"
     "git"
     "filesystem"
