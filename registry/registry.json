@@ -1,0 +1,5332 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stacklok/toolhive/main/pkg/registry/data/schema.json",
+  "version": "1.0.0",
+  "last_updated": "2025-08-27T15:06:50.553832Z",
+  "servers": {
+    "toolomics-browser": {
+      "description": "Web browser automation and search MCP server",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/browser/server.py"
+      ],
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+        "toolomics",
+        "browser",
+        "selenium",
+        "web-automation",
+        "searxng"
+      ],
+      "status": "Active",
+      "tools": [
+        "get_mcp_name",
+        "search",
+        "navigate",
+        "get_links",
+        "get_downloadable_links",
+        "download_file",
+        "take_screenshot"
+      ]
+    },
+    "toolomics-csv": {
+      "description": "CSV data processing MCP server",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/csv/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+        "toolomics",
+        "csv",
+        "data-processing",
+        "pandas"
+      ],
+      "status": "Active",
+      "tools": [
+        "get_mcp_name",
+        "create_csv",
+        "load_csv_from_path",
+        "get_csv_data",
+        "add_csv_row",
+        "update_csv_row",
+        "delete_csv_row",
+        "list_csv_datasets",
+        "delete_csv_dataset",
+        "query_csv",
+        "get_csv_stats"
+      ]
+    },
+    "toolomics-pdf": {
+      "description": "PDF processing and navigation MCP server",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/pdf/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+        "toolomics",
+        "pdf",
+        "document-processing",
+        "text-extraction"
+      ],
+      "status": "Active",
+      "tools": [
+        "get_mcp_name",
+        "list_pdf_files",
+        "initialize_pdf_navigation",
+        "navigate_to_page",
+        "get_current_page",
+        "navigate_next_page",
+        "navigate_previous_page",
+        "add_bookmark",
+        "search_in_current_session",
+        "rag_query_current_session",
+        "get_navigation_status",
+        "close_navigation_session",
+        "extract_text_from_pdf",
+        "search_keywords_in_pdf"
+      ]
+    },
+    "toolomics-rscript": {
+      "description": "R Script execution MCP server",
+      "image": "holobiomicslab/rscript:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/Rscript/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+        "toolomics",
+        "rlanguage",
+        "statistics",
+        "data-analysis"
+      ],
+      "status": "Active",
+      "tools": [
+        "get_mcp_name",
+        "execute_r_code",
+        "write_r_script",
+        "list_workspace_files",
+        "list_script_files",
+        "execute_r_script_file"
+      ]
+    },
+    "toolomics-shell": {
+      "description": "Shell command execution MCP server",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/shell/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+       "toolomics",
+        "shell",
+        "command-execution",
+        "system"
+      ],
+      "status": "Active",
+      "tools": [
+        "get_mcp_name",
+        "execute_command"
+      ]
+    },
+    "toolomics-graphrag": {
+     "description": "GraphRAG MCP server",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/graph_rag/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+       "toolomics",
+        "graphrag"
+      ],
+      "status": "Active",
+      "tools": [
+        "files_to_graph",
+        "query"
+      ]
+  },
+    "toolomics-chunkr": {
+      "description": "Document intelligence MCP server using Chunkr for RAG-ready document processing",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/chunkr/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        },
+        {
+          "name": "CHUNKR_API_KEY",
+          "description": "Chunkr API key for document processing",
+          "required": true
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+        "toolomics",
+        "chunkr",
+        "document-intelligence",
+        "rag",
+        "ocr",
+        "semantic-chunking"
+      ],
+      "status": "Active",
+      "tools": [
+        "get_mcp_name",
+        "list_workspace_documents",
+        "upload_document",
+        "upload_document_from_url",
+        "get_task_status",
+        "export_to_html",
+        "export_to_markdown",
+        "export_to_json",
+        "get_document_chunks",
+        "search_document_content"
+      ]
+    },
+    "adb-mysql-mcp-server": {
+      "description": "Official MCP server for AnalyticDB for MySQL of Alibaba Cloud",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "execute_sql",
+        "get_query_plan",
+        "get_execution_plan"
+      ],
+      "metadata": {
+        "stars": 15,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:45:12Z"
+      },
+      "repository_url": "https://github.com/aliyun/alibabacloud-adb-mysql-mcp-server",
+      "tags": [
+        "database",
+        "mysql",
+        "analytics",
+        "sql",
+        "alibaba-cloud",
+        "data-warehouse"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/adb-mysql-mcp-server:1.0.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "ADB_MYSQL_HOST",
+          "description": "AnalyticDB for MySQL host address",
+          "required": true
+        },
+        {
+          "name": "ADB_MYSQL_PORT",
+          "description": "AnalyticDB for MySQL port number",
+          "required": true
+        },
+        {
+          "name": "ADB_MYSQL_USER",
+          "description": "Database user for authentication",
+          "required": true
+        },
+        {
+          "name": "ADB_MYSQL_PASSWORD",
+          "description": "Database password for authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "ADB_MYSQL_DATABASE",
+          "description": "Database name to connect to",
+          "required": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "agentql-mcp": {
+      "description": "Model Context Protocol server that integrates AgentQL data extraction capabilities",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "extract-web-data"
+      ],
+      "metadata": {
+        "stars": 104,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:45:12Z"
+      },
+      "repository_url": "https://github.com/tinyfish-io/agentql-mcp",
+      "tags": [
+        "web-scraping",
+        "data-extraction",
+        "ai",
+        "automation",
+        "web"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/agentql-mcp:1.0.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.agentql.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "AGENTQL_API_KEY",
+          "description": "API key for AgentQL service",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "arxiv-mcp-server": {
+      "description": "Enables AI assistants to search and access arXiv research papers through MCP protocol. Mount a volume to /arxiv-papers for persistent paper storage.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "search_papers",
+        "download_paper",
+        "list_papers",
+        "read_paper"
+      ],
+      "metadata": {
+        "stars": 1607,
+        "pulls": 77,
+        "last_updated": "2025-08-22T09:41:01Z"
+      },
+      "repository_url": "https://github.com/blazickjp/arxiv-mcp-server",
+      "tags": [
+        "research",
+        "academic",
+        "papers",
+        "arxiv",
+        "search"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/arxiv-mcp-server:0.3.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "arxiv.org",
+              "export.arxiv.org"
+            ],
+            "allow_port": [
+              443,
+              80
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "ARXIV_STORAGE_PATH",
+          "description": "Directory path where downloaded papers will be stored",
+          "required": false,
+          "default": "/arxiv-papers"
+        }
+      ],
+      "args": [
+        "--storage-path",
+        "/arxiv-papers"
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "astra-db-mcp": {
+      "description": "Model Context Protocol server for interacting with DataStax Astra DB",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "GetCollections",
+        "CreateCollection",
+        "UpdateCollection",
+        "DeleteCollection",
+        "ListRecords",
+        "GetRecord",
+        "CreateRecord",
+        "UpdateRecord",
+        "DeleteRecord",
+        "FindRecord",
+        "BulkCreateRecords",
+        "BulkUpdateRecords",
+        "BulkDeleteRecords",
+        "OpenBrowser",
+        "HelpAddToClient",
+        "EstimateDocumentCount"
+      ],
+      "metadata": {
+        "stars": 29,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:45:12Z"
+      },
+      "repository_url": "https://github.com/datastax/astra-db-mcp",
+      "tags": [
+        "database",
+        "nosql",
+        "cassandra",
+        "vector-database",
+        "datastax",
+        "astra"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/astra-db-mcp:1.2.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "ASTRA_DB_APPLICATION_TOKEN",
+          "description": "Astra DB application token for authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "ASTRA_DB_API_ENDPOINT",
+          "description": "Astra DB API endpoint URL",
+          "required": true
+        },
+        {
+          "name": "ASTRA_DB_KEYSPACE",
+          "description": "Astra DB keyspace to use (defaults to default_keyspace)",
+          "required": false,
+          "default": "default_keyspace"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "atlassian": {
+      "description": "Connect to Atlassian products like Confluence, Jira Cloud and Server/Data deployments.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "confluence_search",
+        "confluence_get_page",
+        "confluence_get_page_children",
+        "confluence_get_comments",
+        "confluence_get_labels",
+        "confluence_add_label",
+        "confluence_create_page",
+        "confluence_update_page",
+        "confluence_delete_page",
+        "confluence_add_comment",
+        "confluence_search_user",
+        "jira_get_user_profile",
+        "jira_get_issue",
+        "jira_search",
+        "jira_search_fields",
+        "jira_get_project_issues",
+        "jira_get_transitions",
+        "jira_get_worklog",
+        "jira_download_attachments",
+        "jira_get_agile_boards",
+        "jira_get_board_issues",
+        "jira_get_sprints_from_board",
+        "jira_get_sprint_issues",
+        "jira_get_link_types",
+        "jira_create_issue",
+        "jira_batch_create_issues",
+        "jira_batch_get_changelogs",
+        "jira_update_issue",
+        "jira_delete_issue",
+        "jira_add_comment",
+        "jira_add_worklog",
+        "jira_link_to_epic",
+        "jira_create_issue_link",
+        "jira_remove_issue_link",
+        "jira_transition_issue",
+        "jira_create_sprint",
+        "jira_update_sprint",
+        "jira_get_project_versions",
+        "jira_get_all_projects",
+        "jira_create_version",
+        "jira_batch_create_versions"
+      ],
+      "metadata": {
+        "stars": 2897,
+        "pulls": 12849,
+        "last_updated": "2025-08-22T09:41:08Z"
+      },
+      "repository_url": "https://github.com/sooperset/mcp-atlassian",
+      "tags": [
+        "atlassian",
+        "confluence",
+        "jira",
+        "wiki",
+        "issue-tracking",
+        "project-management",
+        "documentation",
+        "cloud",
+        "server",
+        "data-center"
+      ],
+      "image": "ghcr.io/sooperset/mcp-atlassian:0.11.9",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".atlassian.net",
+              ".atlassian.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "CONFLUENCE_URL",
+          "description": "Confluence URL (e.g., https://your-domain.atlassian.net/wiki)",
+          "required": false
+        },
+        {
+          "name": "CONFLUENCE_USERNAME",
+          "description": "Confluence username/email for Cloud deployments",
+          "required": false
+        },
+        {
+          "name": "CONFLUENCE_API_TOKEN",
+          "description": "Confluence API token for Cloud deployments",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "CONFLUENCE_PERSONAL_TOKEN",
+          "description": "Confluence Personal Access Token for Server/Data Center deployments",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "CONFLUENCE_SSL_VERIFY",
+          "description": "Verify SSL certificates for Confluence Server/Data Center (true/false)",
+          "required": false
+        },
+        {
+          "name": "CONFLUENCE_SPACES_FILTER",
+          "description": "Comma-separated list of Confluence space keys to filter search results",
+          "required": false
+        },
+        {
+          "name": "JIRA_URL",
+          "description": "Jira URL (e.g., https://your-domain.atlassian.net)",
+          "required": false
+        },
+        {
+          "name": "JIRA_USERNAME",
+          "description": "Jira username/email for Cloud deployments",
+          "required": false
+        },
+        {
+          "name": "JIRA_API_TOKEN",
+          "description": "Jira API token for Cloud deployments",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "JIRA_PERSONAL_TOKEN",
+          "description": "Jira Personal Access Token for Server/Data Center deployments",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "JIRA_SSL_VERIFY",
+          "description": "Verify SSL certificates for Jira Server/Data Center (true/false)",
+          "required": false
+        },
+        {
+          "name": "JIRA_PROJECTS_FILTER",
+          "description": "Comma-separated list of Jira project keys to filter search results",
+          "required": false
+        },
+        {
+          "name": "READ_ONLY_MODE",
+          "description": "Run in read-only mode (disables all write operations)",
+          "required": false
+        },
+        {
+          "name": "MCP_VERBOSE",
+          "description": "Increase logging verbosity",
+          "required": false
+        },
+        {
+          "name": "ENABLED_TOOLS",
+          "description": "Comma-separated list of tool names to enable (if not set, all tools are enabled)",
+          "required": false
+        }
+      ]
+    },
+    "aws-diagram": {
+      "description": "Generate AWS diagrams, sequence diagrams, flow diagrams, and class diagrams using Python code.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "generate_diagram",
+        "get_diagram_examples",
+        "list_icons"
+      ],
+      "metadata": {
+        "stars": 6006,
+        "pulls": 0,
+        "last_updated": "2025-08-24T02:35:25Z"
+      },
+      "repository_url": "https://github.com/awslabs/mcp",
+      "tags": [
+        "aws",
+        "cloud",
+        "diagrams",
+        "architecture",
+        "visualization"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/aws-diagram:1.0.5",
+      "permissions": {
+        "network": {
+          "outbound": {}
+        }
+      },
+      "env_vars": [
+        {
+          "name": "OUTPUT_DIR",
+          "description": "Directory where diagrams will be saved",
+          "required": false,
+          "default": "/tmp/diagrams"
+        },
+        {
+          "name": "FASTMCP_LOG_LEVEL",
+          "description": "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+          "required": false,
+          "default": "ERROR"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "aws-documentation": {
+      "description": "Access AWS documentation, search for content, and get recommendations.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "read_documentation",
+        "search_documentation",
+        "recommend"
+      ],
+      "metadata": {
+        "stars": 5950,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:40:58Z"
+      },
+      "repository_url": "https://github.com/awslabs/mcp",
+      "tags": [
+        "aws",
+        "documentation",
+        "cloud",
+        "reference"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/aws-documentation:1.1.2",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".docs.aws.amazon.com",
+              ".docs.amazonaws.cn"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "AWS_DOCUMENTATION_PARTITION",
+          "description": "AWS documentation partition (aws, aws-cn)",
+          "required": false,
+          "default": "aws"
+        },
+        {
+          "name": "FASTMCP_LOG_LEVEL",
+          "description": "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+          "required": false,
+          "default": "ERROR"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "aws-pricing": {
+      "description": "Generate upfront AWS service cost estimates and cost insights.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "analyze_cdk_project",
+        "analyze_terraform_project",
+        "get_pricing",
+        "get_bedrock_patterns",
+        "generate_cost_report",
+        "get_pricing_service_codes",
+        "get_pricing_service_attributes",
+        "get_pricing_attribute_values",
+        "get_price_list_urls"
+      ],
+      "metadata": {
+        "stars": 5950,
+        "pulls": 8179,
+        "last_updated": "2025-08-22T09:42:37Z"
+      },
+      "repository_url": "https://github.com/awslabs/mcp",
+      "tags": [
+        "aws",
+        "cost-analysis",
+        "pricing",
+        "estimates",
+        "cost-insights",
+        "aws-costs",
+        "aws-pricing"
+      ],
+      "image": "public.ecr.aws/f3y8w4n0/awslabs/aws-pricing-mcp-server:1.0.12",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "aws.amazon.com",
+              "pricing.us-east-1.amazonaws.com",
+              "api.pricing.us-east-1.amazonaws.com",
+              "api.pricing.eu-central-1.amazonaws.com",
+              "api.pricing.ap-southeast-1.amazonaws.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "description": "AWS access key ID with access to the AWS Pricing API",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "description": "AWS secret access key",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "AWS_SESSION_TOKEN",
+          "description": "AWS session token for temporary credentials",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "AWS_REGION",
+          "description": "AWS region for the Pricing API endpoint (us-east-1, eu-central-1, ap-southeast-1)",
+          "required": false,
+          "default": "us-east-1"
+        },
+        {
+          "name": "FASTMCP_LOG_LEVEL",
+          "description": "Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+          "required": false,
+          "default": "ERROR"
+        }
+      ]
+    },
+    "azure": {
+      "description": "The Azure MCP Server, bringing the power of Azure to your agents.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "acr",
+        "aks",
+        "appconfig",
+        "azuremanagedlustre",
+        "azureterraformbestpractices",
+        "bestpractices",
+        "bicepschema",
+        "cloudarchitect",
+        "cosmos",
+        "datadog",
+        "deploy",
+        "documentation",
+        "extension_az",
+        "extension_azd",
+        "extension_azqr",
+        "foundry",
+        "functionapp",
+        "grafana",
+        "group",
+        "keyvault",
+        "kusto",
+        "loadtesting",
+        "marketplace",
+        "monitor",
+        "mysql",
+        "postgres",
+        "quota",
+        "redis",
+        "resourcehealth",
+        "role",
+        "search",
+        "servicebus",
+        "sql",
+        "storage",
+        "subscription",
+        "virtualdesktop",
+        "workbooks"
+      ],
+      "metadata": {
+        "stars": 1107,
+        "pulls": 1809,
+        "last_updated": "2025-08-22T09:41:07Z"
+      },
+      "repository_url": "https://github.com/Azure/azure-mcp",
+      "tags": [
+        "azure",
+        "microsoft",
+        "cloud",
+        "iaas",
+        "paas",
+        "infrastructure",
+        "database",
+        "storage"
+      ],
+      "image": "mcr.microsoft.com/azure-sdk/azure-mcp:0.5.8",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "login.microsoftonline.com",
+              "login.windows.net",
+              "management.azure.com",
+              "graph.microsoft.com",
+              ".blob.core.windows.net",
+              ".table.core.windows.net",
+              ".vault.azure.net",
+              ".documents.azure.com",
+              ".servicebus.windows.net"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "AZURE_TENANT_ID",
+          "description": "Your Azure tenant ID",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "AZURE_CLIENT_ID",
+          "description": "Your Azure client ID for authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "AZURE_CLIENT_SECRET",
+          "description": "Your Azure client secret for authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "HTTP_PROXY",
+          "description": "HTTP proxy URL for outbound requests (optional)",
+          "required": false
+        },
+        {
+          "name": "HTTPS_PROXY",
+          "description": "HTTPS proxy URL for outbound requests (optional)",
+          "required": false
+        },
+        {
+          "name": "NO_PROXY",
+          "description": "Comma-separated list of hosts to exclude from proxying (optional)",
+          "required": false
+        }
+      ]
+    },
+    "brightdata-mcp": {
+      "description": "An MCP interface into the Bright Data toolset for web scraping and data extraction",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "search_engine",
+        "scrape_as_markdown",
+        "scrape_as_html",
+        "extract",
+        "session_stats",
+        "web_data_amazon_product",
+        "web_data_amazon_product_reviews",
+        "web_data_amazon_product_search",
+        "web_data_walmart_product",
+        "web_data_walmart_seller",
+        "web_data_ebay_product",
+        "web_data_homedepot_products",
+        "web_data_zara_products",
+        "web_data_etsy_products",
+        "web_data_bestbuy_products",
+        "web_data_linkedin_person_profile",
+        "web_data_linkedin_company_profile",
+        "web_data_linkedin_job_listings",
+        "web_data_linkedin_posts",
+        "web_data_linkedin_people_search",
+        "web_data_crunchbase_company",
+        "web_data_zoominfo_company_profile",
+        "web_data_instagram_profiles",
+        "web_data_instagram_posts",
+        "web_data_instagram_reels",
+        "web_data_instagram_comments",
+        "web_data_facebook_posts",
+        "web_data_facebook_marketplace_listings",
+        "web_data_facebook_company_reviews",
+        "web_data_facebook_events",
+        "web_data_tiktok_profiles",
+        "web_data_tiktok_posts",
+        "web_data_tiktok_shop",
+        "web_data_tiktok_comments",
+        "web_data_google_maps_reviews",
+        "web_data_google_shopping",
+        "web_data_google_play_store",
+        "web_data_apple_app_store",
+        "web_data_reuter_news",
+        "web_data_github_repository_file",
+        "web_data_yahoo_finance_business",
+        "web_data_x_posts",
+        "web_data_zillow_properties_listing",
+        "web_data_booking_hotel_listings",
+        "web_data_youtube_profiles",
+        "web_data_youtube_comments",
+        "web_data_youtube_videos",
+        "web_data_reddit_posts",
+        "browser_create_session",
+        "browser_navigate",
+        "browser_click",
+        "browser_type",
+        "browser_scroll",
+        "browser_screenshot",
+        "browser_get_page_content",
+        "browser_wait_for_element",
+        "browser_execute_script",
+        "browser_close_session"
+      ],
+      "metadata": {
+        "stars": 1122,
+        "pulls": 65,
+        "last_updated": "2025-08-22T09:41:01Z"
+      },
+      "repository_url": "https://github.com/brightdata/brightdata-mcp",
+      "tags": [
+        "web-scraping",
+        "data-extraction",
+        "api",
+        "automation",
+        "browser"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/brightdata-mcp:2.4.2",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.brightdata.com",
+              "brightdata.com"
+            ],
+            "allow_port": [
+              443,
+              80
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "API_TOKEN",
+          "description": "Bright Data API token for authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "RATE_LIMIT",
+          "description": "Rate limiting configuration (format: limit/time+unit, e.g., 100/1h, 50/30m, 10/5s)",
+          "required": false
+        },
+        {
+          "name": "WEB_UNLOCKER_ZONE",
+          "description": "Custom Web Unlocker zone name",
+          "required": false,
+          "default": "mcp_unlocker"
+        },
+        {
+          "name": "BROWSER_ZONE",
+          "description": "Custom Browser API zone name",
+          "required": false,
+          "default": "mcp_browser"
+        },
+        {
+          "name": "PRO_MODE",
+          "description": "Enable pro mode to access all tools including browser automation and web data extraction",
+          "required": false,
+          "default": "false"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "browserbase": {
+      "description": "MCP server for cloud browser automation with Browserbase and Stagehand",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "createSession",
+        "listSessions",
+        "closeSession",
+        "navigateWithSession",
+        "actWithSession",
+        "extractWithSession",
+        "observeWithSession",
+        "getUrlWithSession",
+        "getAllUrlsWithSession",
+        "closeAllSessions",
+        "navigate",
+        "act",
+        "extract",
+        "observe",
+        "screenshot",
+        "getUrl"
+      ],
+      "metadata": {
+        "stars": 2476,
+        "pulls": 133,
+        "last_updated": "2025-08-22T09:41:05Z"
+      },
+      "repository_url": "https://github.com/browserbase/mcp-server-browserbase",
+      "tags": [
+        "browser",
+        "automation",
+        "web-scraping",
+        "testing",
+        "stagehand"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/browserbase-mcp-server:2.0.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "BROWSERBASE_API_KEY",
+          "description": "Browserbase API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "BROWSERBASE_PROJECT_ID",
+          "description": "Browserbase project ID",
+          "required": true
+        },
+        {
+          "name": "GEMINI_API_KEY",
+          "description": "Google Gemini API key for Stagehand",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "browserbase-mcp-server": {
+      "description": "MCP server for cloud browser automation with Browserbase and Stagehand",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "createSession",
+        "listSessions",
+        "closeSession",
+        "navigateWithSession",
+        "actWithSession",
+        "extractWithSession",
+        "observeWithSession",
+        "getUrlWithSession",
+        "getAllUrlsWithSession",
+        "closeAllSessions",
+        "navigate",
+        "act",
+        "extract",
+        "observe",
+        "screenshot",
+        "getUrl"
+      ],
+      "metadata": {
+        "stars": 2476,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:40:58Z"
+      },
+      "repository_url": "https://github.com/browserbase/mcp-server-browserbase",
+      "tags": [
+        "browser",
+        "automation",
+        "web-scraping",
+        "testing",
+        "stagehand"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/browserbase-mcp-server:2.0.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "BROWSERBASE_API_KEY",
+          "description": "Browserbase API key",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "BROWSERBASE_PROJECT_ID",
+          "description": "Browserbase project ID",
+          "required": true
+        },
+        {
+          "name": "GEMINI_API_KEY",
+          "description": "Google Gemini API key for Stagehand",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "buildkite": {
+      "description": "Connect your Buildkite data (pipelines, builds, jobs, tests) to AI tooling and editors.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "get_cluster",
+        "list_clusters",
+        "get_cluster_queue",
+        "list_cluster_queues",
+        "get_pipeline",
+        "list_pipelines",
+        "create_pipeline",
+        "update_pipeline",
+        "list_builds",
+        "get_build",
+        "create_build",
+        "get_build_test_engine_runs",
+        "get_jobs",
+        "get_job_logs",
+        "list_artifacts",
+        "get_artifact",
+        "list_annotations",
+        "list_test_runs",
+        "get_test_run",
+        "get_failed_executions",
+        "get_test",
+        "access_token",
+        "current_user",
+        "user_token_organization"
+      ],
+      "metadata": {
+        "stars": 31,
+        "pulls": 3424,
+        "last_updated": "2025-08-22T09:42:42Z"
+      },
+      "repository_url": "https://github.com/buildkite/buildkite-mcp-server",
+      "tags": [
+        "buildkite",
+        "continuous-integration",
+        "continuous-delivery",
+        "pipelines",
+        "builds",
+        "jobs",
+        "devops",
+        "testing"
+      ],
+      "image": "ghcr.io/buildkite/buildkite-mcp-server:0.5.10",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".buildkite.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "BUILDKITE_API_TOKEN",
+          "description": "Your Buildkite API access token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "JOB_LOG_TOKEN_THRESHOLD",
+          "description": "Token threshold for job logs. If exceeded, logs will be written to disk and returned by path (for local use only).",
+          "required": false
+        }
+      ],
+      "args": [
+        "stdio"
+      ]
+    },
+    "chroma-mcp": {
+      "description": "MCP server for ChromaDB vector database operations",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "chroma_list_collections",
+        "chroma_create_collection",
+        "chroma_peek_collection",
+        "chroma_get_collection_info",
+        "chroma_get_collection_count",
+        "chroma_modify_collection",
+        "chroma_delete_collection",
+        "chroma_add_documents",
+        "chroma_query_documents",
+        "chroma_get_documents",
+        "chroma_update_documents",
+        "chroma_delete_documents"
+      ],
+      "metadata": {
+        "stars": 308,
+        "pulls": 0,
+        "last_updated": "2025-08-24T02:35:25Z"
+      },
+      "repository_url": "https://github.com/chroma-core/chroma-mcp",
+      "tags": [
+        "database",
+        "vector-database",
+        "embeddings",
+        "ai",
+        "chromadb"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/chroma-mcp:0.2.6",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "CHROMA_SERVER_URL",
+          "description": "ChromaDB server URL",
+          "required": false,
+          "default": "http://localhost:8000"
+        },
+        {
+          "name": "CHROMA_API_KEY",
+          "description": "API key for ChromaDB authentication",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "cloud-run": {
+      "description": "Deploy apps to Google Cloud Run directly from AI assistants. Enables deployment of containerized applications, local files, and folders to Cloud Run with integrated logging and service management.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "deploy_file_contents",
+        "deploy_local_files",
+        "deploy_local_folder",
+        "deploy_container_image",
+        "list_services",
+        "get_service",
+        "get_service_log",
+        "list_projects",
+        "create_project"
+      ],
+      "metadata": {
+        "stars": 328,
+        "pulls": 273,
+        "last_updated": "2025-08-22T09:41:00Z"
+      },
+      "repository_url": "https://github.com/GoogleCloudPlatform/cloud-run-mcp",
+      "tags": [
+        "google-cloud",
+        "cloud-run",
+        "deployment",
+        "gcp",
+        "serverless",
+        "containers",
+        "devops"
+      ],
+      "image": "docker.io/mcp/cloud-run-mcp:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "run.googleapis.com",
+              "cloudbuild.googleapis.com",
+              "storage.googleapis.com",
+              "logging.googleapis.com",
+              "cloudresourcemanager.googleapis.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "GOOGLE_APPLICATION_CREDENTIALS",
+          "description": "Path to Google Cloud credentials JSON file",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "GOOGLE_CLOUD_PROJECT",
+          "description": "Google Cloud project ID for deployments",
+          "required": false
+        },
+        {
+          "name": "GOOGLE_CLOUD_REGION",
+          "description": "Default Google Cloud region for deployments",
+          "required": false
+        },
+        {
+          "name": "DEFAULT_SERVICE_NAME",
+          "description": "Default Cloud Run service name",
+          "required": false
+        },
+        {
+          "name": "SKIP_IAM_CHECK",
+          "description": "Skip IAM permission checks (true/false)",
+          "required": false
+        }
+      ]
+    },
+    "context7": {
+      "description": "Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "resolve-library-id",
+        "get-library-docs"
+      ],
+      "metadata": {
+        "stars": 26860,
+        "pulls": 313,
+        "last_updated": "2025-08-22T09:45:11Z"
+      },
+      "repository_url": "https://github.com/upstash/context7",
+      "tags": [
+        "documentation",
+        "modelcontextprotocol"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/context7:1.0.14",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "crowdstrike-falcon": {
+      "description": "Connects AI agents with the CrowdStrike Falcon platform for intelligent security analysis, providing programmatic access to detections, incidents, behaviors, threat intelligence, hosts, vulnerabilities, and identity protection capabilities.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "streamable-http",
+      "tools": [
+        "falcon_check_connectivity",
+        "falcon_get_available_modules",
+        "falcon_search_detections",
+        "falcon_get_detection_details",
+        "falcon_show_crowd_score",
+        "falcon_search_incidents",
+        "falcon_get_incident_details",
+        "falcon_search_behaviors",
+        "falcon_get_behavior_details",
+        "falcon_search_actors",
+        "falcon_search_indicators",
+        "falcon_search_reports",
+        "falcon_search_hosts",
+        "falcon_get_host_details",
+        "falcon_search_vulnerabilities",
+        "falcon_search_kubernetes_containers",
+        "falcon_count_kubernetes_containers",
+        "falcon_search_images_vulnerabilities",
+        "idp_investigate_entity"
+      ],
+      "metadata": {
+        "stars": 42,
+        "pulls": 3771,
+        "last_updated": "2025-08-22T09:42:43Z"
+      },
+      "repository_url": "https://github.com/crowdstrike/falcon-mcp",
+      "tags": [
+        "crowdstrike",
+        "falcon",
+        "security",
+        "cybersecurity",
+        "threat-intelligence",
+        "detections",
+        "incidents",
+        "vulnerabilities",
+        "endpoint-security",
+        "threat-hunting",
+        "incident-response",
+        "malware-analysis",
+        "identity-protection",
+        "cloud-security"
+      ],
+      "image": "quay.io/crowdstrike/falcon-mcp:latest",
+      "target_port": 8000,
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.crowdstrike.com",
+              "api.us-2.crowdstrike.com",
+              "api.eu-1.crowdstrike.com",
+              "api.laggar.gcw.crowdstrike.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "FALCON_CLIENT_ID",
+          "description": "CrowdStrike API client ID",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "FALCON_CLIENT_SECRET",
+          "description": "CrowdStrike API client secret",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "FALCON_BASE_URL",
+          "description": "CrowdStrike API base URL (e.g., https://api.crowdstrike.com, https://api.us-2.crowdstrike.com, https://api.eu-1.crowdstrike.com)",
+          "required": true
+        },
+        {
+          "name": "FALCON_MCP_MODULES",
+          "description": "Comma-separated list of modules to enable (detections,incidents,intel,hosts,spotlight,cloud,idp). If not set, all modules are enabled.",
+          "required": false
+        },
+        {
+          "name": "FALCON_MCP_DEBUG",
+          "description": "Enable debug logging - true or false (default: false)",
+          "required": false
+        }
+      ],
+      "args": [
+        "--transport",
+        "streamable-http",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ]
+    },
+    "dolt": {
+      "description": "Provides Git-like version control for SQL databases using Dolt, enabling branching, merging, and versioning of database schemas and data",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "streamable-http",
+      "tools": [
+        "add_dolt_remote",
+        "alter_table",
+        "clone_database",
+        "create_database",
+        "create_dolt_branch",
+        "create_dolt_branch_from_head",
+        "create_dolt_commit",
+        "create_table",
+        "delete_dolt_branch",
+        "describe_table",
+        "dolt_fetch_all_branches",
+        "dolt_fetch_branch",
+        "dolt_pull_branch",
+        "dolt_push_branch",
+        "dolt_reset_all_tables_soft",
+        "dolt_reset_hard",
+        "dolt_reset_table_soft",
+        "drop_database",
+        "drop_table",
+        "exec",
+        "get_dolt_merge_status",
+        "list_databases",
+        "list_dolt_branches",
+        "list_dolt_commits",
+        "list_dolt_diff_changes_by_table_name",
+        "list_dolt_diff_changes_in_date_range",
+        "list_dolt_diff_changes_in_working_set",
+        "list_dolt_remotes",
+        "merge_dolt_branch",
+        "merge_dolt_branch_no_fast_forward",
+        "move_dolt_branch",
+        "query",
+        "remove_dolt_remote",
+        "select_active_branch",
+        "select_version",
+        "show_create_table",
+        "show_tables",
+        "stage_all_tables_for_dolt_commit",
+        "stage_table_for_dolt_commit",
+        "unstage_all_tables",
+        "unstage_table"
+      ],
+      "metadata": {
+        "stars": 2,
+        "pulls": 0,
+        "last_updated": "2025-08-24T02:35:25Z"
+      },
+      "repository_url": "https://github.com/dolthub/dolt-mcp",
+      "tags": [
+        "database",
+        "version-control",
+        "sql",
+        "mysql",
+        "git",
+        "collaboration",
+        "data-science",
+        "branching",
+        "merging",
+        "reproducibility"
+      ],
+      "image": "docker.io/dolthub/dolt-mcp:0.1.1",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "localhost",
+              "dolthub.com",
+              ".dolthub.com"
+            ],
+            "allow_port": [
+              3306,
+              443,
+              80,
+              8080
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "DOLT_HOST",
+          "description": "Hostname of the Dolt SQL server",
+          "required": true
+        },
+        {
+          "name": "DOLT_PORT",
+          "description": "Dolt server port",
+          "required": false,
+          "default": "3306"
+        },
+        {
+          "name": "DOLT_USER",
+          "description": "Username for Dolt server authentication",
+          "required": true
+        },
+        {
+          "name": "DOLT_PASSWORD",
+          "description": "Password for Dolt server authentication",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "DOLT_DATABASE",
+          "description": "Name of the database to connect to",
+          "required": true
+        },
+        {
+          "name": "MCP_MODE",
+          "description": "Server mode (stdio or http)",
+          "required": false,
+          "default": "http"
+        },
+        {
+          "name": "MCP_PORT",
+          "description": "HTTP server port (HTTP mode only)",
+          "required": false,
+          "default": "8080"
+        }
+      ]
+    },
+    "elasticsearch": {
+      "description": "Connect to your Elasticsearch data.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "streamable-http",
+      "tools": [
+        "esql",
+        "get_mappings",
+        "get_shards",
+        "list_indices",
+        "search"
+      ],
+      "metadata": {
+        "stars": 425,
+        "pulls": 10995,
+        "last_updated": "2025-08-22T09:42:42Z"
+      },
+      "repository_url": "https://github.com/elastic/mcp-server-elasticsearch",
+      "tags": [
+        "elasticsearch",
+        "search",
+        "analytics",
+        "data",
+        "alerting",
+        "observability",
+        "metrics",
+        "logs"
+      ],
+      "image": "docker.io/mcp/elasticsearch:latest",
+      "target_port": 8080,
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443,
+              9200
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "ES_URL",
+          "description": "Your Elasticsearch instance URL",
+          "required": true
+        },
+        {
+          "name": "ES_API_KEY",
+          "description": "Elasticsearch API key for authentication",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "ES_USERNAME",
+          "description": "Elasticsearch username for basic authentication",
+          "required": false
+        },
+        {
+          "name": "ES_PASSWORD",
+          "description": "Elasticsearch password for basic authentication",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "ES_CA_CERT",
+          "description": "Path to custom CA certificate for Elasticsearch SSL/TLS",
+          "required": false
+        },
+        {
+          "name": "ES_SSL_SKIP_VERIFY",
+          "description": "Set to '1' or 'true' to skip SSL certificate verification",
+          "required": false
+        },
+        {
+          "name": "ES_PATH_PREFIX",
+          "description": "Path prefix for Elasticsearch instance exposed at a non-root path",
+          "required": false
+        },
+        {
+          "name": "ES_VERSION",
+          "description": "Server assumes Elasticsearch 9.x. Set to 8 target Elasticsearch 8.x",
+          "required": false
+        }
+      ],
+      "args": [
+        "http"
+      ]
+    },
+    "everything": {
+      "description": "This MCP server attempts to exercise all the features of the MCP protocol",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "echo",
+        "add",
+        "longRunningOperation",
+        "sampleLLM",
+        "getTinyImage",
+        "printEnv",
+        "annotatedMessage"
+      ],
+      "metadata": {
+        "stars": 65278,
+        "pulls": 17019,
+        "last_updated": "2025-08-22T09:42:40Z"
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "tags": [
+        "adds",
+        "all",
+        "attempts",
+        "demonstrates",
+        "everything",
+        "exercise",
+        "features",
+        "returns",
+        "simple",
+        "tools"
+      ],
+      "image": "docker.io/mcp/everything:latest",
+      "permissions": {
+        "network": {
+          "outbound": {}
+        }
+      }
+    },
+    "fetch": {
+      "description": "Allows you to fetch content from the web",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "streamable-http",
+      "tools": [
+        "fetch"
+      ],
+      "metadata": {
+        "stars": 17,
+        "pulls": 12390,
+        "last_updated": "2025-08-22T09:45:10Z"
+      },
+      "repository_url": "https://github.com/stackloklabs/gofetch",
+      "tags": [
+        "content",
+        "html",
+        "markdown",
+        "fetch",
+        "fetching",
+        "get",
+        "wget",
+        "json",
+        "curl",
+        "modelcontextprotocol"
+      ],
+      "image": "ghcr.io/stackloklabs/gofetch/server:0.0.5",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/StacklokLabs/gofetch",
+        "signer_identity": "/.github/workflows/release.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "filesystem": {
+      "description": "Allows you to do filesystem operations. Mount paths under /projects using --volume.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "read_file",
+        "read_multiple_files",
+        "write_file",
+        "edit_file",
+        "create_directory",
+        "list_directory",
+        "directory_tree",
+        "move_file",
+        "search_files",
+        "get_file_info",
+        "list_allowed_directories"
+      ],
+      "metadata": {
+        "stars": 65278,
+        "pulls": 20619,
+        "last_updated": "2025-08-22T09:42:37Z"
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "tags": [
+        "create_directory",
+        "edit_file",
+        "filesystem",
+        "get_file_info",
+        "implementing",
+        "list_allowed_directories",
+        "list_directory",
+        "move_file",
+        "node",
+        "operations"
+      ],
+      "image": "docker.io/mcp/filesystem:latest",
+      "permissions": {
+        "network": {
+          "outbound": {}
+        }
+      },
+      "args": [
+        "/projects"
+      ]
+    },
+    "firecrawl": {
+      "description": "A powerful web scraping and content extraction MCP server that provides advanced crawling, search, and structured data extraction capabilities with LLM integration.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "firecrawl_scrape",
+        "firecrawl_batch_scrape",
+        "firecrawl_check_batch_status",
+        "firecrawl_check_crawl_status",
+        "firecrawl_search",
+        "firecrawl_crawl",
+        "firecrawl_extract",
+        "firecrawl_deep_research",
+        "firecrawl_generate_llmstxt",
+        "firecrawl_map"
+      ],
+      "metadata": {
+        "stars": 4264,
+        "pulls": 12644,
+        "last_updated": "2025-08-22T09:42:38Z"
+      },
+      "repository_url": "https://github.com/mendableai/firecrawl-mcp-server",
+      "tags": [
+        "web-crawler",
+        "web-scraping",
+        "data-collection",
+        "batch-processing",
+        "content-extraction",
+        "search-api",
+        "llm-tools",
+        "javascript-rendering",
+        "research",
+        "automation"
+      ],
+      "image": "docker.io/mcp/firecrawl:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.firecrawl.dev"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "FIRECRAWL_API_KEY",
+          "description": "API key for FireCrawl service authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "FIRECRAWL_API_URL",
+          "description": "FireCrawl API URL (default: https://api.firecrawl.dev/v1)",
+          "required": false
+        },
+        {
+          "name": "FIRECRAWL_RETRY_MAX_ATTEMPTS",
+          "description": "Maximum number of retry attempts for API calls",
+          "required": false
+        },
+        {
+          "name": "FIRECRAWL_RETRY_INITIAL_DELAY",
+          "description": "Initial delay in milliseconds for retry backoff",
+          "required": false
+        },
+        {
+          "name": "FIRECRAWL_RETRY_MAX_DELAY",
+          "description": "Maximum delay in milliseconds for retry backoff",
+          "required": false
+        },
+        {
+          "name": "FIRECRAWL_RETRY_BACKOFF_FACTOR",
+          "description": "Backoff factor for retry delay calculation",
+          "required": false
+        },
+        {
+          "name": "FIRECRAWL_CREDIT_WARNING_THRESHOLD",
+          "description": "Credit threshold for warning notifications",
+          "required": false
+        },
+        {
+          "name": "FIRECRAWL_CREDIT_CRITICAL_THRESHOLD",
+          "description": "Credit threshold for critical notifications",
+          "required": false
+        }
+      ]
+    },
+    "genai-toolbox": {
+      "description": "A comprehensive MCP server for database operations that provides tools for connecting to and interacting with various database systems with advanced features like connection pooling, authentication, and observability. Mount and configured via tools.yaml",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "set_during_runtime"
+      ],
+      "metadata": {
+        "stars": 9486,
+        "pulls": 2408,
+        "last_updated": "2025-08-22T09:41:06Z"
+      },
+      "repository_url": "https://github.com/googleapis/genai-toolbox",
+      "tags": [
+        "database",
+        "sql",
+        "postgresql",
+        "mysql",
+        "sqlite",
+        "mongodb",
+        "redis",
+        "connection-pooling",
+        "authentication",
+        "observability",
+        "toolbox",
+        "genai",
+        "mcp-server"
+      ],
+      "image": "us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:0.12.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      }
+    },
+    "git": {
+      "description": "Provides support for interacting with Git repositories",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "git_status",
+        "git_diff_unstaged",
+        "git_diff_staged",
+        "git_diff",
+        "git_commit",
+        "git_add",
+        "git_reset",
+        "git_log",
+        "git_create_branch",
+        "git_checkout",
+        "git_show",
+        "git_init"
+      ],
+      "metadata": {
+        "stars": 65278,
+        "pulls": 10404,
+        "last_updated": "2025-08-22T09:42:39Z"
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "tags": [
+        "adds",
+        "automation",
+        "git",
+        "interaction",
+        "records",
+        "repository",
+        "shows",
+        "tools",
+        "unstages"
+      ],
+      "image": "docker.io/mcp/git:latest",
+      "permissions": {
+        "network": {
+          "outbound": {}
+        }
+      }
+    },
+    "github": {
+      "description": "Provides integration with GitHub's APIs",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "add_comment_to_pending_review",
+        "add_issue_comment",
+        "add_sub_issue",
+        "assign_copilot_to_issue",
+        "cancel_workflow_run",
+        "create_and_submit_pull_request_review",
+        "create_branch",
+        "create_gist",
+        "create_issue",
+        "create_or_update_file",
+        "create_pending_pull_request_review",
+        "create_pull_request",
+        "create_repository",
+        "delete_file",
+        "delete_pending_pull_request_review",
+        "delete_workflow_run_logs",
+        "dismiss_notification",
+        "download_workflow_run_artifact",
+        "fork_repository",
+        "get_code_scanning_alert",
+        "get_commit",
+        "get_dependabot_alert",
+        "get_discussion",
+        "get_discussion_comments",
+        "get_file_contents",
+        "get_global_security_advisory",
+        "get_issue",
+        "get_issue_comments",
+        "get_job_logs",
+        "get_latest_release",
+        "get_me",
+        "get_notification_details",
+        "get_pull_request",
+        "get_pull_request_comments",
+        "get_pull_request_diff",
+        "get_pull_request_files",
+        "get_pull_request_reviews",
+        "get_pull_request_status",
+        "get_release_by_tag",
+        "get_secret_scanning_alert",
+        "get_tag",
+        "get_team_members",
+        "get_teams",
+        "get_workflow_run",
+        "get_workflow_run_logs",
+        "get_workflow_run_usage",
+        "list_branches",
+        "list_code_scanning_alerts",
+        "list_commits",
+        "list_dependabot_alerts",
+        "list_discussion_categories",
+        "list_discussions",
+        "list_gists",
+        "list_global_security_advisories",
+        "list_issue_types",
+        "list_issues",
+        "list_notifications",
+        "list_org_repository_security_advisories",
+        "list_pull_requests",
+        "list_releases",
+        "list_repository_security_advisories",
+        "list_secret_scanning_alerts",
+        "list_sub_issues",
+        "list_tags",
+        "list_workflow_jobs",
+        "list_workflow_run_artifacts",
+        "list_workflow_runs",
+        "list_workflows",
+        "manage_notification_subscription",
+        "manage_repository_notification_subscription",
+        "mark_all_notifications_read",
+        "merge_pull_request",
+        "push_files",
+        "remove_sub_issue",
+        "reprioritize_sub_issue",
+        "request_copilot_review",
+        "rerun_failed_jobs",
+        "rerun_workflow_run",
+        "run_workflow",
+        "search_code",
+        "search_issues",
+        "search_orgs",
+        "search_pull_requests",
+        "search_repositories",
+        "search_users",
+        "submit_pending_pull_request_review",
+        "update_gist",
+        "update_issue",
+        "update_pull_request",
+        "update_pull_request_branch"
+      ],
+      "metadata": {
+        "stars": 21509,
+        "pulls": 5000,
+        "last_updated": "2025-08-22T09:42:39Z"
+      },
+      "repository_url": "https://github.com/github/github-mcp-server",
+      "tags": [
+        "api",
+        "create",
+        "fork",
+        "github",
+        "list",
+        "pull-request",
+        "push",
+        "repository",
+        "search",
+        "update",
+        "issues"
+      ],
+      "image": "ghcr.io/github/github-mcp-server:v0.13.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".github.com",
+              ".githubusercontent.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "GITHUB_PERSONAL_ACCESS_TOKEN",
+          "description": "GitHub personal access token with appropriate permissions",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "GITHUB_HOST",
+          "description": "GitHub Enterprise Server hostname (optional)",
+          "required": false
+        },
+        {
+          "name": "GITHUB_TOOLSETS",
+          "description": "Comma-separated list of toolsets to enable (e.g., 'repos,issues,pull_requests'). If not set, all toolsets are enabled. See the README for available toolsets.",
+          "required": false
+        },
+        {
+          "name": "GITHUB_DYNAMIC_TOOLSETS",
+          "description": "Set to '1' to enable dynamic toolset discovery",
+          "required": false
+        },
+        {
+          "name": "GITHUB_READ_ONLY",
+          "description": "Set to '1' to enable read-only mode, preventing any modifications to GitHub resources",
+          "required": false
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/github/github-mcp-server",
+        "signer_identity": "/.github/workflows/docker-publish.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "grafana": {
+      "description": "Provides access to your Grafana instance and the surrounding ecosystem, enabling dashboard search, datasource queries, alerting management, incident response, and Sift investigations.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "list_teams",
+        "search_dashboards",
+        "get_dashboard_by_uid",
+        "update_dashboard",
+        "get_dashboard_panel_queries",
+        "list_datasources",
+        "get_datasource_by_uid",
+        "get_datasource_by_name",
+        "query_prometheus",
+        "list_prometheus_metric_metadata",
+        "list_prometheus_metric_names",
+        "list_prometheus_label_names",
+        "list_prometheus_label_values",
+        "list_incidents",
+        "create_incident",
+        "add_activity_to_incident",
+        "resolve_incident",
+        "query_loki_logs",
+        "list_loki_label_names",
+        "list_loki_label_values",
+        "query_loki_stats",
+        "list_alert_rules",
+        "get_alert_rule_by_uid",
+        "list_oncall_schedules",
+        "get_oncall_shift",
+        "get_current_oncall_users",
+        "list_oncall_teams",
+        "list_oncall_users",
+        "get_investigation",
+        "get_analysis",
+        "list_investigations",
+        "find_error_pattern_logs",
+        "find_slow_requests",
+        "list_pyroscope_label_names",
+        "list_pyroscope_label_values",
+        "list_pyroscope_profile_types",
+        "fetch_pyroscope_profile"
+      ],
+      "metadata": {
+        "stars": 1444,
+        "pulls": 8120,
+        "last_updated": "2025-08-22T09:45:10Z"
+      },
+      "repository_url": "https://github.com/grafana/mcp-grafana",
+      "tags": [
+        "grafana",
+        "dashboards",
+        "visualization",
+        "monitoring",
+        "alerting",
+        "prometheus",
+        "loki",
+        "tempo",
+        "pyroscope",
+        "incidents",
+        "observability",
+        "metrics",
+        "logs",
+        "traces",
+        "sift",
+        "investigations",
+        "oncall"
+      ],
+      "image": "docker.io/mcp/grafana:latest",
+      "target_port": 8000,
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "GRAFANA_URL",
+          "description": "URL of the Grafana instance to connect to",
+          "required": true
+        },
+        {
+          "name": "GRAFANA_API_KEY",
+          "description": "Service account token with appropriate permissions",
+          "required": true,
+          "secret": true
+        }
+      ]
+    },
+    "graphlit": {
+      "description": "MCP server for Graphlit platform - ingest, search, and retrieve knowledge from multiple sources",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "query_contents",
+        "query_collections",
+        "query_feeds",
+        "query_conversations",
+        "retrieve_relevant_sources",
+        "retrieve_similar_images",
+        "visually_describe_image",
+        "prompt_llm_conversation",
+        "extract_structured_json_from_text",
+        "publish_as_audio",
+        "publish_as_image",
+        "ingest_files",
+        "ingest_web_pages",
+        "ingest_messages",
+        "ingest_posts",
+        "ingest_emails",
+        "ingest_issues",
+        "ingest_text",
+        "ingest_memory",
+        "web_crawling",
+        "web_search",
+        "web_mapping",
+        "screenshot_page",
+        "configure_project",
+        "create_collection",
+        "add_contents_to_collection",
+        "remove_contents_from_collection",
+        "delete_collections",
+        "delete_feeds",
+        "delete_contents",
+        "delete_conversations",
+        "is_feed_done",
+        "is_content_done",
+        "list_slack_channels",
+        "list_microsoft_teams_teams",
+        "list_microsoft_teams_channels",
+        "list_sharepoint_libraries",
+        "list_sharepoint_folders",
+        "list_linear_projects",
+        "list_notion_databases",
+        "list_notion_pages",
+        "list_dropbox_folders",
+        "list_box_folders",
+        "list_discord_guilds",
+        "list_discord_channels",
+        "list_google_calendars",
+        "list_microsoft_calendars"
+      ],
+      "metadata": {
+        "stars": 348,
+        "pulls": 109,
+        "last_updated": "2025-08-22T09:41:04Z"
+      },
+      "repository_url": "https://github.com/graphlit/graphlit-mcp-server",
+      "tags": [
+        "knowledge-base",
+        "rag",
+        "search",
+        "ingestion",
+        "data-connectors"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/graphlit-mcp-server:1.0.20250808001",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "GRAPHLIT_ENVIRONMENT_ID",
+          "description": "Your Graphlit environment ID",
+          "required": true
+        },
+        {
+          "name": "GRAPHLIT_ORGANIZATION_ID",
+          "description": "Your Graphlit organization ID",
+          "required": true
+        },
+        {
+          "name": "GRAPHLIT_JWT_SECRET",
+          "description": "Your JWT secret for signing the JWT token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "SLACK_BOT_TOKEN",
+          "description": "Slack bot token for Slack integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "DISCORD_BOT_TOKEN",
+          "description": "Discord bot token for Discord integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "TWITTER_TOKEN",
+          "description": "Twitter/X API token",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "GOOGLE_EMAIL_REFRESH_TOKEN",
+          "description": "Google refresh token for Gmail integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "GOOGLE_EMAIL_CLIENT_ID",
+          "description": "Google client ID for Gmail integration",
+          "required": false
+        },
+        {
+          "name": "GOOGLE_EMAIL_CLIENT_SECRET",
+          "description": "Google client secret for Gmail integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "LINEAR_API_KEY",
+          "description": "Linear API key for Linear integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "GITHUB_PERSONAL_ACCESS_TOKEN",
+          "description": "GitHub personal access token",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "JIRA_EMAIL",
+          "description": "Jira email for authentication",
+          "required": false
+        },
+        {
+          "name": "JIRA_TOKEN",
+          "description": "Jira API token",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "NOTION_API_KEY",
+          "description": "Notion API key for Notion integration",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "graphlit-mcp-server": {
+      "description": "MCP server for Graphlit platform - ingest, search, and retrieve knowledge from multiple sources",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "query_contents",
+        "query_collections",
+        "query_feeds",
+        "query_conversations",
+        "retrieve_relevant_sources",
+        "retrieve_similar_images",
+        "visually_describe_image",
+        "prompt_llm_conversation",
+        "extract_structured_json_from_text",
+        "publish_as_audio",
+        "publish_as_image",
+        "ingest_files",
+        "ingest_web_pages",
+        "ingest_messages",
+        "ingest_posts",
+        "ingest_emails",
+        "ingest_issues",
+        "ingest_text",
+        "ingest_memory",
+        "web_crawling",
+        "web_search",
+        "web_mapping",
+        "screenshot_page",
+        "configure_project",
+        "create_collection",
+        "add_contents_to_collection",
+        "remove_contents_from_collection",
+        "delete_collections",
+        "delete_feeds",
+        "delete_contents",
+        "delete_conversations",
+        "is_feed_done",
+        "is_content_done",
+        "list_slack_channels",
+        "list_microsoft_teams_teams",
+        "list_microsoft_teams_channels",
+        "list_sharepoint_libraries",
+        "list_sharepoint_folders",
+        "list_linear_projects",
+        "list_notion_databases",
+        "list_notion_pages",
+        "list_dropbox_folders",
+        "list_box_folders",
+        "list_discord_guilds",
+        "list_discord_channels",
+        "list_google_calendars",
+        "list_microsoft_calendars"
+      ],
+      "metadata": {
+        "stars": 348,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:40:59Z"
+      },
+      "repository_url": "https://github.com/graphlit/graphlit-mcp-server",
+      "tags": [
+        "knowledge-base",
+        "rag",
+        "search",
+        "ingestion",
+        "data-connectors"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/graphlit-mcp-server:1.0.20250808001",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "GRAPHLIT_ENVIRONMENT_ID",
+          "description": "Your Graphlit environment ID",
+          "required": true
+        },
+        {
+          "name": "GRAPHLIT_ORGANIZATION_ID",
+          "description": "Your Graphlit organization ID",
+          "required": true
+        },
+        {
+          "name": "GRAPHLIT_JWT_SECRET",
+          "description": "Your JWT secret for signing the JWT token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "SLACK_BOT_TOKEN",
+          "description": "Slack bot token for Slack integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "DISCORD_BOT_TOKEN",
+          "description": "Discord bot token for Discord integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "TWITTER_TOKEN",
+          "description": "Twitter/X API token",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "GOOGLE_EMAIL_REFRESH_TOKEN",
+          "description": "Google refresh token for Gmail integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "GOOGLE_EMAIL_CLIENT_ID",
+          "description": "Google client ID for Gmail integration",
+          "required": false
+        },
+        {
+          "name": "GOOGLE_EMAIL_CLIENT_SECRET",
+          "description": "Google client secret for Gmail integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "LINEAR_API_KEY",
+          "description": "Linear API key for Linear integration",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "GITHUB_PERSONAL_ACCESS_TOKEN",
+          "description": "GitHub personal access token",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "JIRA_EMAIL",
+          "description": "Jira email for authentication",
+          "required": false
+        },
+        {
+          "name": "JIRA_TOKEN",
+          "description": "Jira API token",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "NOTION_API_KEY",
+          "description": "Notion API key for Notion integration",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "hass-mcp": {
+      "description": "Integrates Home Assistant with LLM applications, enabling direct interaction with smart home devices, sensors, and automations.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "get_version",
+        "get_entity",
+        "entity_action",
+        "list_entities",
+        "search_entities_tool",
+        "domain_summary_tool",
+        "list_automations",
+        "call_service_tool",
+        "restart_ha",
+        "get_history",
+        "get_error_log"
+      ],
+      "metadata": {
+        "stars": 162,
+        "pulls": 17082,
+        "last_updated": "2025-08-22T09:42:42Z"
+      },
+      "repository_url": "https://github.com/voska/hass-mcp",
+      "tags": [
+        "home-assistant",
+        "smart-home",
+        "automation",
+        "iot",
+        "sensors",
+        "devices",
+        "control",
+        "monitoring",
+        "home-automation",
+        "domotics"
+      ],
+      "image": "docker.io/voska/hass-mcp:0.1.1",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "HA_URL",
+          "description": "Home Assistant instance URL (e.g. http://homeassistant.local:8123)",
+          "required": true
+        },
+        {
+          "name": "HA_TOKEN",
+          "description": "Home Assistant Long-Lived Access Token",
+          "required": true,
+          "secret": true
+        }
+      ]
+    },
+    "heroku": {
+      "description": "MCP server for seamless interaction between LLMs and the Heroku Platform",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "list_apps",
+        "get_app_info",
+        "create_app",
+        "rename_app",
+        "transfer_app",
+        "deploy_to_heroku",
+        "deploy_one_off_dyno",
+        "ps_list",
+        "ps_scale",
+        "ps_restart",
+        "list_addons",
+        "get_addon_info",
+        "create_addon",
+        "maintenance_on",
+        "maintenance_off",
+        "get_app_logs",
+        "pipelines_create",
+        "pipelines_promote",
+        "pipelines_list",
+        "pipelines_info",
+        "list_teams",
+        "list_private_spaces",
+        "pg_psql",
+        "pg_info",
+        "pg_ps",
+        "pg_locks",
+        "pg_outliers",
+        "pg_credentials",
+        "pg_kill",
+        "pg_maintenance",
+        "pg_backups",
+        "pg_upgrade"
+      ],
+      "metadata": {
+        "stars": 57,
+        "pulls": 104,
+        "last_updated": "2025-08-22T09:41:06Z"
+      },
+      "repository_url": "https://github.com/heroku/heroku-mcp-server",
+      "tags": [
+        "heroku",
+        "paas",
+        "deployment",
+        "cloud",
+        "devops"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/heroku-mcp-server:1.0.7",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".heroku.com",
+              ".herokuapp.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "HEROKU_API_KEY",
+          "description": "Your Heroku authorization token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "MCP_SERVER_REQUEST_TIMEOUT",
+          "description": "Timeout in milliseconds for command execution",
+          "required": false,
+          "default": "15000"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "heroku-mcp-server": {
+      "description": "MCP server for seamless interaction between LLMs and the Heroku Platform",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "list_apps",
+        "get_app_info",
+        "create_app",
+        "rename_app",
+        "transfer_app",
+        "deploy_to_heroku",
+        "deploy_one_off_dyno",
+        "ps_list",
+        "ps_scale",
+        "ps_restart",
+        "list_addons",
+        "get_addon_info",
+        "create_addon",
+        "maintenance_on",
+        "maintenance_off",
+        "get_app_logs",
+        "pipelines_create",
+        "pipelines_promote",
+        "pipelines_list",
+        "pipelines_info",
+        "list_teams",
+        "list_private_spaces",
+        "pg_psql",
+        "pg_info",
+        "pg_ps",
+        "pg_locks",
+        "pg_outliers",
+        "pg_credentials",
+        "pg_kill",
+        "pg_maintenance",
+        "pg_backups",
+        "pg_upgrade"
+      ],
+      "metadata": {
+        "stars": 57,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:40:59Z"
+      },
+      "repository_url": "https://github.com/heroku/heroku-mcp-server",
+      "tags": [
+        "heroku",
+        "paas",
+        "deployment",
+        "cloud",
+        "devops"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/heroku-mcp-server:1.0.7",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".heroku.com",
+              ".herokuapp.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "HEROKU_API_KEY",
+          "description": "Your Heroku authorization token",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "MCP_SERVER_REQUEST_TIMEOUT",
+          "description": "Timeout in milliseconds for command execution",
+          "required": false,
+          "default": "15000"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "ida-pro-mcp": {
+      "description": "MCP server for IDA Pro reverse engineering and analysis",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "check_connection",
+        "get_metadata",
+        "get_function_by_name",
+        "get_function_by_address",
+        "get_current_address",
+        "get_current_function",
+        "convert_number",
+        "list_functions",
+        "list_globals_filter",
+        "list_globals",
+        "list_strings_filter",
+        "list_strings",
+        "list_local_types",
+        "decompile_function",
+        "disassemble_function",
+        "get_xrefs_to",
+        "get_xrefs_to_field",
+        "get_entry_points",
+        "set_comment",
+        "rename_local_variable",
+        "rename_global_variable",
+        "set_global_variable_type",
+        "rename_function",
+        "set_function_prototype",
+        "declare_c_type",
+        "set_local_variable_type",
+        "dbg_get_registers",
+        "dbg_get_call_stack",
+        "dbg_list_breakpoints",
+        "dbg_start_process",
+        "dbg_exit_process",
+        "dbg_continue_process",
+        "dbg_run_to",
+        "dbg_set_breakpoint",
+        "dbg_delete_breakpoint",
+        "dbg_enable_breakpoint"
+      ],
+      "metadata": {
+        "stars": 3219,
+        "pulls": 99,
+        "last_updated": "2025-08-22T09:41:01Z"
+      },
+      "repository_url": "https://github.com/mrexodia/ida-pro-mcp",
+      "tags": [
+        "reverse-engineering",
+        "ida-pro",
+        "analysis",
+        "security",
+        "disassembly",
+        "decompilation"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/ida-pro-mcp:1.4.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "k8s": {
+      "description": "Allows LLM-powered applications to interact with Kubernetes clusters.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "list_resources",
+        "get_resource",
+        "apply_resource"
+      ],
+      "metadata": {
+        "stars": 45,
+        "pulls": 13952,
+        "last_updated": "2025-08-22T09:45:09Z"
+      },
+      "repository_url": "https://github.com/StacklokLabs/mkp",
+      "tags": [
+        "kubernetes",
+        "k8s",
+        "api",
+        "resources",
+        "cluster",
+        "namespaced",
+        "apply",
+        "get",
+        "list"
+      ],
+      "image": "ghcr.io/stackloklabs/mkp/server:0.1.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "KUBECONFIG",
+          "description": "Path to the kubeconfig file for Kubernetes API authentication (mounted into the container with --volume)",
+          "required": false
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/StacklokLabs/mkp",
+        "signer_identity": "/.github/workflows/release.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "kyverno": {
+      "description": "Provides Kyverno policy management capabilities enabling AI assistants to interact with Kyverno policies in Kubernetes clusters for comprehensive policy management, security assessment, and compliance monitoring.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "list_contexts",
+        "switch_context",
+        "apply_policies",
+        "show_violations",
+        "help"
+      ],
+      "metadata": {
+        "stars": 8,
+        "pulls": 4946,
+        "last_updated": "2025-08-22T09:42:38Z"
+      },
+      "repository_url": "https://github.com/nirmata/kyverno-mcp",
+      "tags": [
+        "kyverno",
+        "kubernetes",
+        "policy-management",
+        "security",
+        "compliance",
+        "governance",
+        "policy-as-code",
+        "nirmata",
+        "admission-control",
+        "validation",
+        "mutation",
+        "generation",
+        "policy-violations",
+        "security-assessment",
+        "rbac",
+        "pod-security",
+        "best-practices"
+      ],
+      "image": "ghcr.io/nirmata/kyverno-mcp:v0.2.2",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "KUBECONFIG",
+          "description": "Path to the kubeconfig file for Kubernetes API authentication (mounted into the container with --volume)",
+          "required": false
+        }
+      ]
+    },
+    "magic-mcp": {
+      "description": "AI-powered UI component generator MCP server by 21st.dev",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "create_ui",
+        "fetch_ui",
+        "logo_search",
+        "refine_ui"
+      ],
+      "metadata": {
+        "stars": 3402,
+        "pulls": 128,
+        "last_updated": "2025-08-22T09:41:02Z"
+      },
+      "repository_url": "https://github.com/21st-dev/magic-mcp",
+      "tags": [
+        "ui",
+        "frontend",
+        "components",
+        "ai",
+        "generator",
+        "react"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/magic-mcp:0.1.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "21st.dev",
+              "api.21st.dev"
+            ],
+            "allow_port": [
+              443,
+              80
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "API_KEY",
+          "description": "21st.dev Magic API key for component generation",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "mcp-clickhouse": {
+      "description": "MCP server for ClickHouse that provides tools to execute SQL queries, list databases and tables, and optionally use chDB's embedded OLAP engine",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "run_select_query",
+        "list_databases",
+        "list_tables",
+        "run_chdb_select_query"
+      ],
+      "metadata": {
+        "stars": 503,
+        "pulls": 81,
+        "last_updated": "2025-08-22T09:41:03Z"
+      },
+      "repository_url": "https://github.com/ClickHouse/mcp-clickhouse",
+      "tags": [
+        "database",
+        "clickhouse",
+        "sql",
+        "analytics",
+        "olap"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/mcp-clickhouse:0.1.11",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "CLICKHOUSE_HOST",
+          "description": "The hostname of your ClickHouse server",
+          "required": true
+        },
+        {
+          "name": "CLICKHOUSE_USER",
+          "description": "The username for authentication",
+          "required": true
+        },
+        {
+          "name": "CLICKHOUSE_PASSWORD",
+          "description": "The password for authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "CLICKHOUSE_PORT",
+          "description": "The port number of your ClickHouse server",
+          "required": false,
+          "default": "8443"
+        },
+        {
+          "name": "CLICKHOUSE_SECURE",
+          "description": "Enable/disable HTTPS connection",
+          "required": false,
+          "default": "true"
+        },
+        {
+          "name": "CLICKHOUSE_VERIFY",
+          "description": "Enable/disable SSL certificate verification",
+          "required": false,
+          "default": "true"
+        },
+        {
+          "name": "CLICKHOUSE_DATABASE",
+          "description": "Default database to use",
+          "required": false
+        },
+        {
+          "name": "CHDB_ENABLED",
+          "description": "Enable/disable chDB functionality",
+          "required": false,
+          "default": "false"
+        },
+        {
+          "name": "CHDB_DATA_PATH",
+          "description": "The path to the chDB data directory",
+          "required": false,
+          "default": ":memory:"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "mcp-jetbrains": {
+      "description": "A MCP proxy to redirect requests to JetBrains IDEs",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "dynamic_tools_from_ide"
+      ],
+      "metadata": {
+        "stars": 913,
+        "pulls": 77,
+        "last_updated": "2025-08-22T09:41:02Z"
+      },
+      "repository_url": "https://github.com/JetBrains/mcp-jetbrains",
+      "tags": [
+        "ide",
+        "jetbrains",
+        "proxy",
+        "development",
+        "intellij"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/mcp-jetbrains:1.8.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "IDE_PORT",
+          "description": "Port of IDE's built-in webserver (if running multiple IDEs)",
+          "required": false
+        },
+        {
+          "name": "HOST",
+          "description": "Host/address of IDE's built-in webserver",
+          "required": false,
+          "default": "127.0.0.1"
+        },
+        {
+          "name": "LOG_ENABLED",
+          "description": "Enable logging for debugging",
+          "required": false,
+          "default": "false"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "mcp-neo4j-aura-manager": {
+      "description": "MCP server for managing Neo4j Aura cloud instances and services",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "list_instances",
+        "create_instance",
+        "delete_instance",
+        "get_instance",
+        "update_instance",
+        "scale_instance",
+        "enable_features"
+      ],
+      "metadata": {
+        "stars": 636,
+        "pulls": 141,
+        "last_updated": "2025-08-22T09:41:02Z"
+      },
+      "repository_url": "https://github.com/neo4j-contrib/mcp-neo4j",
+      "tags": [
+        "database",
+        "neo4j",
+        "aura",
+        "cloud",
+        "management"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/mcp-neo4j-aura-manager:0.3.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.neo4j.io",
+              "console.neo4j.io",
+              ".neo4j.io"
+            ],
+            "allow_port": [
+              443,
+              80
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "AURA_CLIENT_ID",
+          "description": "Neo4j Aura API client ID",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "AURA_CLIENT_SECRET",
+          "description": "Neo4j Aura API client secret",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "AURA_TENANT_ID",
+          "description": "Neo4j Aura tenant ID",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "mcp-neo4j-cypher": {
+      "description": "MCP server for executing Cypher queries against Neo4j databases with natural language interface",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "get_neo4j_schema",
+        "read_neo4j_cypher",
+        "write_neo4j_cypher"
+      ],
+      "metadata": {
+        "stars": 636,
+        "pulls": 91,
+        "last_updated": "2025-08-22T09:41:03Z"
+      },
+      "repository_url": "https://github.com/neo4j-contrib/mcp-neo4j",
+      "tags": [
+        "database",
+        "neo4j",
+        "cypher",
+        "query",
+        "graph-database"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/mcp-neo4j-cypher:0.3.1",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "localhost",
+              ".neo4j.io",
+              ".databases.neo4j.io"
+            ],
+            "allow_port": [
+              7687,
+              7473,
+              7474,
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "NEO4J_URI",
+          "description": "Neo4j database connection URI",
+          "required": true,
+          "default": "bolt://localhost:7687"
+        },
+        {
+          "name": "NEO4J_USERNAME",
+          "description": "Neo4j database username",
+          "required": false,
+          "default": "neo4j"
+        },
+        {
+          "name": "NEO4J_PASSWORD",
+          "description": "Neo4j database password",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "NEO4J_DATABASE",
+          "description": "Neo4j database name",
+          "required": false,
+          "default": "neo4j"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "mcp-neo4j-memory": {
+      "description": "MCP server for Neo4j memory management and knowledge graph storage operations",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "store_memory",
+        "retrieve_memory",
+        "search_memories",
+        "delete_memory",
+        "list_memories"
+      ],
+      "metadata": {
+        "stars": 636,
+        "pulls": 105,
+        "last_updated": "2025-08-22T09:41:03Z"
+      },
+      "repository_url": "https://github.com/neo4j-contrib/mcp-neo4j",
+      "tags": [
+        "database",
+        "neo4j",
+        "memory",
+        "knowledge-graph",
+        "graph-database"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/mcp-neo4j-memory:0.2.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "localhost",
+              ".neo4j.io",
+              ".databases.neo4j.io"
+            ],
+            "allow_port": [
+              7687,
+              7473,
+              7474,
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "NEO4J_URI",
+          "description": "Neo4j database connection URI",
+          "required": true,
+          "default": "bolt://localhost:7687"
+        },
+        {
+          "name": "NEO4J_USERNAME",
+          "description": "Neo4j database username",
+          "required": false,
+          "default": "neo4j"
+        },
+        {
+          "name": "NEO4J_PASSWORD",
+          "description": "Neo4j database password",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "mcp-server-box": {
+      "description": "MCP server that integrates with the Box API to perform file operations, AI-based querying, metadata management, and document generation",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "box_who_am_i",
+        "box_authorize_app_tool",
+        "box_search_tool",
+        "box_search_folder_by_name_tool",
+        "box_ai_ask_file_single_tool",
+        "box_ai_ask_file_multi_tool",
+        "box_ai_ask_hub_tool",
+        "box_ai_extract_freeform_tool",
+        "box_ai_extract_structured_using_fields_tool",
+        "box_ai_extract_structured_using_template_tool",
+        "box_ai_extract_structured_enhanced_using_fields_tool",
+        "box_ai_extract_structured_enhanced_using_template_tool",
+        "box_docgen_create_batch_tool",
+        "box_docgen_get_job_by_id_tool",
+        "box_docgen_list_jobs_tool",
+        "box_docgen_list_jobs_by_batch_tool",
+        "box_docgen_template_create_tool",
+        "box_docgen_template_list_tool",
+        "box_docgen_template_get_by_id_tool",
+        "box_docgen_template_list_tags_tool",
+        "box_docgen_template_list_jobs_tool",
+        "box_docgen_template_get_by_name_tool",
+        "box_docgen_create_single_file_from_user_input_tool",
+        "box_read_tool",
+        "box_upload_file_from_path_tool",
+        "box_upload_file_from_content_tool",
+        "box_download_file_tool",
+        "box_list_folder_content_by_folder_id",
+        "box_manage_folder_tool",
+        "box_metadata_template_get_by_name_tool",
+        "box_metadata_set_instance_on_file_tool",
+        "box_metadata_get_instance_on_file_tool",
+        "box_metadata_delete_instance_on_file_tool",
+        "box_metadata_update_instance_on_file_tool",
+        "box_metadata_template_create_tool"
+      ],
+      "metadata": {
+        "stars": 46,
+        "pulls": 52,
+        "last_updated": "2025-08-22T09:41:05Z"
+      },
+      "repository_url": "https://github.com/box-community/mcp-server-box",
+      "tags": [
+        "storage",
+        "box",
+        "files",
+        "ai",
+        "document-generation"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/uvx/mcp-server-box:0.1.2",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "BOX_CLIENT_ID",
+          "description": "Box API Client ID",
+          "required": true
+        },
+        {
+          "name": "BOX_CLIENT_SECRET",
+          "description": "Box API Client Secret",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "mcp-server-circleci": {
+      "description": "Official CircleCI MCP server for CI/CD operations, enabling AI models to manage pipelines, analyze test results, debug build failures, and optimize resource usage",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "get_build_failure_logs",
+        "find_flaky_tests",
+        "get_latest_pipeline_status",
+        "get_job_test_results",
+        "config_helper",
+        "create_prompt_template",
+        "recommend_prompt_template_tests",
+        "list_followed_projects",
+        "run_pipeline",
+        "run_rollback_pipeline",
+        "rerun_workflow",
+        "analyze_diff",
+        "list_component_versions",
+        "download_usage_api_data",
+        "find_underused_resource_classes"
+      ],
+      "metadata": {
+        "stars": 59,
+        "pulls": 0,
+        "last_updated": "2025-08-24T02:35:26Z"
+      },
+      "repository_url": "https://github.com/CircleCI-Public/mcp-server-circleci",
+      "tags": [
+        "circleci",
+        "ci-cd",
+        "devops",
+        "testing",
+        "automation",
+        "pipeline",
+        "continuous-integration",
+        "continuous-deployment",
+        "build-automation"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/mcp-server-circleci:0.14.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "circleci.com",
+              "app.circleci.com"
+            ],
+            "allow_port": [
+              443,
+              80
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "CIRCLECI_TOKEN",
+          "description": "CircleCI Personal API Token for authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "CIRCLECI_BASE_URL",
+          "description": "CircleCI base URL (optional, defaults to https://circleci.com)",
+          "required": false,
+          "default": "https://circleci.com"
+        },
+        {
+          "name": "FILE_OUTPUT_DIRECTORY",
+          "description": "Directory for file outputs (optional, used by some tools)",
+          "required": false
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "mcp-server-neon": {
+      "description": "MCP server for interacting with Neon Management API and databases",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "list_projects",
+        "describe_project",
+        "create_project",
+        "delete_project",
+        "create_branch",
+        "delete_branch",
+        "describe_branch",
+        "list_branch_computes",
+        "list_organizations",
+        "get_connection_string",
+        "run_sql",
+        "run_sql_transaction",
+        "get_database_tables",
+        "describe_table_schema",
+        "list_slow_queries",
+        "prepare_database_migration",
+        "complete_database_migration",
+        "explain_sql_statement",
+        "prepare_query_tuning",
+        "complete_query_tuning",
+        "provision_neon_auth"
+      ],
+      "metadata": {
+        "stars": 424,
+        "pulls": 55,
+        "last_updated": "2025-08-22T09:41:04Z"
+      },
+      "repository_url": "https://github.com/neondatabase-labs/mcp-server-neon",
+      "tags": [
+        "database",
+        "postgresql",
+        "api",
+        "management",
+        "sql",
+        "migration",
+        "branching"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/mcp-server-neon:0.6.3",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "console.neon.tech",
+              "api.neon.tech",
+              "neon.tech"
+            ],
+            "allow_port": [
+              443,
+              5432
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "NEON_API_KEY",
+          "description": "API key for Neon database service",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "memory": {
+      "description": "Provides persistent memory to an LLMs application for storing information about the user across chats. Implemented using a local knowledge graph.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "create_entities",
+        "create_relations",
+        "add_observations",
+        "delete_entities",
+        "delete_observations",
+        "delete_relations",
+        "read_graph",
+        "search_nodes",
+        "open_nodes"
+      ],
+      "metadata": {
+        "stars": 65278,
+        "pulls": 15854,
+        "last_updated": "2025-08-22T09:42:37Z"
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "tags": [
+        "entities",
+        "graph",
+        "knowledge",
+        "memory",
+        "observations",
+        "persistent",
+        "relations"
+      ],
+      "image": "docker.io/mcp/memory:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "MEMORY_FILE_PATH",
+          "description": "Path to the memory storage JSON file (default: memory.json in the server directory)",
+          "required": false
+        }
+      ]
+    },
+    "mongodb": {
+      "description": "Provides support for interacting with MongoDB Databases and MongoDB Atlas.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "atlas-list-orgs",
+        "atlas-list-projects",
+        "atlas-create-project",
+        "atlas-list-clusters",
+        "atlas-inspect-cluster",
+        "atlas-create-free-cluster",
+        "atlas-connect-cluster",
+        "atlas-inspect-access-list",
+        "atlas-create-access-list",
+        "atlas-list-db-users",
+        "atlas-create-db-user",
+        "atlas-list-alerts",
+        "connect",
+        "find",
+        "aggregate",
+        "count",
+        "insert-one",
+        "insert-many",
+        "create-index",
+        "update-one",
+        "update-many",
+        "rename-collection",
+        "delete-one",
+        "delete-many",
+        "drop-collection",
+        "drop-database",
+        "list-databases",
+        "list-collections",
+        "collection-indexes",
+        "collection-schema",
+        "collection-storage-size",
+        "db-stats"
+      ],
+      "metadata": {
+        "stars": 581,
+        "pulls": 5060,
+        "last_updated": "2025-08-22T09:41:07Z"
+      },
+      "repository_url": "https://github.com/mongodb-js/mongodb-mcp-server",
+      "tags": [
+        "mongodb",
+        "mongo",
+        "atlas",
+        "database",
+        "data",
+        "query"
+      ],
+      "image": "docker.io/mongodb/mongodb-mcp-server:0.2.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443,
+              27017,
+              27018,
+              27019,
+              27020
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "MDB_MCP_CONNECTION_STRING",
+          "description": "MongoDB connection string for direct database connections (optional, if not set, you'll need to call the connect tool before interacting with MongoDB data)",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "MDB_MCP_API_CLIENT_ID",
+          "description": "Atlas API client ID for authentication (required for running Atlas tools)",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "MDB_MCP_API_CLIENT_SECRET",
+          "description": "Atlas API client secret for authentication (required for running Atlas tools)",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "MDB_MCP_API_BASE_URL",
+          "description": "Atlas API base URL (default is https://cloud.mongodb.com/)",
+          "required": false
+        },
+        {
+          "name": "MDB_MCP_SERVER_ADDRESS",
+          "description": "MongoDB server address for direct connections (optional, used for connect tool)",
+          "required": false
+        },
+        {
+          "name": "MDB_MCP_SERVER_PORT",
+          "description": "MongoDB server port for direct connections (optional, used for connect tool)",
+          "required": false
+        },
+        {
+          "name": "MDB_MCP_LOG_PATH",
+          "description": "Folder to store logs (inside the container)",
+          "required": false
+        },
+        {
+          "name": "MDB_MCP_DISABLED_TOOLS",
+          "description": "Comma-separated list of tool names, operation types, and/or categories of tools to disable",
+          "required": false
+        },
+        {
+          "name": "MDB_MCP_READ_ONLY",
+          "description": "When set to true, only allows read and metadata operation types",
+          "required": false
+        },
+        {
+          "name": "MDB_MCP_TELEMETRY",
+          "description": "When set to disabled, disables telemetry collection",
+          "required": false
+        }
+      ]
+    },
+    "netbird": {
+      "description": "Enables management of an NetBird network.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "list_netbird_peers",
+        "list_netbird_port_allocations",
+        "list_netbird_groups",
+        "list_netbird_policies",
+        "list_netbird_posture_checks",
+        "list_netbird_networks",
+        "list_netbird_nameservers"
+      ],
+      "metadata": {
+        "stars": 38,
+        "pulls": 10904,
+        "last_updated": "2025-08-22T09:45:09Z"
+      },
+      "repository_url": "https://github.com/aantti/mcp-netbird",
+      "tags": [
+        "netbird",
+        "vpn",
+        "networking",
+        "peer",
+        "route",
+        "dns",
+        "setup-key",
+        "management"
+      ],
+      "image": "docker.io/aantti/mcp-netbird:latest",
+      "target_port": 8001,
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_host": [
+              "api.netbird.io"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "NETBIRD_API_TOKEN",
+          "description": "NetBird API token for authentication",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "NETBIRD_HOST",
+          "description": "NetBird API host (default is api.netbird.io)",
+          "required": false
+        }
+      ],
+      "args": [
+        "--transport",
+        "sse",
+        "--sse-address",
+        ":8001"
+      ]
+    },
+    "notion": {
+      "description": "Provides integration with Notion APIs through a local Notion MCP Server.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "API-get-user",
+        "API-get-users",
+        "API-get-self",
+        "API-post-database-query",
+        "API-post-search",
+        "API-get-block-children",
+        "API-patch-block-children",
+        "API-retrieve-a-block",
+        "API-update-a-block",
+        "API-delete-a-block",
+        "API-retrieve-a-page",
+        "API-patch-page",
+        "API-post-page",
+        "API-create-a-database",
+        "API-update-a-database",
+        "API-retrieve-a-database",
+        "API-retrieve-a-page-property",
+        "API-retrieve-a-comment",
+        "API-create-a-comment"
+      ],
+      "metadata": {
+        "stars": 3013,
+        "pulls": 24143,
+        "last_updated": "2025-08-22T09:40:58Z"
+      },
+      "repository_url": "https://github.com/makenotion/notion-mcp-server",
+      "tags": [
+        "notion",
+        "notes"
+      ],
+      "image": "mcp/notion:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.notion.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "OPENAPI_MCP_HEADERS",
+          "description": "HTTP headers for Notion API requests in JSON format. Example: {\"Authorization\":\"Bearer ntn_****\",\"Notion-Version\":\"2022-06-28\"}",
+          "required": true,
+          "secret": true
+        }
+      ]
+    },
+    "oci-registry": {
+      "description": "Enables secure and seamless querying of OCI container registries, providing tools for image introspection, tag discovery, and manifest/config retrieval.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "get_image_info",
+        "list_tags",
+        "get_image_manifest",
+        "get_image_config"
+      ],
+      "metadata": {
+        "stars": 10,
+        "pulls": 8029,
+        "last_updated": "2025-08-22T09:45:11Z"
+      },
+      "repository_url": "https://github.com/StacklokLabs/ocireg-mcp",
+      "tags": [
+        "oci",
+        "registry",
+        "containers",
+        "images",
+        "tags",
+        "manifest",
+        "config",
+        "mcp",
+        "docker"
+      ],
+      "image": "ghcr.io/stackloklabs/ocireg-mcp/server:0.0.5",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "OCI_TOKEN",
+          "description": "Bearer token for OCI registry authentication",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "OCI_USERNAME",
+          "description": "Username for registry authentication",
+          "required": false
+        },
+        {
+          "name": "OCI_PASSWORD",
+          "description": "Password for registry authentication",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/StacklokLabs/ocireg-mcp",
+        "signer_identity": "/.github/workflows/release.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "onchain-mcp": {
+      "description": "MCP server for blockchain data interaction through the Bankless API",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "read_contract",
+        "get_proxy",
+        "get_abi",
+        "get_source",
+        "get_events",
+        "build_event_topic",
+        "get_transaction_history_for_user",
+        "get_transaction_info",
+        "get_token_balances_on_network",
+        "get_block_info"
+      ],
+      "metadata": {
+        "stars": 62,
+        "pulls": 0,
+        "last_updated": "2025-08-24T02:35:26Z"
+      },
+      "repository_url": "https://github.com/Bankless/onchain-mcp",
+      "tags": [
+        "blockchain",
+        "ethereum",
+        "web3",
+        "smart-contracts",
+        "defi",
+        "crypto"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/onchain-mcp:1.0.6",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.bankless.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "BANKLESS_API_TOKEN",
+          "description": "API token for Bankless API authentication",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "osv": {
+      "description": "Provides access to the OSV (Open Source Vulnerabilities) database. Allows LLM-powered applications to query the OSV database for vulnerability information about packages and commits.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "query_vulnerability",
+        "query_vulnerabilities_batch",
+        "get_vulnerability"
+      ],
+      "metadata": {
+        "stars": 17,
+        "pulls": 10318,
+        "last_updated": "2025-08-22T09:42:40Z"
+      },
+      "repository_url": "https://github.com/StacklokLabs/osv-mcp",
+      "tags": [
+        "vulnerability",
+        "security",
+        "osv",
+        "open-source",
+        "cve",
+        "packages",
+        "dependencies",
+        "scanning",
+        "security-scanning",
+        "vulnerability-detection"
+      ],
+      "image": "ghcr.io/stackloklabs/osv-mcp/server:0.0.7",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.osv.dev"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/StacklokLabs/osv-mcp",
+        "signer_identity": "/.github/workflows/release.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "perplexity-ask": {
+      "description": "Integrates Perplexity AI's Sonar API for live web searches, in-depth research, and reasoning tasks.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "perplexity_ask",
+        "perplexity_research",
+        "perplexity_reason"
+      ],
+      "metadata": {
+        "stars": 1519,
+        "pulls": 15188,
+        "last_updated": "2025-08-22T09:42:40Z"
+      },
+      "repository_url": "https://github.com/ppl-ai/modelcontextprotocol",
+      "tags": [
+        "ask",
+        "perplexity",
+        "perplexity-ask"
+      ],
+      "image": "docker.io/mcp/perplexity-ask:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.perplexity.ai"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "PERPLEXITY_API_KEY",
+          "description": "Perplexity API key",
+          "required": true,
+          "secret": true
+        }
+      ]
+    },
+    "phoenix": {
+      "description": "MCP server for Arize Phoenix observability platform",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "get-spans",
+        "get-span-annotations",
+        "list-projects",
+        "get-project",
+        "list-datasets",
+        "get-dataset",
+        "create-dataset",
+        "add-examples-to-dataset",
+        "list-experiments",
+        "get-experiment",
+        "get-experiment-runs",
+        "list-prompts",
+        "get-prompt",
+        "create-prompt",
+        "update-prompt",
+        "share-traces"
+      ],
+      "metadata": {
+        "stars": 6734,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:39:15Z"
+      },
+      "repository_url": "https://github.com/Arize-ai/phoenix",
+      "tags": [
+        "observability",
+        "llm",
+        "monitoring",
+        "tracing",
+        "evaluation",
+        "ai"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/phoenix-mcp:2.2.9",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "PHOENIX_API_KEY",
+          "description": "API key for Phoenix authentication",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "PHOENIX_BASE_URL",
+          "description": "Base URL for Phoenix instance",
+          "required": false,
+          "default": "http://localhost:6006"
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "playwright": {
+      "description": "Provides browser automation capabilities using Playwright",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "browser_close",
+        "browser_resize",
+        "browser_console_messages",
+        "browser_handle_dialog",
+        "browser_file_upload",
+        "browser_install",
+        "browser_press_key",
+        "browser_navigate",
+        "browser_navigate_back",
+        "browser_navigate_forward",
+        "browser_network_requests",
+        "browser_pdf_save",
+        "browser_take_screenshot",
+        "browser_snapshot",
+        "browser_click",
+        "browser_drag",
+        "browser_hover",
+        "browser_type",
+        "browser_select_option",
+        "browser_tab_list",
+        "browser_tab_new",
+        "browser_tab_select",
+        "browser_tab_close",
+        "browser_generate_playwright_test",
+        "browser_wait_for"
+      ],
+      "metadata": {
+        "stars": 17741,
+        "pulls": 23622,
+        "last_updated": "2025-08-22T09:45:10Z"
+      },
+      "repository_url": "https://github.com/microsoft/playwright-mcp",
+      "tags": [
+        "playwright",
+        "automation",
+        "browser",
+        "navigate"
+      ],
+      "image": "mcr.microsoft.com/playwright/mcp:v0.0.34",
+      "target_port": 8931,
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "args": [
+        "--port",
+        "8931"
+      ]
+    },
+    "plotting": {
+      "description": "Provides plotting capabilities for visualizing data in various formats.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "streamable-http",
+      "tools": [
+        "generate_plot"
+      ],
+      "metadata": {
+        "stars": 0,
+        "pulls": 1314,
+        "last_updated": "2025-08-22T09:42:41Z"
+      },
+      "repository_url": "https://github.com/StacklokLabs/plotting-mcp",
+      "tags": [
+        "plotting",
+        "visualization",
+        "data",
+        "charts",
+        "graphs",
+        "matplotlib",
+        "seaborn",
+        "cartopy",
+        "maps"
+      ],
+      "image": "ghcr.io/stackloklabs/plotting-mcp:v0.0.2",
+      "permissions": {
+        "network": {
+          "outbound": {}
+        }
+      },
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/StacklokLabs/plotting-mcp",
+        "signer_identity": "/.github/workflows/release.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "postgres-mcp-pro": {
+      "description": "Provides configurable read/write access and performance analysis for PostgreSQL databases.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "list_schemas",
+        "list_objects",
+        "get_object_details",
+        "execute_sql",
+        "explain_query",
+        "get_top_queries",
+        "analyze_workload_indexes",
+        "analyze_query_indexes",
+        "analyze_db_health"
+      ],
+      "metadata": {
+        "stars": 970,
+        "pulls": 19360,
+        "last_updated": "2025-08-22T09:42:37Z"
+      },
+      "repository_url": "https://github.com/crystaldba/postgres-mcp",
+      "tags": [
+        "database",
+        "data",
+        "postgres",
+        "postgresql",
+        "sql",
+        "query",
+        "storage",
+        "analytics",
+        "performance",
+        "monitoring"
+      ],
+      "image": "crystaldba/postgres-mcp:0.3.0",
+      "target_port": 8000,
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "DATABASE_URI",
+          "description": "PostgreSQL connection string, like 'postgresql://username:password@host.docker.internal:5432/dbname'",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "OpenAI API key for experimental index tuning by LLM",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "args": [
+        "--transport=sse",
+        "--sse-host=0.0.0.0",
+        "--sse-port=8000"
+      ]
+    },
+    "redis": {
+      "description": "Enables LLMs to interact with Redis key-value databases through a set of standardized tools.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "dbsize",
+        "info",
+        "client_list",
+        "delete",
+        "type",
+        "expire",
+        "rename",
+        "scan_keys",
+        "scan_all_keys",
+        "get_indexes",
+        "get_index_info",
+        "get_indexed_keys_number",
+        "create_vector_index_hash",
+        "vector_search_hash",
+        "hset",
+        "hget",
+        "hdel",
+        "hgetall",
+        "hexists",
+        "set_vector_in_hash",
+        "get_vector_from_hash",
+        "lpush",
+        "rpush",
+        "lpop",
+        "rpop",
+        "lrange",
+        "llen",
+        "set",
+        "get",
+        "json_set",
+        "json_get",
+        "json_del",
+        "zadd",
+        "zrange",
+        "zrem",
+        "sadd",
+        "srem",
+        "smembers",
+        "xadd",
+        "xrange",
+        "xdel",
+        "publish",
+        "subscribe",
+        "unsubscribe"
+      ],
+      "metadata": {
+        "stars": 215,
+        "pulls": 10366,
+        "last_updated": "2025-08-22T09:42:39Z"
+      },
+      "repository_url": "https://github.com/redis/mcp-redis",
+      "tags": [
+        "redis",
+        "database",
+        "key-value",
+        "storage",
+        "cache",
+        "data"
+      ],
+      "image": "docker.io/mcp/redis:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "insecure_allow_all": true,
+            "allow_port": [
+              443,
+              6379
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "REDIS_HOST",
+          "description": "Redis IP or hostname (default \"127.0.0.1\")",
+          "required": true
+        },
+        {
+          "name": "REDIS_PORT",
+          "description": "Redis port (default 6379)",
+          "required": false
+        },
+        {
+          "name": "REDIS_DB",
+          "description": "Redis database number (default 0)",
+          "required": false
+        },
+        {
+          "name": "REDIS_USERNAME",
+          "description": "Redis username (default \"default\")",
+          "required": false
+        },
+        {
+          "name": "REDIS_PWD",
+          "description": "Redis password (default empty)",
+          "required": false,
+          "secret": true
+        },
+        {
+          "name": "REDIS_SSL",
+          "description": "Redis TLS connection (True|False, default False)",
+          "required": false
+        },
+        {
+          "name": "REDIS_CA_PATH",
+          "description": "CA certificate for verifying server",
+          "required": false
+        },
+        {
+          "name": "REDIS_SSL_KEYFILE",
+          "description": "Client's private key file for client authentication",
+          "required": false
+        },
+        {
+          "name": "REDIS_SSL_CERTFILE",
+          "description": "Client's certificate file for client authentication",
+          "required": false
+        },
+        {
+          "name": "REDIS_CERT_REQS",
+          "description": "Whether the client should verify the server's certificate (default \"required\")",
+          "required": false
+        },
+        {
+          "name": "REDIS_CA_CERTS",
+          "description": "Path to the trusted CA certificates file",
+          "required": false
+        },
+        {
+          "name": "REDIS_CLUSTER_MODE",
+          "description": "Enable Redis Cluster mode (True|False, default False)",
+          "required": false
+        },
+        {
+          "name": "MCP_TRANSPORT",
+          "description": "Use the stdio or sse transport (default stdio)",
+          "required": false
+        }
+      ]
+    },
+    "semgrep": {
+      "description": "Allows you to scan code for security vulnerabilities using Semgrep, a fast, deterministic static analysis tool that semantically understands many languages and comes with over 5,000 rules.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "security_check",
+        "semgrep_scan",
+        "semgrep_scan_with_custom_rule",
+        "get_abstract_syntax_tree",
+        "supported_languages",
+        "semgrep_rule_schema",
+        "write_custom_semgrep_rule"
+      ],
+      "metadata": {
+        "stars": 479,
+        "pulls": 12180,
+        "last_updated": "2025-08-22T09:42:42Z"
+      },
+      "repository_url": "https://github.com/semgrep/mcp",
+      "tags": [
+        "security",
+        "static-analysis",
+        "code-scanning",
+        "vulnerability-detection",
+        "sast",
+        "code-quality",
+        "security-scanning",
+        "semgrep",
+        "ast",
+        "code-analysis"
+      ],
+      "image": "ghcr.io/semgrep/mcp:0.6.0",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "semgrep.dev"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "SEMGREP_APP_TOKEN",
+          "description": "Token for connecting to Semgrep AppSec Platform",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "args": [
+        "--transport",
+        "sse"
+      ]
+    },
+    "sentry": {
+      "description": "Sentry's MCP service for human-in-the-loop coding agents, optimized for developer workflows and debugging use cases",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "whoami",
+        "find_organizations",
+        "find_teams",
+        "find_projects",
+        "find_releases",
+        "get_issue_details",
+        "get_trace_details",
+        "get_event_attachment",
+        "update_issue",
+        "search_events",
+        "create_team",
+        "create_project",
+        "update_project",
+        "create_dsn",
+        "find_dsns",
+        "analyze_issue_with_seer",
+        "search_docs",
+        "get_doc",
+        "search_issues"
+      ],
+      "metadata": {
+        "stars": 314,
+        "pulls": 127,
+        "last_updated": "2025-08-22T09:41:05Z"
+      },
+      "repository_url": "https://github.com/getsentry/sentry-mcp",
+      "tags": [
+        "sentry",
+        "debugging",
+        "monitoring",
+        "error-tracking",
+        "observability"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/sentry-mcp-server:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".sentry.io",
+              "sentry.io"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "SENTRY_ACCESS_TOKEN",
+          "description": "Sentry user auth token with necessary scopes",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "SENTRY_HOST",
+          "description": "Sentry host URL (e.g., sentry.example.com)",
+          "required": false
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "OpenAI API key for AI-powered search tools (search_events, search_issues)",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "sentry-mcp-server": {
+      "description": "Sentry's MCP service for human-in-the-loop coding agents, optimized for developer workflows and debugging use cases",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "whoami",
+        "find_organizations",
+        "find_teams",
+        "find_projects",
+        "find_releases",
+        "get_issue_details",
+        "get_trace_details",
+        "get_event_attachment",
+        "update_issue",
+        "search_events",
+        "create_team",
+        "create_project",
+        "update_project",
+        "create_dsn",
+        "find_dsns",
+        "analyze_issue_with_seer",
+        "search_docs",
+        "get_doc",
+        "search_issues"
+      ],
+      "metadata": {
+        "stars": 314,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:40:59Z"
+      },
+      "repository_url": "https://github.com/getsentry/sentry-mcp",
+      "tags": [
+        "sentry",
+        "debugging",
+        "monitoring",
+        "error-tracking",
+        "observability"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/sentry-mcp-server:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".sentry.io",
+              "sentry.io"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "SENTRY_ACCESS_TOKEN",
+          "description": "Sentry user auth token with necessary scopes",
+          "required": true,
+          "secret": true
+        },
+        {
+          "name": "SENTRY_HOST",
+          "description": "Sentry host URL (e.g., sentry.example.com)",
+          "required": false
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "OpenAI API key for AI-powered search tools (search_events, search_issues)",
+          "required": false,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "sequentialthinking": {
+      "description": "Enables dynamic problem-solving with a structured, reflective approach that can adapt and evolve as understanding deepens.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "sequentialthinking"
+      ],
+      "metadata": {
+        "stars": 65278,
+        "pulls": 14819,
+        "last_updated": "2025-08-22T09:42:40Z"
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "tags": [
+        "approach",
+        "dynamic",
+        "enabling",
+        "problem",
+        "reflective",
+        "sequentialthinking",
+        "solving",
+        "structured",
+        "step-by-step",
+        "revision",
+        "branching",
+        "chain-of-thought"
+      ],
+      "image": "docker.io/mcp/sequentialthinking:latest",
+      "permissions": {
+        "network": {
+          "outbound": {}
+        }
+      }
+    },
+    "sqlite": {
+      "description": "Provides tools and resources for querying SQLite databases.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "sse",
+      "tools": [
+        "execute_query",
+        "execute_statement",
+        "list_tables",
+        "describe_table"
+      ],
+      "metadata": {
+        "stars": 9,
+        "pulls": 4212,
+        "last_updated": "2025-08-22T09:41:07Z"
+      },
+      "repository_url": "https://github.com/StacklokLabs/sqlite-mcp",
+      "tags": [
+        "data",
+        "database",
+        "query",
+        "sql",
+        "sqlite"
+      ],
+      "image": "ghcr.io/stackloklabs/sqlite-mcp/server:0.0.1",
+      "permissions": {
+        "network": {
+          "outbound": {}
+        }
+      }
+    },
+    "stripe": {
+      "description": "Allows you to integrate with Stripe APIs through the Stripe Agent Toolkit.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "create_coupon",
+        "create_customer",
+        "create_payment_link",
+        "create_price",
+        "create_product",
+        "create_refund",
+        "create_invoice_item",
+        "create_invoice",
+        "finalize_invoice",
+        "list_coupons",
+        "list_customers",
+        "list_disputes",
+        "list_prices",
+        "list_products",
+        "list_subscriptions",
+        "retrieve_balance",
+        "cancel_subscription",
+        "update_dispute",
+        "update_subscription"
+      ],
+      "metadata": {
+        "stars": 939,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:45:11Z"
+      },
+      "repository_url": "https://github.com/stripe/agent-toolkit",
+      "tags": [
+        "stripe",
+        "agent-toolkit",
+        "payments",
+        "mcp"
+      ],
+      "image": "docker.io/mcp/stripe:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.stripe.com",
+              "docs.stripe.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "description": "Your Stripe secret API key, available in the Stripe Dashboard.",
+          "required": true
+        }
+      ],
+      "args": [
+        "--tools=all"
+      ]
+    },
+    "supabase": {
+      "description": "Connect your Supabase projects to AI assistants for managing tables, fetching config, and querying data",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "list_projects",
+        "get_project",
+        "create_project",
+        "pause_project",
+        "restore_project",
+        "list_organizations",
+        "get_organization",
+        "get_cost",
+        "confirm_cost",
+        "search_docs",
+        "list_tables",
+        "list_extensions",
+        "list_migrations",
+        "apply_migration",
+        "execute_sql",
+        "get_logs",
+        "get_advisors",
+        "get_project_url",
+        "get_anon_key",
+        "generate_typescript_types",
+        "list_edge_functions",
+        "deploy_edge_function",
+        "create_branch",
+        "list_branches",
+        "delete_branch",
+        "merge_branch",
+        "reset_branch",
+        "rebase_branch",
+        "list_storage_buckets",
+        "get_storage_config",
+        "update_storage_config"
+      ],
+      "metadata": {
+        "stars": 1974,
+        "pulls": 102,
+        "last_updated": "2025-08-22T09:41:06Z"
+      },
+      "repository_url": "https://github.com/supabase-community/supabase-mcp",
+      "tags": [
+        "supabase",
+        "database",
+        "backend",
+        "baas",
+        "postgresql"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/supabase-mcp-server:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".supabase.co",
+              ".supabase.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "SUPABASE_ACCESS_TOKEN",
+          "description": "Personal access token from Supabase dashboard",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "supabase-mcp-server": {
+      "description": "Connect your Supabase projects to AI assistants for managing tables, fetching config, and querying data",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "list_projects",
+        "get_project",
+        "create_project",
+        "pause_project",
+        "restore_project",
+        "list_organizations",
+        "get_organization",
+        "get_cost",
+        "confirm_cost",
+        "search_docs",
+        "list_tables",
+        "list_extensions",
+        "list_migrations",
+        "apply_migration",
+        "execute_sql",
+        "get_logs",
+        "get_advisors",
+        "get_project_url",
+        "get_anon_key",
+        "generate_typescript_types",
+        "list_edge_functions",
+        "deploy_edge_function",
+        "create_branch",
+        "list_branches",
+        "delete_branch",
+        "merge_branch",
+        "reset_branch",
+        "rebase_branch",
+        "list_storage_buckets",
+        "get_storage_config",
+        "update_storage_config"
+      ],
+      "metadata": {
+        "stars": 1974,
+        "pulls": 0,
+        "last_updated": "2025-08-22T09:41:00Z"
+      },
+      "repository_url": "https://github.com/supabase-community/supabase-mcp",
+      "tags": [
+        "supabase",
+        "database",
+        "backend",
+        "baas",
+        "postgresql"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/supabase-mcp-server:latest",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              ".supabase.co",
+              ".supabase.com"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "SUPABASE_ACCESS_TOKEN",
+          "description": "Personal access token from Supabase dashboard",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "tavily-mcp": {
+      "description": "MCP server for advanced web search using Tavily's AI search engine",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "tavily-search",
+        "tavily-extract",
+        "tavily-crawl",
+        "tavily-map"
+      ],
+      "metadata": {
+        "stars": 693,
+        "pulls": 80,
+        "last_updated": "2025-08-22T09:41:04Z"
+      },
+      "repository_url": "https://github.com/tavily-ai/tavily-mcp",
+      "tags": [
+        "search",
+        "web-search",
+        "ai-search",
+        "crawl",
+        "extract",
+        "api",
+        "real-time"
+      ],
+      "image": "ghcr.io/stacklok/dockyard/npx/tavily-mcp:0.2.9",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "api.tavily.com",
+              "mcp.tavily.com"
+            ],
+            "allow_port": [
+              443,
+              80
+            ]
+          }
+        }
+      },
+      "env_vars": [
+        {
+          "name": "TAVILY_API_KEY",
+          "description": "API key for Tavily search service",
+          "required": true,
+          "secret": true
+        }
+      ],
+      "provenance": {
+        "sigstore_url": "tuf-repo-cdn.sigstore.dev",
+        "repository_uri": "https://github.com/stacklok/dockyard",
+        "signer_identity": "/.github/workflows/build-containers.yml",
+        "runner_environment": "github-hosted",
+        "cert_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "terraform": {
+      "description": "Provides integration with the Terraform ecosystem and interaction capabilities for Infrastructure as Code (IaC) development.",
+      "tier": "Official",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "resolveProviderDocID",
+        "getProviderDocs",
+        "searchModules",
+        "moduleDetails"
+      ],
+      "metadata": {
+        "stars": 862,
+        "pulls": 9600,
+        "last_updated": "2025-08-22T09:45:09Z"
+      },
+      "repository_url": "https://github.com/hashicorp/terraform-mcp-server",
+      "tags": [
+        "terraform",
+        "iac",
+        "infrastructure",
+        "automation",
+        "providers",
+        "modules",
+        "hcl",
+        "plan",
+        "apply",
+        "destroy",
+        "aws",
+        "gcp",
+        "azure"
+      ],
+      "image": "docker.io/hashicorp/terraform-mcp-server:0.2.3",
+      "permissions": {
+        "network": {
+          "outbound": {
+            "allow_host": [
+              "registry.terraform.io"
+            ],
+            "allow_port": [
+              443
+            ]
+          }
+        }
+      }
+    },
+    "time": {
+      "description": "Provides time information and IANA timezone conversions with auto system timezone detection.",
+      "tier": "Community",
+      "status": "Active",
+      "transport": "stdio",
+      "tools": [
+        "get_current_time",
+        "convert_time"
+      ],
+      "metadata": {
+        "stars": 65278,
+        "pulls": 10986,
+        "last_updated": "2025-08-22T09:42:38Z"
+      },
+      "repository_url": "https://github.com/modelcontextprotocol/servers",
+      "tags": [
+        "auto",
+        "available",
+        "configuration",
+        "conversions",
+        "convert_time",
+        "customization",
+        "details",
+        "detection",
+        "example",
+        "examples"
+      ],
+      "image": "docker.io/mcp/time:latest",
+      "permissions": {
+        "network": {
+          "outbound": {}
+        }
+      }
+    }
+  }
+}
