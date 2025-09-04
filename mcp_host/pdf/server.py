@@ -21,7 +21,7 @@ import hashlib
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import CommandResult, return_as_dict
+from shared import CommandResult, return_as_dict, get_workspace_path
 
 # PDF processing imports
 try:
@@ -123,7 +123,7 @@ def list_pdf_files() -> Dict[str, Any]:
             - message: Error message if applicable
     """
     try:
-        workspace_path = Path.cwd()
+        workspace_path = get_workspace_path()
         pdf_files = list(workspace_path.glob("*.pdf"))
         pdf_filenames = [f.name for f in pdf_files]
 
@@ -170,7 +170,7 @@ def initialize_pdf_navigation(
         )
 
     try:
-        pdf_path = Path.cwd() / filename
+        pdf_path = get_workspace_path() / filename
         if not pdf_path.exists():
             return CommandResult(
                 status="error",
@@ -845,7 +845,7 @@ def extract_text_from_pdf(
         )
 
     try:
-        pdf_path = Path.cwd() / filename
+        pdf_path = get_workspace_path() / filename
         if not pdf_path.exists():
             return CommandResult(
                 status="error",

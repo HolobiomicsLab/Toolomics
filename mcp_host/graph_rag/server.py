@@ -8,17 +8,24 @@ import os
 import sys
 import shutil
 
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from shared import get_workspace_path
+
 
 def convert_pdf_txt(fname: str):
     # fname = "s11306-019-1612-4.pdf"
     with pymupdf.open(fname) as doc:  # open document
         text = chr(12).join([page.get_text() for page in doc])
     # write as a binary file to support non-ASCII characters
-    Path(f"rag/input/{fname.removesuffix('.pdf')}.txt").write_bytes(text.encode())
+    output_path = get_workspace_path() / "rag" / "input" / f"{fname.removesuffix('.pdf')}.txt"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(text.encode())
 
 
 def move_files_to_rag(file: str):
-    output_dir = Path("./rag/input")
+    output_dir = get_workspace_path() / "rag" / "input"
+    output_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy(file, output_dir / file)
     print(f"Moved {file} to {output_dir}")
 

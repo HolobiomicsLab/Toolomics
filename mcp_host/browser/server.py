@@ -18,6 +18,11 @@ import atexit
 from typing import Dict, Any
 import signal
 from contextlib import contextmanager
+from pathlib import Path
+
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from shared import get_workspace_path
 
 from browser import Browser
 from searxng import search_searx
@@ -402,7 +407,7 @@ def download_file(url: str) -> Dict[str, Any]:
     Notes:
         - Requires an active browser session
         - Only downloads files with common extensions (PDFs, videos, documents, etc.)
-        - Files are saved to /projects directory
+        - Files are saved to workspace directory
     """
     print(f"Downloading file from URL: {url}")
     if not init_browser():
@@ -447,7 +452,7 @@ def take_screenshot() -> Dict[str, str]:
         }
 
     Notes:
-        - Screenshots are saved in /projects/.screenshots/ directory
+        - Screenshots are saved in workspace .screenshots/ directory
         - Filename contains timestamp when taken
         - PNG format is used
     """
@@ -474,7 +479,7 @@ def take_screenshot() -> Dict[str, str]:
         browser_lock.release()
 
 
-screenshots_dir = "/projects/.screenshots"
+screenshots_dir = str(get_workspace_path() / ".screenshots")
 if not os.path.exists(screenshots_dir):
     os.makedirs(screenshots_dir)
 
