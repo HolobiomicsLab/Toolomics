@@ -64,19 +64,10 @@ class CSVMCPTest:
                 async with Client(url, timeout=3.0) as client:
                     tools = await client.list_tools()
                     
-                    # Get server name
-                    name = f"MCP Server on port {port}"
-                    try:
-                        resp = await client.call_tool("get_mcp_name", {})
-                        if resp and len(resp) > 0:
-                            name = resp[0].text
-                    except Exception:
-                        pass
-                    
                     if tools and any("csv" in tool.name.lower() for tool in tools):
-                        print(f"✅ Found CSV MCP on port {port}: {name}")
+                        print(f"✅ Found CSV MCP on port {port}")
                         self.csv_mcp = MCP(
-                            name=name,
+                            name="test",
                             tools=[tool.name for tool in tools],
                             address="localhost",
                             port=port,

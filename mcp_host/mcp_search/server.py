@@ -24,13 +24,6 @@ mcp = FastMCP(
     instructions=description,
 )
 
-
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server"""
-    return "discover MCP"
-
-
 class MCPRegistryClient:
     """Client for interacting with the Smithery MCP registry."""
 

@@ -31,11 +31,6 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server"""
-    return "Bash command MCP"
-
 
 @mcp.tool
 @return_as_dict

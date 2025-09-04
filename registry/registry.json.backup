@@ -7,6 +7,10 @@
       "image": "holobiomicslab/rscript:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/Rscript/server.py"],
+      "permissions": {
+        "read": ["/projects"],
+        "write": ["/projects"]
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
@@ -17,7 +21,7 @@
       "tier": "Community",
       "tags": ["toolomics", "rlanguage", "statistics", "data-analysis"],
       "status": "Active",
-      "tools": ["get_mcp_name", "execute_r_code", "write_r_script", "list_workspace_files", "list_script_files", "execute_r_script_file"]
+      "tools": ["execute_r_code", "write_r_script", "list_workspace_files", "list_script_files", "execute_r_script_file"]
     },
     "toolomics-browser": {
       "description": "Web browser automation and search MCP server", 
@@ -29,7 +33,9 @@
           "outbound": {
             "insecure_allow_all": true
           }
-        }
+        },
+        "read": ["/projects"],
+        "write": ["/projects"]
       },
       "env_vars": [
         {
@@ -41,13 +47,17 @@
       "tier": "Community",
       "tags": ["toolomics", "browser", "selenium", "web-automation", "searxng"],
       "status": "Active",
-      "tools": ["get_mcp_name", "search", "navigate", "get_links", "get_downloadable_links", "download_file", "take_screenshot"]
+      "tools": ["search", "navigate", "get_links", "get_downloadable_links", "download_file", "take_screenshot", "get_pool_status"]
     },
     "toolomics-csv": {
       "description": "CSV data processing MCP server",
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/csv/server.py"],
+      "permissions": {
+        "read": ["/projects"],
+        "write": ["/projects"]
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
@@ -58,13 +68,17 @@
       "tier": "Community",
       "tags": ["toolomics", "csv", "data-processing", "pandas"],
       "status": "Active",
-      "tools": ["get_mcp_name", "create_csv", "load_csv_from_path", "get_csv_data", "add_csv_row", "update_csv_row", "delete_csv_row", "list_csv_datasets", "delete_csv_dataset", "query_csv", "get_csv_stats"]
+      "tools": ["create_csv", "load_csv_from_path", "get_csv_data", "add_csv_row", "update_csv_row", "delete_csv_row", "list_csv_datasets", "delete_csv_dataset", "query_csv", "get_csv_stats"]
     },
     "toolomics-pdf": {
       "description": "PDF processing and navigation MCP server",
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/pdf/server.py"],
+      "permissions": {
+        "read": ["/projects"],
+        "write": ["/projects"]
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
@@ -75,13 +89,17 @@
       "tier": "Community",
       "tags": ["toolomics", "pdf", "document-processing", "text-extraction"],
       "status": "Active",
-      "tools": ["get_mcp_name", "list_pdf_files", "initialize_pdf_navigation", "navigate_to_page", "get_current_page", "navigate_next_page", "navigate_previous_page", "add_bookmark", "search_in_current_session", "rag_query_current_session", "get_navigation_status", "close_navigation_session", "extract_text_from_pdf", "search_keywords_in_pdf"]
+      "tools": ["list_pdf_files", "initialize_pdf_navigation", "navigate_to_page", "get_current_page", "navigate_next_page", "navigate_previous_page", "add_bookmark", "search_in_current_session", "rag_query_current_session", "get_navigation_status", "close_navigation_session", "extract_text_from_pdf", "search_keywords_in_pdf"]
     },
     "toolomics-shell": {
       "description": "Shell command execution MCP server",
       "image": "holobiomicslab/toolomics:latest",
       "transport": "streamable-http",
       "args": ["python", "/app/mcp_host/shell/server.py"],
+      "permissions": {
+        "read": ["/projects"],
+        "write": ["/projects"]
+      },
       "env_vars": [
         {
           "name": "MCP_SERVER_TYPE",
@@ -92,7 +110,28 @@
       "tier": "Community",
       "tags": ["toolomics", "shell", "command-execution", "system"],
       "status": "Active",
-      "tools": ["get_mcp_name", "execute_command"]
+      "tools": ["execute_command"]
+    },
+    "toolomics-python-editor": {
+      "description": "Python file editing and analysis MCP server",
+      "image": "holobiomicslab/toolomics:latest",
+      "transport": "streamable-http",
+      "args": ["python", "/app/mcp_host/python_editor/server.py"],
+      "permissions": {
+        "read": ["/projects"],
+        "write": ["/projects"]
+      },
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": ["toolomics", "python", "code-editing", "ast-analysis", "file-manipulation"],
+      "status": "Active",
+      "tools": ["read_python_file", "list_python_methods", "search_in_python_file", "get_method_implementation", "replace_line_range", "replace_method_implementation", "add_method_to_class", "create_python_file", "list_python_files", "validate_python_syntax"]
     },
     "arxiv-mcp-server": {
       "args": [

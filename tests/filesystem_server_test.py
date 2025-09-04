@@ -65,23 +65,10 @@ class FilesystemMCPTest:
                 async with Client(url, timeout=3.0) as client:
                     tools = await client.list_tools()
                     
-                    # Get server name
-                    name = f"MCP Server on port {port}"
-                    try:
-                        # Filesystem server may not have get_mcp_name
-                        resp = await client.call_tool("get_mcp_name", {})
-                        if resp and len(resp) > 0:
-                            name = resp[0].text
-                    except Exception:
-                        # Try to identify by tools
-                        tool_names = [tool.name.lower() for tool in tools]
-                        if any(keyword in " ".join(tool_names) for keyword in ["file", "directory", "read", "write", "list"]):
-                            name = "Filesystem MCP Server"
-                    
                     if tools and any(keyword in tool.name.lower() for keyword in ["file", "directory", "read", "write", "list", "create", "edit"] for tool in tools):
-                        print(f"✅ Found Filesystem MCP on port {port}: {name}")
+                        print(f"✅ Found Filesystem MCP on port {port}")
                         self.filesystem_mcp = MCP(
-                            name=name,
+                            name="test",
                             tools=[tool.name for tool in tools],
                             address="localhost",
                             port=port,

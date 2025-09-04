@@ -23,7 +23,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class Browser:
     def __init__(self, headless: bool = True):
         """Initialize the browser with Helium."""
-        self.screenshot_folder = "/projects/.screenshots"
+        self.screenshot_folder = ".screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
         self._start_browser()
