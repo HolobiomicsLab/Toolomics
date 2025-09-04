@@ -101,16 +101,6 @@ class NavigationState:
 
 
 @mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server
-
-    Returns:
-        str: The name of this MCP server ("PDF Processing MCP")
-    """
-    return "PDF Processing MCP"
-
-
-@mcp.tool
 @return_as_dict
 def list_pdf_files() -> Dict[str, Any]:
     """List all PDF files in the workspace directory

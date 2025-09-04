@@ -63,23 +63,10 @@ class FetchMCPTest:
                 async with Client(url, timeout=3.0) as client:
                     tools = await client.list_tools()
                     
-                    # Get server name
-                    name = f"MCP Server on port {port}"
-                    try:
-                        # Fetch server may not have get_mcp_name
-                        resp = await client.call_tool("get_mcp_name", {})
-                        if resp and len(resp) > 0:
-                            name = resp[0].text
-                    except Exception:
-                        # Try to identify by tools
-                        tool_names = [tool.name.lower() for tool in tools]
-                        if any("fetch" in tool_name or "get" in tool_name for tool_name in tool_names):
-                            name = "Fetch MCP Server"
-                    
                     if tools and any(tool_name in tool.name.lower() for tool_name in ["fetch", "get", "download", "http", "url"] for tool in tools):
-                        print(f"✅ Found Fetch MCP on port {port}: {name}")
+                        print(f"✅ Found Fetch MCP on port {port}")
                         self.fetch_mcp = MCP(
-                            name=name,
+                            name="test",
                             tools=[tool.name for tool in tools],
                             address="localhost",
                             port=port,
