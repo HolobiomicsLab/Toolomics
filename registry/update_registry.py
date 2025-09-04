@@ -72,6 +72,13 @@ TOOLOMICS_SERVERS = {
         "image": "holobiomicslab/toolomics:latest",
         "args": ["python", "/app/mcp_host/shell/server.py"], 
         "tags": ["toolomics", "shell", "command-execution", "system"]
+    },
+    "toolomics-graphrag": {
+        "path": "graph_rag/server.py",
+        "description": "GraphRAG MCP server",
+        "image": "holobiomicslab/toolomics:latest",
+        "args": ["python", "/app/mcp_host/shell/server.py"], 
+        "tags": ["toolomics", "graphrag", "rag", "knowledge-graph"]
     }
 }
 

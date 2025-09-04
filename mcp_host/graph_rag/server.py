@@ -9,23 +9,10 @@ import sys
 import shutil
 
 
-def convert_pdf_txt(fname: str):
-    # fname = "s11306-019-1612-4.pdf"
-    with pymupdf.open(fname) as doc:  # open document
-        text = chr(12).join([page.get_text() for page in doc])
-    # write as a binary file to support non-ASCII characters
-    Path(f"rag/input/{fname.removesuffix('.pdf')}.txt").write_bytes(text.encode())
-
-
-def move_files_to_rag(file: str):
-    output_dir = Path("./rag/input")
-    shutil.copy(file, output_dir / file)
-    print(f"Moved {file} to {output_dir}")
-
-
 description = """
-GraphRAG is a retrieval-augmented generation (RAG) system that uses a knowledge graph to enhance the capabilities of large language models (LLMs). 
+GraphRAG is a retrieval-augmented generation (RAG) system that uses a knowledge graph to enhance the capabilities of large language models (LLMs).
 It combines document retrieval, knowledge graph querying, and LLMs to provide accurate and contextually relevant responses to user queries.
+GraphRAG also allows searching for information inside large documents and should be the main solution to query large files such as PDFs and text documents.
 """
 
 mcp = FastMCP(
@@ -35,22 +22,52 @@ mcp = FastMCP(
 
 executor = ThreadPoolExecutor(max_workers=2)
 
+project_path = Path("./rag/input")
+
+if not project_path.exists():
+    Path("./rag/input").mkdir(parents=True, exist_ok=True)
+    print("Created ./rag/input directory")
+
+async def convert_pdf_txt(fname: str):
+    with pymupdf.open(fname) as doc:  # open document
+        text = chr(12).join([page.get_text() for page in doc])
+    # write as a binary file to support non-ASCII characters
+    (project_path /  f"{fname.removesuffix('.pdf')}.txt").write_bytes(text.encode())
+
+
+def move_files_to_rag(file: str):
+    shutil.copy(file, project_path / file)
+    print(f"Moved {file} to {project_path}")
+
+@mcp.tool
+def get_mcp_name() -> str:
+    """Get the name of this MCP server"""
+    return mcp.name
+
 @mcp.tool
 async def files_to_graph(filenames: list[str]):
-    """Process files and add them to the GraphRAG knowledge graph
+    """Process files and add create the GraphRAG knowledge graph
     
     Args:
         filenames: List of filenames to process and add to the graph
+    
+    Exemple: files_to_graph(["document1.txt", "document2.pdf"])
         
     Returns:
         String confirmation message that files were processed for GraphRAG
     """
+    # Clear the input directory first
+    for file in project_path.iterdir():
+        if file.is_file():
+            file.unlink()
+    print(f"Cleared all files from {project_path}")
+        
     # Process files first
     for filename in filenames:
         if filename.lower().endswith(".txt"):
             move_files_to_rag(filename)
         elif filename.lower().endswith(".pdf"):
-            convert_pdf_txt(filename)
+            await convert_pdf_txt(filename)
         else:
             raise ValueError(f"Unsupported file type: {filename}")
     
@@ -85,7 +102,15 @@ async def files_to_graph(filenames: list[str]):
 
 @mcp.tool
 async def query(query: str) -> str:
-    """Query the GraphRAG knowledge graph with a natural language query"""
+    """Query the GraphRAG knowledge graph with a natural language query
+    
+    Args:
+        query: Natural language query string
+        
+    Exemple: query("What is the main topic of the documents?")
+    
+    Returns:
+        String response from GraphRAG"""
     
     def run_query():
         try:

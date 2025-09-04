@@ -402,7 +402,6 @@ def download_file(url: str) -> Dict[str, Any]:
     Notes:
         - Requires an active browser session
         - Only downloads files with common extensions (PDFs, videos, documents, etc.)
-        - Files are saved to /projects directory
     """
     print(f"Downloading file from URL: {url}")
     if not init_browser():
