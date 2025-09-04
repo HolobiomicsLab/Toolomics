@@ -13,11 +13,14 @@ import threading
 import time
 import os
 import sys
-import subprocess
-import atexit
 from typing import Dict, Any
 import signal
 from contextlib import contextmanager
+from pathlib import Path
+
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from shared import get_workspace_path
 
 from browser import Browser
 from searxng import search_searx
@@ -31,20 +34,6 @@ mcp = FastMCP(
     name="Web Browsing MCP",
     instructions=description,
 )
-
-
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server
-
-    Returns:
-        str: The name of this MCP server ("Web Browser MCP")
-
-    Example:
-        >>> get_mcp_name()
-        "Web Browser MCP"
-    """
-    return "Web Browser MCP"
 
 
 # Global browser instance with thread safety
@@ -446,7 +435,7 @@ def take_screenshot() -> Dict[str, str]:
         }
 
     Notes:
-        - Screenshots are saved in /projects/.screenshots/ directory
+        - Screenshots are saved in workspace .screenshots/ directory
         - Filename contains timestamp when taken
         - PNG format is used
     """
@@ -473,7 +462,7 @@ def take_screenshot() -> Dict[str, str]:
         browser_lock.release()
 
 
-screenshots_dir = "/projects/.screenshots"
+screenshots_dir = str(get_workspace_path() / ".screenshots")
 if not os.path.exists(screenshots_dir):
     os.makedirs(screenshots_dir)
 
