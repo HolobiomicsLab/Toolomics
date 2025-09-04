@@ -596,7 +596,7 @@ def take_screenshot() -> Dict[str, str]:
         }
 
     Notes:
-        - Screenshots are saved in /projects/.screenshots/ directory
+        - Screenshots are saved in .screenshots/ directory
         - Filename contains timestamp when taken
         - PNG format is used
     """
