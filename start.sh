@@ -119,19 +119,17 @@ fi
 SERVERS=(
     "toolomics-browser"
     "toolomics-chunkr"
+    "toolomics-zip"
     "toolomics-csv"
     "toolomics-graphrag"
     "toolomics-pdf"
     "toolomics-python-editor"
     "toolomics-rscript"
     "toolomics-shell"
-
-
     # Additional available servers :
     # "fetch"
     "filesystem"
     "git"
-    "playwright"
     "plotting"
     "time"
     # "adb-mysql-mcp-server"
