@@ -124,6 +124,7 @@ SERVERS=(
     "toolomics-shell"
     "toolomics-graphrag"   
     "toolomics-chunkr"
+    "toolomics-zip"
 
     # Additional available servers :
     # "fetch"
@@ -180,7 +181,7 @@ SERVERS=(
     # "osv"
     # "perplexity-ask"
     # "phoenix"
-    "playwright"
+    #"playwright"
     "plotting"
     # "postgres-mcp-pro"
     # "redis"

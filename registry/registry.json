@@ -250,6 +250,41 @@
         "search_document_content"
       ]
     },
+    "toolomics-zip": {
+      "description": "ZIP file operations MCP server for creating, extracting, and manipulating ZIP archives",
+      "image": "holobiomicslab/toolomics:local",
+      "transport": "streamable-http",
+      "args": [
+        "python",
+        "/app/mcp_host/zip/server.py"
+      ],
+      "env_vars": [
+        {
+          "name": "MCP_SERVER_TYPE",
+          "description": "MCP server type identifier",
+          "required": false
+        }
+      ],
+      "tier": "Community",
+      "tags": [
+        "toolomics",
+        "zip",
+        "compression",
+        "archive",
+        "file-operations"
+      ],
+      "status": "Active",
+      "tools": [
+        "create_zip_from_directory",
+        "create_zip_from_files",
+        "extract_zip",
+        "list_zip_contents",
+        "add_files_to_zip",
+        "extract_specific_files",
+        "list_zip_files",
+        "delete_zip_file"
+      ]
+    },
     "adb-mysql-mcp-server": {
       "description": "Official MCP server for AnalyticDB for MySQL of Alibaba Cloud",
       "tier": "Official",
