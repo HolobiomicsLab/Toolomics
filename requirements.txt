@@ -14,7 +14,7 @@ chunkr-ai>=0.3.0
 
 # Data processing
 pandas>=2.3.0
-numpy>=2.2.0
+numpy
 scikit-learn>=1.7.0
 
 # ML and NLP
@@ -46,3 +46,4 @@ webdriver-manager>=4.0.0
 python-multipart>=0.0.20
 
 matplotlib>=3.9.0
+graphrag

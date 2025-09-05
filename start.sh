@@ -117,23 +117,30 @@ else
 fi
 
 SERVERS=(
-    "toolomics-rscript"
-    "toolomics-browser" 
-    "toolomics-csv"    
-    "toolomics-pdf"
-    "toolomics-shell"
-    "toolomics-graphrag"   
+    "toolomics-browser"
     "toolomics-chunkr"
+<<<<<<< HEAD
     "toolomics-zip"
+=======
+    "toolomics-csv"
+    "toolomics-graphrag"
+    "toolomics-pdf"
+    "toolomics-python-editor"
+    "toolomics-rscript"
+    "toolomics-shell"
+
+>>>>>>> 8838ecfce7cd90e8937ea5638c0719786e4c53c2
 
     # Additional available servers :
     # "fetch"
-    "git"
     "filesystem"
-    #"time"
-    # "arxiv-mcp-server"
+    "git"
+    "playwright"
+    "plotting"
+    "time"
     # "adb-mysql-mcp-server"
     # "agentql-mcp"
+    # "arxiv-mcp-server"
     # "astra-db-mcp"
     # "atlassian"
     # "aws-diagram"
@@ -151,9 +158,11 @@ SERVERS=(
     # "dolt"
     # "elasticsearch"
     # "everything"
+    # "fetch"
     # "firecrawl"
     # "genai-toolbox"
     # "github"
+    # "gitlab"
     # "grafana"
     # "graphlit"
     # "graphlit-mcp-server"
@@ -181,18 +190,19 @@ SERVERS=(
     # "osv"
     # "perplexity-ask"
     # "phoenix"
+<<<<<<< HEAD
     #"playwright"
     "plotting"
+=======
+>>>>>>> 8838ecfce7cd90e8937ea5638c0719786e4c53c2
     # "postgres-mcp-pro"
     # "redis"
     # "semgrep"
     # "sentry"
-    # "sentry-mcp-server"
     # "sequentialthinking"
     # "sqlite"
     # "stripe"
     # "supabase"
-    # "supabase-mcp-server"
     # "tavily-mcp"
     # "terraform"
 )

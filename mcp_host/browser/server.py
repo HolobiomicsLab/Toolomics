@@ -63,6 +63,9 @@ class BrowserSession:
         except Exception:
             return False
 
+# Global browser instance with thread safety
+browser_lock = threading.Lock()
+browser_instance = None
 
 class BrowserPool:
     """Thread-safe browser pool for handling multiple concurrent clients"""
@@ -259,7 +262,6 @@ class BrowserPool:
                     break
                     
         print("Browser pool shutdown complete")
-
 
 # Global browser pool instance
 browser_pool: Optional[BrowserPool] = None
@@ -553,7 +555,6 @@ def download_file(url: str) -> Dict[str, Any]:
     Notes:
         - Uses browser session for download
         - Only downloads files with common extensions (PDFs, videos, documents, etc.)
-        - Files are saved to /projects directory
     """
     print(f"Downloading file from URL: {url}")
     
