@@ -103,11 +103,6 @@ fi
 echo "📁 Creating workspace directory..."
 mkdir -p workspace
 
-# Export workspace path for Mimosa-AI integration
-WORKSPACE_PATH="$(pwd)/workspace"
-export TOOLOMICS_WORKSPACE="$WORKSPACE_PATH"
-echo "🔧 Set TOOLOMICS_WORKSPACE=$WORKSPACE_PATH"
-
 # List of servers to start (Toolomics + Essential MCP servers)
 # Note: The registry contains many more MCP servers available.
 # Use 'thv run <server-name>' to start additional servers as needed.
