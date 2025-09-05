@@ -13,6 +13,9 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.core.os_manager import ChromeType
+import psutil
+import signal
+import threading
 
 # Override helium's ChromeOptions with selenium's for better compatibility
 helium.ChromeOptions = ChromeOptions
@@ -20,12 +23,56 @@ helium.ChromeOptions = ChromeOptions
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+class ProcessMonitor:
+    """Monitor and cleanup browser processes"""
+    
+    def __init__(self):
+        self.tracked_processes = set()
+        self.lock = threading.Lock()
+        
+    def track_browser_process(self, driver):
+        """Track browser process for cleanup"""
+        with self.lock:
+            if hasattr(driver, 'service') and driver.service.process:
+                self.tracked_processes.add(driver.service.process.pid)
+                
+    def cleanup_zombie_processes(self):
+        """Clean up any zombie browser processes"""
+        with self.lock:
+            for pid in list(self.tracked_processes):
+                try:
+                    process = psutil.Process(pid)
+                    if process.name() in ['chrome', 'chromium', 'chromedriver']:
+                        if process.status() == psutil.STATUS_ZOMBIE:
+                            process.terminate()
+                            self.tracked_processes.discard(pid)
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    self.tracked_processes.discard(pid)
+                    
+    def force_cleanup_all(self):
+        """Force cleanup of all tracked processes"""
+        with self.lock:
+            for pid in list(self.tracked_processes):
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                    time.sleep(1)
+                    os.kill(pid, signal.SIGKILL)
+                except (OSError, ProcessLookupError):
+                    pass
+            self.tracked_processes.clear()
+
+
 class Browser:
     def __init__(self, headless: bool = True):
-        """Initialize the browser with Helium."""
+        """Initialize the browser with Helium and enhanced error handling."""
         self.screenshot_folder = ".screenshots"
         self.headless = headless
-        self.driver = None  # Initialize driver instance variable
+        self.driver = None
+        self.process_monitor = ProcessMonitor()
+        self.operation_count = 0
+        self.max_operations = 100  # Restart after 100 operations
+        self.last_health_check = time.time()
+        self.health_check_interval = 60  # Check health every minute
         self._start_browser()
 
     def _setup_webdriver_service(self):
@@ -107,105 +154,213 @@ class Browser:
         return None
 
     def _start_browser(self):
-        """Start the browser with automatic driver management."""
-        try:
-            # Setup Chrome options
-            chrome_options = helium.ChromeOptions()
-
-            # Detect environment
-            in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
-                "/.dockerenv"
-            )
-
-            # Basic options for both environments
-            if self.headless:
-                chrome_options.add_argument("--headless=new")
-
-            if in_container:
-                # Container-specific options
-                chrome_options.add_argument("--no-sandbox")
-                chrome_options.add_argument("--disable-dev-shm-usage")
-                chrome_options.add_argument("--disable-gpu")
-                chrome_options.add_argument("--disable-software-rasterizer")
-                chrome_options.add_argument("--disable-extensions")
-                chrome_options.add_argument("--disable-background-timer-throttling")
-                chrome_options.add_argument("--memory-pressure-off")
-                chrome_options.add_argument("--single-process")
-                print("Configured Chrome options for container environment")
-
-            # Set browser binary
-            browser_binary = self._get_browser_binary()
-            if browser_binary:
-                chrome_options.binary_location = browser_binary
-
-            # Setup WebDriver service
-            service = self._setup_webdriver_service()
-
-            # Initialize Helium with our configured service and options
-            # We need to set up the webdriver manually and then use it with Helium
-            from selenium import webdriver
-
-            # Create the webdriver
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-            
-            # Validate driver was created successfully
-            if driver is None:
-                raise RuntimeError("Failed to create Chrome WebDriver")
-            
-            # Store driver as instance variable for persistence
-            self.driver = driver
-            
-            # Use proper Helium API to set the driver
-            helium.set_driver(driver)
-            
-            # Validate the driver is accessible
-            current_url = driver.current_url
-            if current_url is None:
-                raise RuntimeError("Driver session is not valid")
-
-            print("Successfully initialized browser with Helium")
-
-        except Exception as e:
-            print(f"Failed to start browser: {e}")
-            # Try the most basic setup as final fallback
+        """Start the browser with automatic driver management and enhanced error handling."""
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
             try:
-                print("Attempting basic fallback initialization...")
+                # Setup Chrome options
                 chrome_options = helium.ChromeOptions()
-                chrome_options.add_argument("--headless=new")
-                chrome_options.add_argument("--no-sandbox")
-                chrome_options.add_argument("--disable-dev-shm-usage")
 
-                # Try to use basic start_chrome
-                self.driver = start_chrome(options=chrome_options)
-                if self.driver is not None:
-                    print("Fallback initialization succeeded")
+                # Detect environment
+                in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
+                    "/.dockerenv"
+                )
+
+                # Basic options for both environments
+                if self.headless:
+                    chrome_options.add_argument("--headless=new")
+
+                if in_container:
+                    # Container-specific options
+                    chrome_options.add_argument("--no-sandbox")
+                    chrome_options.add_argument("--disable-dev-shm-usage")
+                    chrome_options.add_argument("--disable-gpu")
+                    chrome_options.add_argument("--disable-software-rasterizer")
+                    chrome_options.add_argument("--disable-extensions")
+                    chrome_options.add_argument("--disable-background-timer-throttling")
+                    chrome_options.add_argument("--memory-pressure-off")
+                    chrome_options.add_argument("--single-process")
+                    print("Configured Chrome options for container environment")
+
+                # Additional stability options
+                chrome_options.add_argument("--disable-web-security")
+                chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+                chrome_options.add_argument("--disable-ipc-flooding-protection")
+                chrome_options.add_argument("--max_old_space_size=4096")
+
+                # Set browser binary
+                browser_binary = self._get_browser_binary()
+                if browser_binary:
+                    chrome_options.binary_location = browser_binary
+
+                # Setup WebDriver service
+                service = self._setup_webdriver_service()
+
+                # Initialize Helium with our configured service and options
+                from selenium import webdriver
+
+                # Create the webdriver
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+                
+                # Validate driver was created successfully
+                if driver is None:
+                    raise RuntimeError("Failed to create Chrome WebDriver")
+                
+                # Store driver as instance variable for persistence
+                self.driver = driver
+                
+                # Track the browser process for cleanup
+                self.process_monitor.track_browser_process(driver)
+                
+                # Use proper Helium API to set the driver
+                helium.set_driver(driver)
+                
+                # Enhanced validation
+                if not self._validate_driver_session():
+                    raise RuntimeError("Driver session validation failed")
+
+                print("Successfully initialized browser with Helium")
+                return
+
+            except Exception as e:
+                print(f"Browser initialization attempt {attempt + 1} failed: {e}")
+                
+                # Cleanup failed attempt
+                try:
+                    if hasattr(self, 'driver') and self.driver:
+                        self.driver.quit()
+                except:
+                    pass
+                
+                if attempt < max_retries - 1:
+                    print(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
                 else:
-                    raise RuntimeError("Fallback initialization failed - driver is None")
-            except Exception as fallback_error:
-                print(f"All initialization attempts failed: {fallback_error}")
-                raise RuntimeError(f"Cannot initialize browser: {fallback_error}")
+                    # Final fallback attempt
+                    try:
+                        print("Attempting basic fallback initialization...")
+                        chrome_options = helium.ChromeOptions()
+                        chrome_options.add_argument("--headless=new")
+                        chrome_options.add_argument("--no-sandbox")
+                        chrome_options.add_argument("--disable-dev-shm-usage")
+
+                        self.driver = start_chrome(options=chrome_options)
+                        if self.driver is not None and self._validate_driver_session():
+                            print("Fallback initialization succeeded")
+                            return
+                        else:
+                            raise RuntimeError("Fallback initialization failed")
+                    except Exception as fallback_error:
+                        print(f"All initialization attempts failed: {fallback_error}")
+                        raise RuntimeError(f"Cannot initialize browser: {fallback_error}")
+
+    def _validate_driver_session(self) -> bool:
+        """Enhanced driver session validation"""
+        try:
+            if self.driver is None:
+                return False
+            
+            # Check if driver is responsive
+            current_url = self.driver.current_url
+            if current_url is None:
+                return False
+            
+            # Check if browser process is alive
+            if hasattr(self.driver, 'service') and self.driver.service.process:
+                if self.driver.service.process.poll() is not None:
+                    return False
+            
+            # Test basic functionality
+            ready_state = self.driver.execute_script("return document.readyState;")
+            if ready_state not in ['loading', 'interactive', 'complete']:
+                return False
+            
+            return True
+        except Exception as e:
+            print(f"Driver validation failed: {e}")
+            return False
+
+    def is_session_valid(self) -> bool:
+        """Enhanced session validation with multiple checks"""
+        try:
+            # Periodic health check
+            current_time = time.time()
+            if current_time - self.last_health_check > self.health_check_interval:
+                self.last_health_check = current_time
+                self.process_monitor.cleanup_zombie_processes()
+            
+            return self._validate_driver_session()
+        except Exception as e:
+            print(f"Session validation failed: {e}")
+            return False
+
+    def should_restart(self) -> bool:
+        """Check if session should be restarted"""
+        return (
+            self.operation_count >= self.max_operations or
+            not self.is_session_valid()
+        )
+
+    def recover_session(self):
+        """Attempt to recover a failed browser session"""
+        print("Attempting session recovery...")
+        try:
+            if self.driver:
+                self.driver.quit()
+        except:
+            pass
+        
+        self.driver = None
+        self.operation_count = 0
+        self._start_browser()
+
+    def _increment_operations(self):
+        """Increment operation counter and check for restart"""
+        self.operation_count += 1
+        if self.should_restart():
+            print(f"Session restart needed after {self.operation_count} operations")
+            self.recover_session()
 
     def go_to(self, url: str) -> bool:
-        """Navigate to a specified URL."""
+        """Navigate to a specified URL with enhanced error handling."""
         try:
+            self._increment_operations()
+            
+            if not self.is_session_valid():
+                self.recover_session()
+            
             go_to(url)
             time.sleep(random.uniform(0.5, 2.0))
             self.human_scroll()
             return True
-        except Exception:
-            return False
+        except Exception as e:
+            print(f"Navigation to {url} failed: {e}")
+            # Attempt recovery on navigation failure
+            try:
+                self.recover_session()
+                go_to(url)
+                return True
+            except Exception as recovery_error:
+                print(f"Recovery navigation failed: {recovery_error}")
+                return False
 
     def human_scroll(self):
-        """Simulate human-like scrolling."""
-        for _ in range(random.randint(1, 3)):
-            scroll_pixels = random.randint(150, 600)
-            get_driver().execute_script(f"window.scrollBy(0, {scroll_pixels});")
-            time.sleep(random.uniform(0.5, 1.5))
-            if random.random() < 0.3:
-                get_driver().execute_script(
-                    f"window.scrollBy(0, -{random.randint(50, 200)});"
-                )
-                time.sleep(random.uniform(0.3, 0.8))
+        """Simulate human-like scrolling with error handling."""
+        try:
+            for _ in range(random.randint(1, 3)):
+                scroll_pixels = random.randint(150, 600)
+                get_driver().execute_script(f"window.scrollBy(0, {scroll_pixels});")
+                time.sleep(random.uniform(0.5, 1.5))
+                if random.random() < 0.3:
+                    get_driver().execute_script(
+                        f"window.scrollBy(0, -{random.randint(50, 200)});"
+                    )
+                    time.sleep(random.uniform(0.3, 0.8))
+        except Exception as e:
+            print(f"Scrolling failed: {e}")
 
     def is_sentence(self, text: str) -> bool:
         """Check if the text qualifies as a meaningful sentence."""
@@ -220,8 +375,13 @@ class Browser:
         return word_count >= 5 and (has_punctuation or word_count > 4)
 
     def get_text(self) -> Optional[str]:
-        """Get page text as formatted Markdown."""
+        """Get page text as formatted Markdown with error handling."""
         try:
+            self._increment_operations()
+            
+            if not self.is_session_valid():
+                self.recover_session()
+            
             page_source = get_driver().page_source
             soup = BeautifulSoup(page_source, "html.parser")
 
@@ -249,7 +409,8 @@ class Browser:
             result = "[Start of page]\n\n" + "\n\n".join(lines) + "\n\n[End of page]"
             result = re.sub(r"!\[(.*?)\]\(.*?\)", r"[IMAGE: \1]", result)
             return result[:4096]
-        except Exception:
+        except Exception as e:
+            print(f"Failed to get page text: {e}")
             return None
 
     def is_link_valid(self, url: str) -> bool:
@@ -264,49 +425,12 @@ class Browser:
                 return False
             path = parsed_url.path.lower()
             download_extensions = [
-                ".pdf",
-                ".mp4",
-                ".mp3",
-                ".avi",
-                ".mov",
-                ".wmv",
-                ".flv",
-                ".mkv",
-                ".doc",
-                ".docx",
-                ".xls",
-                ".xlsx",
-                ".ppt",
-                ".pptx",
-                ".zip",
-                ".rar",
-                ".gz",
-                ".tar",
-                ".7z",
-                ".bz2",
-                ".csv",
-                ".json",
-                ".xml",
-                ".txt",
-                ".log",
-                ".png",
-                ".jpg",
-                ".jpeg",
-                ".gif",
-                ".bmp",
-                ".tiff",
-                ".svg",
-                ".webp",
-                ".exe",
-                ".dmg",
-                ".pkg",
-                ".deb",
-                ".rpm",
-                ".msi",
-                ".apk",
-                ".iso",
-                ".img",
-                ".bin",
+                ".pdf", ".mp4", ".mp3", ".avi", ".mov", ".wmv", ".flv", ".mkv",
+                ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip", ".rar",
+                ".gz", ".tar", ".7z", ".bz2", ".csv", ".json", ".xml", ".txt",
+                ".log", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg",
+                ".webp", ".exe", ".dmg", ".pkg", ".deb", ".rpm", ".msi", ".apk",
+                ".iso", ".img", ".bin",
             ]
             for ext in download_extensions:
                 if path.endswith(ext):
@@ -318,8 +442,13 @@ class Browser:
             return False
 
     def get_navigable(self) -> List[str]:
-        """Get all navigable links on the current page."""
+        """Get all navigable links on the current page with error handling."""
         try:
+            self._increment_operations()
+            
+            if not self.is_session_valid():
+                self.recover_session()
+            
             links = []
             link_elements = find_all(Link())
 
@@ -333,75 +462,52 @@ class Browser:
                     links.append(href)
 
             return list(set(links))  # Remove duplicates
-        except Exception:
+        except Exception as e:
+            print(f"Failed to get navigable links: {e}")
+            return []
+
+    def get_downloadable(self) -> List[str]:
+        """Get all downloadable resource links on the current page with error handling."""
+        try:
+            self._increment_operations()
+            
+            if not self.is_session_valid():
+                self.recover_session()
+            
+            current_url = self.get_current_url()
+            base_url = (
+                f"{urlparse(current_url).scheme}://{urlparse(current_url).netloc}"
+            )
+            all_links = []
+            element_links = self._extract_links_from_elements(current_url, base_url)
+            all_links.extend(element_links)
+            attribute_links = self._extract_links_from_attributes(current_url, base_url)
+            all_links.extend(attribute_links)
+            return self._deduplicate_links(all_links)
+
+        except Exception as e:
+            print(f"Error getting downloadable links: {e}")
             return []
 
     def _get_downloadable_extensions(self) -> List[str]:
         """Get list of downloadable file extensions."""
         return [
-            ".pdf",
-            ".mp4",
-            ".mp3",
-            ".avi",
-            ".mov",
-            ".wmv",
-            ".flv",
-            ".mkv",
-            ".doc",
-            ".docx",
-            ".xls",
-            ".xlsx",
-            ".ppt",
-            ".pptx",
-            ".zip",
-            ".rar",
-            ".gz",
-            ".tar",
-            ".7z",
-            ".bz2",
-            ".csv",
-            ".json",
-            ".xml",
-            ".txt",
-            ".log",
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".gif",
-            ".bmp",
-            ".tiff",
-            ".svg",
-            ".webp",
-            ".exe",
-            ".dmg",
-            ".pkg",
-            ".deb",
-            ".rpm",
-            ".msi",
-            ".apk",
-            ".iso",
-            ".img",
-            ".bin",
+            ".pdf", ".mp4", ".mp3", ".avi", ".mov", ".wmv", ".flv", ".mkv",
+            ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".zip", ".rar",
+            ".gz", ".tar", ".7z", ".bz2", ".csv", ".json", ".xml", ".txt",
+            ".log", ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg",
+            ".webp", ".exe", ".dmg", ".pkg", ".deb", ".rpm", ".msi", ".apk",
+            ".iso", ".img", ".bin",
         ]
 
     def _get_download_patterns(self) -> List[str]:
         """Get list of URL patterns that indicate downloadable content."""
         return [
-            "download",
-            "attachment",
-            "file",
-            "document",
-            "export",
-            "report",
-            "data",
-            "dataset",
-            "archive",
-            "backup",
+            "download", "attachment", "file", "document", "export",
+            "report", "data", "dataset", "archive", "backup",
         ]
 
-    def _convert_to_absolute_url(
-        self, href: str, current_url: str, base_url: str
-    ) -> str:
+    def _convert_to_absolute_url(self, href: str, current_url: str, base_url: str) -> str:
         """Convert relative URL to absolute URL."""
         if href.startswith("/"):
             return base_url + href
@@ -442,9 +548,7 @@ class Browser:
                     return True
         return False
 
-    def _extract_links_from_elements(
-        self, current_url: str, base_url: str
-    ) -> List[str]:
+    def _extract_links_from_elements(self, current_url: str, base_url: str) -> List[str]:
         """Extract downloadable links from HTML elements."""
         links = []
         extensions = self._get_downloadable_extensions()
@@ -468,9 +572,7 @@ class Browser:
 
         return links
 
-    def _extract_links_from_attributes(
-        self, current_url: str, base_url: str
-    ) -> List[str]:
+    def _extract_links_from_attributes(self, current_url: str, base_url: str) -> List[str]:
         """Extract downloadable links from HTML attributes like download, data-url, etc."""
         links = []
         extensions = self._get_downloadable_extensions()
@@ -522,34 +624,11 @@ class Browser:
                 unique_links.append(link)
         return unique_links
 
-    def get_downloadable(self) -> List[str]:
-        """Get all downloadable resource links on the current page."""
-        try:
-            current_url = self.get_current_url()
-            base_url = (
-                f"{urlparse(current_url).scheme}://{urlparse(current_url).netloc}"
-            )
-            all_links = []
-            element_links = self._extract_links_from_elements(current_url, base_url)
-            all_links.extend(element_links)
-            attribute_links = self._extract_links_from_attributes(current_url, base_url)
-            all_links.extend(attribute_links)
-            return self._deduplicate_links(all_links)
-
-        except Exception as e:
-            print(f"Error getting downloadable links: {e}")
-            return []
-
     def download_file(self, url: str) -> Optional[tuple[bool, str]]:
-        """Download a file from URL to current directory.
-
-        Args:
-            url: The URL of file to download
-
-        Returns:
-            tuple[bool, str] | None: (success_status, filename) if successful, None on failure
-        """
+        """Download a file from URL to current directory with enhanced error handling."""
         try:
+            self._increment_operations()
+            
             import requests
             from urllib.parse import urlparse, unquote
             import os
@@ -667,131 +746,66 @@ class Browser:
         except Exception as e:
             print(f"Error downloading file from {url}: {e}")
             return None
-            
-    def download_ftp_file(self, ftp_url: str) -> str:
-        """Download a file from FTP URL to projects directory.
-        
-        Args:
-            ftp_url: The FTP URL of file to download (format: ftp://host/path/to/file)
-            
-        Returns:
-            tuple[bool, str] | None: (success_status, filename) if successful, None on failure
-        """
-        try:
-            import ftplib
-            from urllib.parse import urlparse, unquote
-            import os
-            import re
-            import time
-            
-            # Parse the FTP URL
-            parsed = urlparse(ftp_url)
-            if parsed.scheme != 'ftp':
-                return f"Not an FTP URL: {ftp_url}"
-                
-            # Extract components from URL
-            hostname = parsed.netloc
-            path = parsed.path
-            
-            # Get filename from path
-            filename = os.path.basename(path)
-            if not filename:
-                filename = f"ftp_download_{int(time.time())}"
-            
-            # Clean filename - remove invalid characters
-            filename = unquote(filename)  # URL decode
-            filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
-            filename = filename.strip()
-            
-            # Save to /projects directory
-            workspace_dir = "/projects"
-            
-            filepath = os.path.join(workspace_dir, filename)
-            
-            # Ensure we don't overwrite existing files
-            original_filename = filename
-            counter = 1
-            while os.path.exists(filepath):
-                name, ext = os.path.splitext(original_filename)
-                filename = f"{name}_{counter}{ext}"
-                filepath = os.path.join(workspace_dir, filename)
-                counter += 1
-            
-            # Connect to FTP server and download the file
-            ftp = ftplib.FTP()
-            ftp.connect(hostname)
-            ftp.login()  # Anonymous login
-            
-            # Navigate to the directory containing the file
-            directory = os.path.dirname(path)
-            if directory:
-                # Split the directory path and navigate through each component
-                for dir_part in directory.strip('/').split('/'):
-                    if dir_part:
-                        try:
-                            ftp.cwd(dir_part)
-                        except ftplib.error_perm as e:
-                            ftp.quit()
-                            return f"FTP directory navigation error: {e}"
-                                    
-            # Download the file
-            with open(filepath, 'wb') as f:
-                ftp.retrbinary(f'RETR {os.path.basename(path)}', f.write)
-            
-            ftp.quit()
-            
-            return f"Successfully downloaded: {filename} to {workspace_dir} ({os.path.getsize(filepath)} bytes)"
-            
-        except Exception as e:
-            return f"Error downloading file from FTP {ftp_url}: {e}"
 
     def get_current_url(self) -> str:
-        """Get the current URL."""
-        return get_driver().current_url
+        """Get the current URL with error handling."""
+        try:
+            if not self.is_session_valid():
+                self.recover_session()
+            return get_driver().current_url
+        except Exception as e:
+            print(f"Failed to get current URL: {e}")
+            return "about:blank"
 
     def get_page_title(self) -> str:
-        """Get the page title."""
-        return get_driver().title
+        """Get the page title with error handling."""
+        try:
+            if not self.is_session_valid():
+                self.recover_session()
+            return get_driver().title
+        except Exception as e:
+            print(f"Failed to get page title: {e}")
+            return "Unknown"
 
     def screenshot(self, filename: str = "updated_screen.png") -> bool:
-        """Take a screenshot."""
+        """Take a screenshot with enhanced error handling."""
         try:
+            self._increment_operations()
+            
+            if not self.is_session_valid():
+                self.recover_session()
+            
             if not os.path.exists(self.screenshot_folder):
                 os.makedirs(self.screenshot_folder)
             path = os.path.join(self.screenshot_folder, filename)
             get_driver().save_screenshot(path)
             return True
-        except Exception:
+        except Exception as e:
+            print(f"Screenshot failed: {e}")
             return False
 
     def get_screenshot(self) -> str:
         """Get screenshot path."""
         return os.path.join(self.screenshot_folder, "updated_screen.png")
 
-    def is_session_valid(self) -> bool:
-        """Check if the browser session is still valid."""
-        try:
-            if self.driver is None:
-                return False
-            # Try to get current URL to test if session is alive
-            current_url = self.driver.current_url
-            return current_url is not None
-        except Exception:
-            return False
-
     def quit(self):
-        """Quit the browser session."""
+        """Quit the browser session with enhanced cleanup."""
         try:
+            # Cleanup tracked processes
+            self.process_monitor.force_cleanup_all()
+            
+            # Quit browser
+            if self.driver:
+                self.driver.quit()
+                self.driver = None
+            
             kill_browser()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error during browser quit: {e}")
 
     def close(self):
-        """Close the browser."""
-        try:
-            kill_browser()
-        except Exception:
-            pass
+        """Close the browser with enhanced cleanup."""
+        self.quit()
 
     def __enter__(self):
         return self

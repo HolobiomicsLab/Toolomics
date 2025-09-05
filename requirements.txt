@@ -37,6 +37,7 @@ click>=8.2.0
 rich>=14.1.0
 beautifulsoup4>=4.13.0
 markdownify>=1.1.0
+psutil>=5.9.0
 
 # Browser automation support
 helium>=5.1.0
