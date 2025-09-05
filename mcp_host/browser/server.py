@@ -66,7 +66,6 @@ class BrowserSession:
 # Global browser instance with thread safety
 browser_lock = threading.Lock()
 browser_instance = None
-=======
 
 class BrowserPool:
     """Thread-safe browser pool for handling multiple concurrent clients"""
