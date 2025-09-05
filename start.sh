@@ -119,23 +119,17 @@ fi
 SERVERS=(
     "toolomics-browser"
     "toolomics-chunkr"
-<<<<<<< HEAD
     "toolomics-zip"
-=======
     "toolomics-csv"
     "toolomics-graphrag"
     "toolomics-pdf"
     "toolomics-python-editor"
     "toolomics-rscript"
     "toolomics-shell"
-
->>>>>>> 8838ecfce7cd90e8937ea5638c0719786e4c53c2
-
     # Additional available servers :
     # "fetch"
     "filesystem"
     "git"
-    "playwright"
     "plotting"
     "time"
     # "adb-mysql-mcp-server"
@@ -190,11 +184,6 @@ SERVERS=(
     # "osv"
     # "perplexity-ask"
     # "phoenix"
-<<<<<<< HEAD
-    #"playwright"
-    "plotting"
-=======
->>>>>>> 8838ecfce7cd90e8937ea5638c0719786e4c53c2
     # "postgres-mcp-pro"
     # "redis"
     # "semgrep"
