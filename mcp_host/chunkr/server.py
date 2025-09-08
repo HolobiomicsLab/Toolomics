@@ -10,17 +10,18 @@ and semantic chunking.
 Author: Toolomics Integration - HolobiomicsLab, CNRS
 """
 
-import sys
-import os
 import json
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-import requests
+import os
+import sys
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import requests
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import CommandResult, return_as_dict, get_workspace_path
+from shared import CommandResult, get_workspace_path, return_as_dict
 
 # Chunkr imports
 try:
@@ -86,16 +87,6 @@ class ChunkrTask:
     file_type: str
     created_at: str
     expires_at: Optional[str] = None
-
-
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server
-    
-    Returns:
-        str: The name of this MCP server ("Chunkr Document Intelligence")
-    """
-    return "Chunkr Document Intelligence"
 
 
 @mcp.tool

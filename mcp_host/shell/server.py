@@ -53,17 +53,6 @@ def execute_command(command: str) -> dict:
     print(f"Executing command: {command}")
 
     dangerous_patterns = [
-        ["rm", "-r"],
-        ["rm", "-rf"],
-        ["rm", "-f"],
-        ["kill", "-9"],
-        ["chmod", "777"],
-        ["mv", "/etc"],
-        ["cp", "/etc"],
-        ["rm", "/etc"],
-        ["rm", "/usr"],
-        ["rm", "/var"],
-        ["rm", "/"],
     ]
     try:
         command_words = shlex.split(command.lower())

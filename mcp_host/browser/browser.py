@@ -23,7 +23,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class Browser:
     def __init__(self, headless: bool = True):
         """Initialize the browser with Helium."""
-        self.screenshot_folder = ".screenshots"
+        # Use /projects path as mounted by start.sh
+        self.screenshot_folder = "/projects/.screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
         self._start_browser()
@@ -176,9 +177,15 @@ class Browser:
                 chrome_options.add_argument("--disable-dev-shm-usage")
 
                 # Try to use basic start_chrome
-                self.driver = start_chrome(options=chrome_options)
+                start_chrome(options=chrome_options)
+                # Get the driver that Helium created
+                self.driver = get_driver()
                 if self.driver is not None:
                     print("Fallback initialization succeeded")
+                    # Validate the driver is accessible
+                    current_url = self.driver.current_url
+                    if current_url is None:
+                        raise RuntimeError("Driver session is not valid after fallback")
                 else:
                     raise RuntimeError("Fallback initialization failed - driver is None")
             except Exception as fallback_error:
