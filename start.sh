@@ -123,7 +123,7 @@ SERVERS=(
     "toolomics-pdf"
     "toolomics-shell"
     "toolomics-graphrag"   
-    "toolomics-chunkr"
+    #"toolomics-chunkr"
 
     # Additional available servers :
     # "fetch"
@@ -180,8 +180,8 @@ SERVERS=(
     # "osv"
     # "perplexity-ask"
     # "phoenix"
-    "playwright"
-    "plotting"
+    #"playwright"
+    #"plotting"
     # "postgres-mcp-pro"
     # "redis"
     # "semgrep"

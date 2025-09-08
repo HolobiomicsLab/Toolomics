@@ -66,7 +66,6 @@ class BrowserSession:
 # Global browser instance with thread safety
 browser_lock = threading.Lock()
 browser_instance = None
-=======
 
 class BrowserPool:
     """Thread-safe browser pool for handling multiple concurrent clients"""
@@ -341,7 +340,7 @@ searxng_url = None
 
 
 @mcp.tool
-def search(query: str) -> Dict[str, str]:
+async def search(query: str) -> Dict[str, str]:
     """Perform a web search using SearxNG search engine
 
     Args:
@@ -370,7 +369,7 @@ def search(query: str) -> Dict[str, str]:
     print(f"Searching for query: {query}")
     try:
         # Search doesn't use browser, so no timeout needed
-        search_result = search_searx(query)
+        search_result = await search_searx(query)
         return {"status": "success", "result": search_result}
     except Exception as e:
         print(f"Error searching: {e}")
@@ -378,7 +377,7 @@ def search(query: str) -> Dict[str, str]:
 
 
 @mcp.tool
-def navigate(url: str) -> Dict[str, str]:
+async def navigate(url: str) -> Dict[str, str]:
     """Navigate to a specified URL in the browser
 
     Args:
@@ -412,30 +411,29 @@ def navigate(url: str) -> Dict[str, str]:
         return {"status": "error", "message": "Failed to initialize browser pool"}
 
     try:
-        with browser_pool.get_browser(timeout=BROWSER_TIMEOUT) as browser:
-            if not browser.is_link_valid(url):
+        # Utilisation d'un thread pour ne pas bloquer l'event loop
+        loop = asyncio.get_event_loop()
+        def sync_navigate():
+            with browser_pool.get_browser(timeout=BROWSER_TIMEOUT) as browser:
+                if not browser.is_link_valid(url):
+                    return {
+                        "status": "error",
+                        "message": "Invalid URL, File is a PDF or unsupported format for navigation, consider downloading instead.",
+                    }
+                success = safe_browser_operation("navigate", browser.go_to, url)
+                if success is None:
+                    return {"status": "error", "message": "Navigation failed"}
+                current_url = safe_browser_operation("get_url", browser.get_current_url)
+                title = safe_browser_operation("get_title", browser.get_page_title)
+                content = safe_browser_operation("get_content", browser.get_text)
                 return {
-                    "status": "error",
-                    "message": "Invalid URL, File is a PDF or unsupported format for navigation, consider downloading instead.",
+                    "status": "success" if success else "failed",
+                    "current_url": current_url or "unknown",
+                    "title": title or "unknown",
+                    "content": content or "content unavailable",
                 }
-
-            # Navigate with browser
-            success = safe_browser_operation("navigate", browser.go_to, url)
-            if success is None:
-                return {"status": "error", "message": "Navigation failed"}
-
-            # Get page info
-            current_url = safe_browser_operation("get_url", browser.get_current_url)
-            title = safe_browser_operation("get_title", browser.get_page_title)
-            content = safe_browser_operation("get_content", browser.get_text)
-
-            return {
-                "status": "success" if success else "failed",
-                "current_url": current_url or "unknown",
-                "title": title or "unknown",
-                "content": content or "content unavailable",
-            }
-            
+        result = await loop.run_in_executor(None, sync_navigate)
+        return result
     except TimeoutError:
         return {"status": "error", "message": "Browser pool timeout - all browsers are busy"}
     except Exception as e:

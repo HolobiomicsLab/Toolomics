@@ -52,6 +52,6 @@ RUN usermod -u 1001 dockeruser && \
 
 USER dockeruser
 
-WORKDIR /projects
+WORKDIR /
 
 # No CMD directive needed - ToolHive manages container execution via registry.json

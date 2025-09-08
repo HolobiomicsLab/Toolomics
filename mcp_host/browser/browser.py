@@ -541,7 +541,7 @@ class Browser:
             return []
 
     def download_file(self, url: str) -> Optional[tuple[bool, str]]:
-        """Download a file from URL to current directory.
+        """Download a file from URL to /projects directory
 
         Args:
             url: The URL of file to download
@@ -669,7 +669,7 @@ class Browser:
             return None
             
     def download_ftp_file(self, ftp_url: str) -> str:
-        """Download a file from FTP URL to projects directory.
+        """Download a file from FTP URL to /projects directory
         
         Args:
             ftp_url: The FTP URL of file to download (format: ftp://host/path/to/file)
