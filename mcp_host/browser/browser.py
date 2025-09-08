@@ -148,17 +148,17 @@ class Browser:
 
             # Create the webdriver
             driver = webdriver.Chrome(service=service, options=chrome_options)
-            
+
             # Validate driver was created successfully
             if driver is None:
                 raise RuntimeError("Failed to create Chrome WebDriver")
-            
+
             # Store driver as instance variable for persistence
             self.driver = driver
-            
+
             # Use proper Helium API to set the driver
             helium.set_driver(driver)
-            
+
             # Validate the driver is accessible
             current_url = driver.current_url
             if current_url is None:
@@ -187,7 +187,9 @@ class Browser:
                     if current_url is None:
                         raise RuntimeError("Driver session is not valid after fallback")
                 else:
-                    raise RuntimeError("Fallback initialization failed - driver is None")
+                    raise RuntimeError(
+                        "Fallback initialization failed - driver is None"
+                    )
             except Exception as fallback_error:
                 print(f"All initialization attempts failed: {fallback_error}")
                 raise RuntimeError(f"Cannot initialize browser: {fallback_error}")
@@ -648,9 +650,9 @@ class Browser:
             workspace_dir = "/projects"
             if not os.path.exists(workspace_dir):
                 os.makedirs(workspace_dir)
-            
+
             filepath = os.path.join(workspace_dir, filename)
-            
+
             # Ensure we don't overwrite existing files
             original_filename = filename
             counter = 1
@@ -674,13 +676,13 @@ class Browser:
         except Exception as e:
             print(f"Error downloading file from {url}: {e}")
             return None
-            
+
     def download_ftp_file(self, ftp_url: str) -> str:
         """Download a file from FTP URL to /projects directory
-        
+
         Args:
             ftp_url: The FTP URL of file to download (format: ftp://host/path/to/file)
-            
+
         Returns:
             tuple[bool, str] | None: (success_status, filename) if successful, None on failure
         """
@@ -690,31 +692,31 @@ class Browser:
             import os
             import re
             import time
-            
+
             # Parse the FTP URL
             parsed = urlparse(ftp_url)
-            if parsed.scheme != 'ftp':
+            if parsed.scheme != "ftp":
                 return f"Not an FTP URL: {ftp_url}"
-                
+
             # Extract components from URL
             hostname = parsed.netloc
             path = parsed.path
-            
+
             # Get filename from path
             filename = os.path.basename(path)
             if not filename:
                 filename = f"ftp_download_{int(time.time())}"
-            
+
             # Clean filename - remove invalid characters
             filename = unquote(filename)  # URL decode
             filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
             filename = filename.strip()
-            
+
             # Save to /projects directory
             workspace_dir = "/projects"
-            
+
             filepath = os.path.join(workspace_dir, filename)
-            
+
             # Ensure we don't overwrite existing files
             original_filename = filename
             counter = 1
@@ -723,32 +725,32 @@ class Browser:
                 filename = f"{name}_{counter}{ext}"
                 filepath = os.path.join(workspace_dir, filename)
                 counter += 1
-            
+
             # Connect to FTP server and download the file
             ftp = ftplib.FTP()
             ftp.connect(hostname)
             ftp.login()  # Anonymous login
-            
+
             # Navigate to the directory containing the file
             directory = os.path.dirname(path)
             if directory:
                 # Split the directory path and navigate through each component
-                for dir_part in directory.strip('/').split('/'):
+                for dir_part in directory.strip("/").split("/"):
                     if dir_part:
                         try:
                             ftp.cwd(dir_part)
                         except ftplib.error_perm as e:
                             ftp.quit()
                             return f"FTP directory navigation error: {e}"
-                                    
+
             # Download the file
-            with open(filepath, 'wb') as f:
-                ftp.retrbinary(f'RETR {os.path.basename(path)}', f.write)
-            
+            with open(filepath, "wb") as f:
+                ftp.retrbinary(f"RETR {os.path.basename(path)}", f.write)
+
             ftp.quit()
-            
+
             return f"Successfully downloaded: {filename} to {workspace_dir} ({os.path.getsize(filepath)} bytes)"
-            
+
         except Exception as e:
             return f"Error downloading file from FTP {ftp_url}: {e}"
 

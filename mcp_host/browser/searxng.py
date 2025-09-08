@@ -1,48 +1,46 @@
 import httpx
-from os import getenv
+import requests
 from bs4 import BeautifulSoup
-from pydantic import BaseModel
+from urllib.parse import quote
 
 
-class SearchResult(BaseModel):
-    url: str
-    title: str
-    content: str
-
-
-class InfoboxUrl(BaseModel):
-    title: str
-    url: str
-
-
-class Infobox(BaseModel):
-    infobox: str
-    id: str
-    content: str
-    urls: list[InfoboxUrl]
-
-
-class Response(BaseModel):
-    query: str
-    number_of_results: int
-    results: list[SearchResult]
-    infoboxes: list[Infobox]
-
-
-async def search_searx(query, limit: int = 3):
+async def search_searx(query):
     """
-    Recherche asynchrone sur une instance SearxNG et extrait les URLs, titres et descriptions.
+    Searches a SearxNG instance and extracts URLs, titles, and descriptions.
 
     Args:
-        query (str): La requête de recherche
+        query (str): The search query
+        base_url (str, optional): Base URL for SearxNG instance. Defaults to env var SEARXNG_BASE_URL.
 
     Returns:
-        str: Résultats formatés ou message d'erreur
+        str: Formatted search results or error message
     """
-    base_url = str(getenv("SEARXNG_URL", "http://localhost:8080"))
+    # Try container service name first, then fallback options
+    base_url_candidates = [
+        "http://searxng:8080",  # Docker service name (preferred)
+        "http://localhost:8080",  # Local development
+        "http://0.0.0.0:8080",  # Original fallback
+        "http://host.docker.internal:8080",  # Docker Desktop
+    ]
+
+    base_url = None
+    for url in base_url_candidates:
+        try:
+            # Quick connectivity test
+            response = requests.get(f"{url}/", timeout=2)
+            if response.status_code == 200:
+                base_url = url
+                break
+        except:
+            continue
+
+    if not base_url:
+        return "Error: SearxNG base URL must be provided either as an argument or via the SEARXNG_BASE_URL environment variable."
+
     if not query or query.strip() == "":
         return "Error: Empty search query provided."
 
+    search_url = f"{base_url}/search"
     user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -54,38 +52,86 @@ async def search_searx(query, limit: int = 3):
         "Upgrade-Insecure-Requests": "1",
         "User-Agent": user_agent,
     }
-    query = query.strip()
-    # encoded_query = quote(query)
-    params: dict[str, str] = {"q": query, "format": "json"}
-    # data = f"q={encoded_query}&categories=general&language=auto&time_range=&safesearch=0&theme=simple".encode("utf-8")
+    encoded_query = quote(query)
+    data = f"q={encoded_query}&categories=general&language=auto&time_range=&safesearch=0&theme=simple".encode(
+        "utf-8"
+    )
+
+    params: dict[str, str] = {"q": query}
 
     try:
         async with httpx.AsyncClient(base_url=base_url) as client:
-            response = await client.post("/search", headers=headers, params=params)
+            response = await client.post("/search", params=params)
+            print(response)
             response.raise_for_status()
 
-            data = Response.model_validate_json(response.text)
-            
-            text  = ""
+            soup = BeautifulSoup(response.text, "html.parser")
+            results = []
 
-            for index, infobox in enumerate(data.infoboxes):
-                text += f"Infobox: {infobox.infobox}\n"
-                text += f"ID: {infobox.id}\n"
-                text += f"Content: {infobox.content}\n"
-                text += "\n"
+            for article in soup.find_all("article", class_="result"):
+                url_header = article.find("a", class_="url_header")
+                if url_header:
+                    url = url_header["href"]
+                    title = (
+                        article.find("h3").text.strip()
+                        if article.find("h3")
+                        else "No Title"
+                    )
+                    description = (
+                        article.find("p", class_="content").text.strip()
+                        if article.find("p", class_="content")
+                        else "No Description"
+                    )
+                    results.append(f"Title:{title}\nSnippet:{description}\nLink:{url}")
 
-            if len(data.results) == 0:
-                text += "No results found\n"
+            if len(results) == 0:
+                return "No search results, web search failed. Consider using a different query or waiting a few minutes before trying again. If all fail, request user assistance."
+            return "\n\n".join(results)
 
-            for index, result in enumerate(data.results):
-                text += f"Title: {result.title}\n"
-                text += f"URL: {result.url}\n"
-                text += f"Content: {result.content}\n"
-                text += "\n"
-
-                if index == limit - 1:
-                    break
-
-            return str(text)
-    except httpx.RequestError as e:
+    except requests.exceptions.RequestException as e:
         return f"Error: SearxNG search failed. {str(e)}\n"
+
+
+def check_link_validity(link):
+    """
+    Check if a link is valid and accessible.
+    Args:
+        link (str): URL to check
+    Returns:
+        str: Status message about the link
+    """
+    paywall_keywords = [
+        "Member-only",
+        "access denied",
+        "restricted content",
+        "404",
+        "this page is not working",
+    ]
+
+    if not link.startswith("http"):
+        return "Status: Invalid URL"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    try:
+        response = requests.get(link, headers=headers, timeout=5)
+        status = response.status_code
+        if status == 200:
+            content = response.text.lower()
+            if any(keyword.lower() in content for keyword in paywall_keywords):
+                return "Status: Possible Paywall"
+            return "Status: OK"
+        elif status == 404:
+            return "Status: 404 Not Found"
+        elif status == 403:
+            return "Status: 403 Forbidden"
+        else:
+            return f"Status: {status} {response.reason}"
+    except requests.exceptions.RequestException as e:
+        return f"Error: {str(e)}"
+
+
+if __name__ == "__main__":
+    result = search_searx("are dogs better than cats?")
+    print(result)
