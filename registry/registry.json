@@ -44,27 +44,6 @@
         "take_screenshot"
       ]
     },
-    "toolomics-python-editor": {
-      "description": "Python file editing and analysis MCP server",
-      "image": "holobiomicslab/toolomics:latest",
-      "transport": "streamable-http",
-      "args": ["python", "/app/mcp_host/python_editor/server.py"],
-      "permissions": {
-        "read": ["/projects"],
-        "write": ["/projects"]
-      },
-      "env_vars": [
-        {
-          "name": "MCP_SERVER_TYPE",
-          "description": "MCP server type identifier",
-          "required": false
-        }
-      ],
-      "tier": "Community",
-      "tags": ["toolomics", "python", "code-editing", "ast-analysis", "file-manipulation"],
-      "status": "Active",
-      "tools": ["read_python_file", "list_python_methods", "search_in_python_file", "get_method_implementation", "replace_line_range", "replace_method_implementation", "add_method_to_class", "create_python_file", "list_python_files", "validate_python_syntax"]
-    },
     "toolomics-csv": {
       "description": "CSV data processing MCP server",
       "image": "holobiomicslab/toolomics:local",
