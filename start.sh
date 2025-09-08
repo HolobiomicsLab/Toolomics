@@ -130,6 +130,7 @@ SERVERS=(
     # "fetch"
     "filesystem"
     "git"
+    # "playwright"
     "plotting"
     "time"
     # "adb-mysql-mcp-server"

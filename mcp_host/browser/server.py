@@ -29,6 +29,9 @@ import psutil
 from browser import Browser
 from searxng import search_searx
 
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 description = """
 Browser Tools MCP Server provides tools for web browsing, navigation, and interaction using a headless browser.
 Enhanced version with crash mitigation, automatic recovery, and improved reliability.
@@ -914,10 +917,16 @@ def get_pool_status() -> Dict[str, Any]:
         return {"status": "error", "message": str(e)}
 
 
-# Ensure screenshots directory exists
+# Ensure screenshots directory exists - use /projects as mounted by start.sh
 screenshots_dir = "/projects/.screenshots"
-if not os.path.exists(screenshots_dir):
-    os.makedirs(screenshots_dir)
+try:
+    if not os.path.exists(screenshots_dir):
+        os.makedirs(screenshots_dir, exist_ok=True)
+    print(f"Screenshots directory: {screenshots_dir}")
+except PermissionError:
+    print(f"Warning: Could not create screenshots directory {screenshots_dir}, using fallback")
+    screenshots_dir = "/tmp/.screenshots"
+    os.makedirs(screenshots_dir, exist_ok=True)
 
 print("Starting Enhanced Browser MCP server with streamable-http transport...")
 

@@ -64,8 +64,9 @@ class ProcessMonitor:
 
 class Browser:
     def __init__(self, headless: bool = True):
-        """Initialize the browser with Helium and enhanced error handling."""
-        self.screenshot_folder = ".screenshots"
+        """Initialize the browser with Helium."""
+        # Use /projects path as mounted by start.sh
+        self.screenshot_folder = "/projects/.screenshots"
         self.headless = headless
         self.driver = None
         self.process_monitor = ProcessMonitor()
@@ -163,17 +164,14 @@ class Browser:
                 # Setup Chrome options
                 chrome_options = helium.ChromeOptions()
 
-                # Detect environment
                 in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
                     "/.dockerenv"
                 )
 
-                # Basic options for both environments
                 if self.headless:
                     chrome_options.add_argument("--headless=new")
 
                 if in_container:
-                    # Container-specific options
                     chrome_options.add_argument("--no-sandbox")
                     chrome_options.add_argument("--disable-dev-shm-usage")
                     chrome_options.add_argument("--disable-gpu")
@@ -190,37 +188,20 @@ class Browser:
                 chrome_options.add_argument("--disable-ipc-flooding-protection")
                 chrome_options.add_argument("--max_old_space_size=4096")
 
-                # Set browser binary
                 browser_binary = self._get_browser_binary()
                 if browser_binary:
                     chrome_options.binary_location = browser_binary
-
                 # Setup WebDriver service
                 service = self._setup_webdriver_service()
-
-                # Initialize Helium with our configured service and options
                 from selenium import webdriver
-
-                # Create the webdriver
                 driver = webdriver.Chrome(service=service, options=chrome_options)
-                
-                # Validate driver was created successfully
                 if driver is None:
                     raise RuntimeError("Failed to create Chrome WebDriver")
-                
-                # Store driver as instance variable for persistence
                 self.driver = driver
-                
-                # Track the browser process for cleanup
                 self.process_monitor.track_browser_process(driver)
-                
-                # Use proper Helium API to set the driver
                 helium.set_driver(driver)
-                
-                # Enhanced validation
                 if not self._validate_driver_session():
                     raise RuntimeError("Driver session validation failed")
-
                 print("Successfully initialized browser with Helium")
                 return
 
@@ -231,9 +212,10 @@ class Browser:
                 try:
                     if hasattr(self, 'driver') and self.driver:
                         self.driver.quit()
-                except:
+                except Exception as e:
+                    print(f"Error cleaning up driver: {e}")
                     pass
-                
+
                 if attempt < max_retries - 1:
                     print(f"Retrying in {retry_delay} seconds...")
                     time.sleep(retry_delay)
@@ -247,7 +229,7 @@ class Browser:
                         chrome_options.add_argument("--no-sandbox")
                         chrome_options.add_argument("--disable-dev-shm-usage")
 
-                        self.driver = start_chrome(options=chrome_options)
+                        self._start_browser(options=chrome_options)
                         if self.driver is not None and self._validate_driver_session():
                             print("Fallback initialization succeeded")
                             return
