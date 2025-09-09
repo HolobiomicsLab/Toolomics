@@ -158,7 +158,12 @@ async def upload_document(filename: str, processing_config: Optional[Dict[str, A
     
     Args:
         filename: Document file in workspace (supports: PDF, PPT, PPTX, DOC, DOCX, PNG, JPG)
-        processing_config: Optional config for OCR quality, chunking strategy, segment processing
+        processing_config: Optional configuration dict. Examples:
+            - None (recommended): Uses default configuration
+            - {"ocr_strategy": "Auto"}: Enable intelligent OCR
+            - {"segmentation_strategy": "LayoutAnalysis"}: Use layout analysis
+            - {"chunk_processing": {"target_length": 512}}: Custom chunk size
+            INVALID: "", "default", or any string value will cause validation errors
         
     Returns:
         Dict containing task_id (required for all subsequent operations), status, and metadata.
@@ -216,18 +221,22 @@ async def upload_document(filename: str, processing_config: Optional[Dict[str, A
 
 @mcp.tool
 @return_as_dict
-async def upload_document_from_url(url: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+async def upload_document_from_url(url: str, processing_config: Optional[Dict[str, Any]] = None, timeout_seconds: int = 300) -> Dict[str, Any]:
     """Download and process document from URL with advanced document intelligence.
     Combines download + Vision Language Model processing in one step.
     REQUIRED first step before search, export, or analysis operations.
     
+    URL must serve document content, not HTML article pages.
+    WORKS: https://arxiv.org/pdf/2506.07398 (ArXiv PDFs)
+    FAILS: https://academic.oup.com/article/123 (HTML pages → 400 Bad Request)
+    
     Args:
-        url: Document URL (supports: PDF, PPT, PPTX, DOC, DOCX, images)
-        processing_config: Optional config for OCR settings, chunking strategy, LLM processing
+        url: URL that serves document content (PDF, PPT, PPTX, DOC, DOCX, images)
+        processing_config: Optional config dict or None for defaults
+        timeout_seconds: Max wait time in seconds (default: 60)
         
     Returns:
-        Dict containing task_id for subsequent operations, processing status, and metadata.
-        Perfect for processing research papers, reports, or online documents.
+        Dict with task_id for subsequent operations (search_document_content, export functions)
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -237,11 +246,23 @@ async def upload_document_from_url(url: str, processing_config: Optional[Dict[st
         )
     
     try:
+        import asyncio
+
         # Get Chunkr client
         client = get_chunkr_client()
         
-        # Upload from URL
-        task = await client.upload(url, config=processing_config)
+        # Upload from URL with timeout
+        try:
+            task = await asyncio.wait_for(
+                client.upload(url, config=processing_config), 
+                timeout=timeout_seconds
+            )
+        except asyncio.TimeoutError:
+            return CommandResult(
+                status="error",
+                stderr=f"Upload timeout after {timeout_seconds} seconds. URL may be unreachable or document too large/complex for processing within timeout limit. Try increasing timeout_seconds parameter or check URL accessibility.",
+                exit_code=1
+            )
         
         task_info = {
             "task_id": task.task_id,
@@ -661,13 +682,22 @@ async def search_document_content(task_id: str, query: str, max_results: int = 1
         )
     
     try:
-        # Get chunks from the task
-        chunks_result = await get_document_chunks(task_id)
-        if chunks_result.status != "success":
-            return chunks_result
+        client = get_chunkr_client()
+        task = await client.get_task(task_id)
         
-        chunks_data = json.loads(chunks_result.stdout)
-        all_chunks = chunks_data["chunks"]
+        if task.status.lower() != "succeeded":
+            return CommandResult(
+                status="error",
+                stderr=f"Task is not completed. Status: {task.status}",
+                exit_code=1
+            )
+        
+        # Get JSON data directly
+        json_data = task.json()
+        if isinstance(json_data, str):
+            json_data = json.loads(json_data)
+        
+        all_chunks = json_data.get("chunks", [])
         
         # Check if chunks are available
         if not all_chunks:
@@ -729,7 +759,12 @@ async def upload_multiple_documents(filenames: List[str], processing_config: Opt
     
     Args:
         filenames: List of document files in workspace (supports: PDF, PPT, PPTX, DOC, DOCX, PNG, JPG)
-        processing_config: Optional config for OCR quality, chunking strategy, webhook notifications
+        processing_config: Optional configuration dict. Examples:
+            - None (recommended): Uses default configuration
+            - {"ocr_strategy": "Auto"}: Enable intelligent OCR
+            - {"segmentation_strategy": "LayoutAnalysis"}: Use layout analysis
+            - {"chunk_processing": {"target_length": 512}}: Custom chunk size
+            INVALID: "", "default", or any string value will cause validation errors
         parallel: Process documents in parallel for faster completion (default: True)
         
     Returns:
@@ -882,13 +917,22 @@ async def semantic_search_content(task_id: str, query: str, similarity_threshold
         )
     
     try:
-        # Get chunks from the task
-        chunks_result = await get_document_chunks(task_id)
-        if chunks_result.status != "success":
-            return chunks_result
+        client = get_chunkr_client()
+        task = await client.get_task(task_id)
         
-        chunks_data = json.loads(chunks_result.stdout)
-        all_chunks = chunks_data["chunks"]
+        if task.status.lower() != "succeeded":
+            return CommandResult(
+                status="error",
+                stderr=f"Task is not completed. Status: {task.status}",
+                exit_code=1
+            )
+        
+        # Get JSON data directly
+        json_data = task.json()
+        if isinstance(json_data, str):
+            json_data = json.loads(json_data)
+        
+        all_chunks = json_data.get("chunks", [])
         
         if not all_chunks:
             return CommandResult(

@@ -208,7 +208,7 @@
       ]
   },
     "toolomics-chunkr": {
-      "description": "Advanced document intelligence powered by Chunkr AI with Vision Language Models. PERFECT FOR: PDF Q&A, research analysis, technical documentation. Features: intelligent layout analysis, high-quality OCR, semantic chunking. Workflow: upload_document_from_url() → search_document_content() for targeted info retrieval. Supports: PDF, PPT, Word, images. Export: Markdown, HTML, JSON.",
+      "description": "Advanced document intelligence with DIRECT URL DOWNLOAD - no need for separate fetching! Upload PDFs/docs directly from URLs (e.g., arxiv.org/pdf/xyz.pdf) using upload_document_from_url(). Features: Vision Language Models, intelligent layout analysis, high-quality OCR, semantic chunking. Workflow: upload_document_from_url(url) → search_document_content() for Q&A. Supports: PDF, PPT, Word, images from URLs or workspace. Export: Markdown, HTML, JSON.",
       "image": "holobiomicslab/toolomics:local",
       "transport": "streamable-http",
       "args": [
