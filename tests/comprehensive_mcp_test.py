@@ -107,24 +107,6 @@ class ComprehensiveMCPTester:
                     result['errors'].append(f"Discovery failed: {e}")
                     print(f"❌ Tool discovery failed: {e}")
                 
-                # Phase 2: Server Identity
-                print(f"🏷️ Phase 2: Server Identity")
-                try:
-                    resp = await client.call_tool("get_mcp_name", {})
-                    server_identity = resp[0].text if resp else "Unknown"
-                    result['phases']['identity'] = {
-                        'success': True,
-                        'identity': server_identity
-                    }
-                    print(f"✅ Server identity: {server_identity}")
-                except Exception as e:
-                    result['phases']['identity'] = {
-                        'success': False, 
-                        'error': str(e),
-                        'identity': server['name']
-                    }
-                    print(f"⚠️ Could not get server identity (this is optional)")
-                
                 # Phase 3: Use Case Testing (server-specific)
                 print(f"🎯 Phase 3: Use Case Testing")
                 use_case_result = await self.test_server_use_cases(client, server)

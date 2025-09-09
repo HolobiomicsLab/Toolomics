@@ -13,26 +13,10 @@ sys.path.append(str(project_root))
 from shared import get_workspace_path
 
 
-def convert_pdf_txt(fname: str):
-    # fname = "s11306-019-1612-4.pdf"
-    with pymupdf.open(fname) as doc:  # open document
-        text = chr(12).join([page.get_text() for page in doc])
-    # write as a binary file to support non-ASCII characters
-    output_path = get_workspace_path() / "rag" / "input" / f"{fname.removesuffix('.pdf')}.txt"
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(text.encode())
-
-
-def move_files_to_rag(file: str):
-    output_dir = get_workspace_path() / "rag" / "input"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy(file, output_dir / file)
-    print(f"Moved {file} to {output_dir}")
-
-
 description = """
-GraphRAG is a retrieval-augmented generation (RAG) system that uses a knowledge graph to enhance the capabilities of large language models (LLMs). 
+GraphRAG is a retrieval-augmented generation (RAG) system that uses a knowledge graph to enhance the capabilities of large language models (LLMs).
 It combines document retrieval, knowledge graph querying, and LLMs to provide accurate and contextually relevant responses to user queries.
+GraphRAG also allows searching for information inside large documents and should be the main solution to query large files such as PDFs and text documents.
 """
 
 mcp = FastMCP(
@@ -42,25 +26,52 @@ mcp = FastMCP(
 
 executor = ThreadPoolExecutor(max_workers=2)
 
+project_path = get_workspace_path() / "rag" / "input"
+
+if not project_path.exists():
+    project_path.mkdir(parents=True, exist_ok=True)
+    print("Created {project_path} directory")
+
+
+async def convert_pdf_txt(fname: str):
+    with pymupdf.open(fname) as doc:  # open document
+        text = chr(12).join([page.get_text() for page in doc])
+    # write as a binary file to support non-ASCII characters
+    (project_path / f"{fname.removesuffix('.pdf')}.txt").write_bytes(text.encode())
+
+
+def move_files_to_rag(file: str):
+    shutil.copy(file, project_path / file)
+    print(f"Moved {file} to {project_path}")
+
+
 @mcp.tool
 async def files_to_graph(filenames: list[str]):
-    """Process files and add them to the GraphRAG knowledge graph
-    
+    """Process files and add create the GraphRAG knowledge graph
+
     Args:
         filenames: List of filenames to process and add to the graph
-        
+
+    Exemple: files_to_graph(["document1.txt", "document2.pdf"])
+
     Returns:
         String confirmation message that files were processed for GraphRAG
     """
+    # Clear the input directory first
+    for file in project_path.iterdir():
+        if file.is_file():
+            file.unlink()
+    print(f"Cleared all files from {project_path}")
+
     # Process files first
     for filename in filenames:
         if filename.lower().endswith(".txt"):
             move_files_to_rag(filename)
         elif filename.lower().endswith(".pdf"):
-            convert_pdf_txt(filename)
+            await convert_pdf_txt(filename)
         else:
             raise ValueError(f"Unsupported file type: {filename}")
-    
+
     # Define function to run in thread pool
     def run_indexing():
         try:
@@ -74,26 +85,33 @@ async def files_to_graph(filenames: list[str]):
             return result
         except Exception as e:
             return None, str(e), -1
-    
+
     # Run in thread pool to avoid blocking
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(executor, run_indexing)
-    
+
     # Handle potential errors
     if isinstance(result, tuple):  # Error case
         return f"Error during indexing: {result[1]}"
-    
+
     if result.returncode != 0:
         return f"Error during indexing: {result.stderr}"
-    
-    return "Files processed and indexed for GraphRAG successfully."
 
+    return "Files processed and indexed for GraphRAG successfully."
 
 
 @mcp.tool
 async def query(query: str) -> str:
-    """Query the GraphRAG knowledge graph with a natural language query"""
-    
+    """Query the GraphRAG knowledge graph with a natural language query
+
+    Args:
+        query: Natural language query string
+
+    Exemple: query("What is the main topic of the documents?")
+
+    Returns:
+        String response from GraphRAG"""
+
     def run_query():
         try:
             result = subprocess.run(
@@ -115,17 +133,17 @@ async def query(query: str) -> str:
             return result
         except Exception as e:
             return None, str(e), -1
-    
+
     # Run in thread pool to avoid blocking
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(executor, run_query)
-    
+
     if isinstance(result, tuple):  # Error case
         return f"Error: {result[1]}"
-    
+
     if result.returncode != 0:
         return f"Error: {result.stderr}"
-    
+
     return result.stdout
 
 

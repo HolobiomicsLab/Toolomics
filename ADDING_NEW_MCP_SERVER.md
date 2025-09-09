@@ -91,27 +91,41 @@ if __name__ == "__main__":
     mcp.run(transport="streamable-http", port=port, host="0.0.0.0")
 ```
 
-## Step 2: Add to Registry
+## Step 2: Add to Registry Update Script
 
-Add your server to `registry.json`:
+**NEW AUTOMATED PROCESS:** Add your server to the `TOOLOMICS_SERVERS` configuration in `registry/update_registry.py`:
 
-```json
+```python
 "toolomics-your-tool": {
-  "description": "Brief description of what your tool does",
-  "image": "holobiomicslab/toolomics:latest",
-  "transport": "streamable-http",
-  "args": ["python", "/app/mcp_host/your_tool_name/server.py"],
-  "env_vars": [{"name": "MCP_SERVER_TYPE", "value": "your-tool"}]
+    "path": "your_tool_name/server.py",
+    "description": "Brief description of what your tool does",
+    "image": "holobiomicslab/toolomics:local",
+    "args": ["python", "/app/mcp_host/your_tool_name/server.py"],
+    "tags": ["toolomics", "your-domain", "your-keywords"]
 }
 ```
 
 **Naming Convention:**
 - Registry name: `toolomics-your-tool` (kebab-case)
 - Directory: `your_tool_name` (snake_case)
+- Path: `your_tool_name/server.py` (matches directory structure)
 
-## Step 3: Add to Start Script
+## Step 3: Run Registry Update
 
-Add `"toolomics-your-tool"` to the `SERVERS` array in `start.sh` around line 119.
+**AUTOMATIC REGISTRY & START.SH UPDATE:**
+```bash
+python registry/update_registry.py
+```
+
+This script automatically:
+- ✅ **Creates backup** of current registry.json (keeps latest 5)
+- ✅ **Extracts actual tool names** from your server.py using advanced regex
+- ✅ **Updates registry.json** with your server and detected tools
+- ✅ **Updates start.sh SERVERS array** with your new server
+- ✅ **Syncs official MCP servers** list as commented options
+- ✅ **Preserves active servers** like playwright, plotting, filesystem, git
+
+**No more manual editing of registry.json or start.sh!**
 
 ## Step 4: Deploy and Test
 

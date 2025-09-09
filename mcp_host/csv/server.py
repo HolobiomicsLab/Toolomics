@@ -28,13 +28,6 @@ mcp = FastMCP(
     instructions=description,
 )
 
-
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server"""
-    return "CSV Management"
-
-
 # Default working directory for CSV files - use shared workspace
 CSV_DIR = get_workspace_path()
 CSV_DIR.mkdir(exist_ok=True)
