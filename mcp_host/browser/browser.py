@@ -3,6 +3,8 @@ import sys
 import re
 import time
 import random
+import tempfile
+import uuid
 import markdownify
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
@@ -26,6 +28,7 @@ class Browser:
         self.screenshot_folder = "/projects/.screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
+        self.user_data_dir = None  # Track user data directory for cleanup
         self._start_browser()
 
     def _setup_webdriver_service(self):
@@ -112,6 +115,11 @@ class Browser:
             # Setup Chrome options
             chrome_options = helium.ChromeOptions()
 
+            # Create unique user data directory to avoid conflicts
+            self.user_data_dir = tempfile.mkdtemp(prefix=f"chrome_user_data_{uuid.uuid4().hex[:8]}_")
+            chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
+            print(f"Using unique user data directory: {self.user_data_dir}")
+
             # Detect environment
             in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
                 "/.dockerenv"
@@ -121,6 +129,18 @@ class Browser:
             if self.headless:
                 chrome_options.add_argument("--headless=new")
 
+            # Additional options to prevent conflicts and improve stability
+            chrome_options.add_argument("--no-first-run")
+            chrome_options.add_argument("--disable-default-apps")
+            chrome_options.add_argument("--disable-sync")
+            chrome_options.add_argument("--disable-background-networking")
+            chrome_options.add_argument("--disable-background-timer-throttling")
+            chrome_options.add_argument("--disable-renderer-backgrounding")
+            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+            chrome_options.add_argument("--disable-client-side-phishing-detection")
+            chrome_options.add_argument("--disable-component-update")
+            chrome_options.add_argument("--disable-domain-reliability")
+
             if in_container:
                 # Container-specific options
                 chrome_options.add_argument("--no-sandbox")
@@ -128,7 +148,6 @@ class Browser:
                 chrome_options.add_argument("--disable-gpu")
                 chrome_options.add_argument("--disable-software-rasterizer")
                 chrome_options.add_argument("--disable-extensions")
-                chrome_options.add_argument("--disable-background-timer-throttling")
                 chrome_options.add_argument("--memory-pressure-off")
                 chrome_options.add_argument("--single-process")
                 print("Configured Chrome options for container environment")
@@ -171,9 +190,17 @@ class Browser:
             try:
                 print("Attempting basic fallback initialization...")
                 chrome_options = helium.ChromeOptions()
+                
+                # Create unique user data directory for fallback too
+                if not self.user_data_dir:
+                    self.user_data_dir = tempfile.mkdtemp(prefix=f"chrome_user_data_fallback_{uuid.uuid4().hex[:8]}_")
+                chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
+                
                 chrome_options.add_argument("--headless=new")
                 chrome_options.add_argument("--no-sandbox")
                 chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--no-first-run")
+                chrome_options.add_argument("--disable-default-apps")
 
                 # Try to use basic start_chrome
                 self.driver = start_chrome(options=chrome_options)
@@ -702,12 +729,24 @@ class Browser:
         except Exception:
             return False
 
+    def _cleanup_user_data_dir(self):
+        """Clean up the temporary user data directory."""
+        if self.user_data_dir and os.path.exists(self.user_data_dir):
+            try:
+                import shutil
+                shutil.rmtree(self.user_data_dir, ignore_errors=True)
+                print(f"Cleaned up user data directory: {self.user_data_dir}")
+            except Exception as e:
+                print(f"Warning: Could not clean up user data directory {self.user_data_dir}: {e}")
+
     def quit(self):
         """Quit the browser session."""
         try:
             kill_browser()
         except Exception:
             pass
+        finally:
+            self._cleanup_user_data_dir()
 
     def close(self):
         """Close the browser."""
@@ -715,6 +754,8 @@ class Browser:
             kill_browser()
         except Exception:
             pass
+        finally:
+            self._cleanup_user_data_dir()
 
     def __enter__(self):
         return self

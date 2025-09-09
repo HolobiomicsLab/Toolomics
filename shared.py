@@ -26,6 +26,8 @@ def return_as_dict(func):
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
         if isinstance(result, CommandResult):
+            result.stderr = result.stderr[:16000] or ""
+            result.stdout = result.stdout[:16000] or ""
             return asdict(result)
         elif hasattr(result, "__dataclass_fields__"):
             return asdict(result)
