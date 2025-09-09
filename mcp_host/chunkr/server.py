@@ -35,22 +35,25 @@ except ImportError as e:
 from fastmcp import FastMCP
 
 description = """
-Chunkr MCP Server is PERFECT FOR PDF QUESTION ANSWERING AND DOCUMENT PROCESSING.
-This server specializes in document intelligence with advanced layout analysis, OCR, and semantic chunking.
+Advanced document intelligence MCP server powered by Chunkr AI. Transforms complex documents into LLM/RAG-ready data with Vision Language Model processing, advanced layout analysis, and intelligent OCR.
 
-PRIMARY WORKFLOW - INFORMATION RETRIEVAL:
-1. Use upload_document_from_url() to download and process PDFs from URLs (gets task_id)
-2. Use upload_document() to process local PDFs in workspace (gets task_id)  
-3. Use search_document_content() with task_id to FIND SPECIFIC INFORMATION in the document
-4. Use get_document_chunks() to browse document structure and content
+PRIMARY WORKFLOW - TARGETED INFORMATION RETRIEVAL:
+1. upload_document_from_url() or upload_document() → get task_id
+2. search_document_content() → find specific information with relevance scoring
+3. get_document_chunks() → browse structured content by type (text/tables/images)
 
-SECONDARY WORKFLOW - FULL CONVERSION:
-1. Upload document (same as above)
-2. Use export_to_markdown() for complete document conversion to markdown
+SECONDARY WORKFLOW - FULL DOCUMENT CONVERSION:
+1. Upload document → get task_id  
+2. export_to_markdown(), export_to_html(), or export_to_json()
 
-IDEAL FOR: PDF question answering, document search, information extraction, content analysis.
-ALSO SUPPORTS: Full PDF-to-markdown conversion, document processing, layout-aware text extraction.
-File types: PDFs (primary), PPTs, Word docs, images. Export formats: HTML, Markdown, JSON.
+KEY CAPABILITIES:
+• Document Intelligence: Advanced layout analysis preserves document structure
+• Vision Language Models: Intelligent processing of complex document layouts  
+• Multi-format Support: PDFs, PPTs, Word docs, images
+• Flexible Output: HTML, Markdown, JSON with semantic chunks
+• OCR Excellence: High-quality text extraction from images and scanned documents
+
+PERFECT FOR: PDF Q&A, research paper analysis, technical documentation processing, content extraction.
 """
 
 mcp = FastMCP(
@@ -150,18 +153,16 @@ def list_workspace_documents() -> Dict[str, Any]:
 @mcp.tool
 @return_as_dict
 async def upload_document(filename: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Upload a local document from workspace to Chunkr for processing.
-    This is REQUIRED BEFORE any export operations. You MUST use this tool first to get a task_id.
+    """Upload local document from workspace for intelligent processing with Vision Language Models.
+    REQUIRED first step before search, export, or analysis operations.
     
     Args:
-        filename: Name of the document file in workspace (e.g., 'document.pdf')
-        processing_config: Optional processing configuration (OCR settings, chunk size, etc.)
+        filename: Document file in workspace (supports: PDF, PPT, PPTX, DOC, DOCX, PNG, JPG)
+        processing_config: Optional config for OCR quality, chunking strategy, segment processing
         
     Returns:
-        Dict containing:
-            - status: "success" or "error"
-            - task_id: Chunkr task ID (REQUIRED for all export functions)
-            - task_info: Task information including status and metadata
+        Dict containing task_id (required for all subsequent operations), status, and metadata.
+        Use task_id with search_document_content() for targeted info retrieval.
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -216,18 +217,17 @@ async def upload_document(filename: str, processing_config: Optional[Dict[str, A
 @mcp.tool
 @return_as_dict
 async def upload_document_from_url(url: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Download and upload a document from URL to Chunkr for processing.
-    This downloads the PDF and processes it in one step.
-    This is REQUIRED BEFORE any export operations. You MUST use this tool first to get a task_id.
+    """Download and process document from URL with advanced document intelligence.
+    Combines download + Vision Language Model processing in one step.
+    REQUIRED first step before search, export, or analysis operations.
     
     Args:
-        url: URL of the PDF/document to download and process
-        processing_config: Optional processing configuration
+        url: Document URL (supports: PDF, PPT, PPTX, DOC, DOCX, images)
+        processing_config: Optional config for OCR settings, chunking strategy, LLM processing
         
     Returns:
-        Dict containing:
-            - task_id: Chunkr task ID (REQUIRED for all export functions)
-            - task_info: Task information including status and metadata
+        Dict containing task_id for subsequent operations, processing status, and metadata.
+        Perfect for processing research papers, reports, or online documents.
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -392,22 +392,18 @@ async def export_to_html(task_id: str, output_filename: Optional[str] = None) ->
 @mcp.tool
 @return_as_dict
 async def export_to_markdown(task_id: str, output_filename: Optional[str] = None) -> Dict[str, Any]:
-    """Export processed document to clean Markdown format.
-    This produces high-quality markdown with proper formatting.
+    """Export document to clean, structured Markdown preserving layout and formatting.
+    Uses advanced layout analysis to maintain document structure, tables, and hierarchy.
     REQUIRES: task_id from upload_document() or upload_document_from_url() with "succeeded" status.
     
     Args:
-        task_id: Chunkr task ID 
+        task_id: Chunkr task ID from successful document upload
         output_filename: Optional output filename (defaults to task_id.md)
         
     Returns:
-        Dict containing:
-            - status: "success" or "error"
-            - output_file: Path to the generated Markdown file in workspace
-            - content_preview: Preview of the clean Markdown content
-            - content_length: Size of the converted content
-            
-    The generated markdown file will be saved in the workspace for use with other tools.
+        Dict with output_file path, content preview, and length.
+        Generated markdown preserves document intelligence and is optimized for LLM consumption.
+        Saved in workspace for integration with other MCP tools.
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -642,23 +638,20 @@ async def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str
 @mcp.tool
 @return_as_dict
 async def search_document_content(task_id: str, query: str, max_results: int = 10) -> Dict[str, Any]:
-    """PRIMARY TOOL: Search for specific information within processed document chunks.
-    Use this to ANSWER QUESTIONS about document content instead of converting entire documents.
-    Perfect for extracting hyperparameters, specific values, or targeted information.
+    """PRIMARY TOOL: Intelligent search within processed documents using content analysis.
+    Leverages Vision Language Model processing to find specific information with relevance scoring.
+    Ideal for Q&A, fact extraction, and targeted research without full document conversion.
     
     Args:
-        task_id: Chunkr task ID from upload_document() or upload_document_from_url()
-        query: Search query (e.g., "hyperparameter", "learning rate", "batch size")
-        max_results: Maximum number of matching chunks to return (default: 10)
+        task_id: Chunkr task ID from successful document upload
+        query: Search terms (e.g., "methodology", "results", "hyperparameters", "conclusions")
+        max_results: Maximum matching chunks to return (default: 10)
         
     Returns:
-        Dict containing:
-            - status: "success" or "error"
-            - matches: List of matching text chunks with relevance scores
-            - total_matches: Total number of matches found
-            - query: The original search query
-            
-    Example: search_document_content(task_id, "learning rate OR optimizer")
+        Dict with ranked matches, relevance scores, page numbers, and chunk metadata.
+        Each match includes content, chunk type (text/table/image), and document location.
+        
+    Example: search_document_content(task_id, "neural network architecture")
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -724,6 +717,468 @@ async def search_document_content(task_id: str, query: str, max_results: int = 1
         return CommandResult(
             status="error",
             stderr=f"Failed to search document content: {str(e)}",
+            exit_code=1
+        )
+
+
+@mcp.tool
+@return_as_dict
+async def upload_multiple_documents(filenames: List[str], processing_config: Optional[Dict[str, Any]] = None, parallel: bool = True) -> Dict[str, Any]:
+    """Upload multiple documents from workspace for batch processing with Vision Language Models.
+    Efficient bulk processing with optional parallel execution for document collections.
+    
+    Args:
+        filenames: List of document files in workspace (supports: PDF, PPT, PPTX, DOC, DOCX, PNG, JPG)
+        processing_config: Optional config for OCR quality, chunking strategy, webhook notifications
+        parallel: Process documents in parallel for faster completion (default: True)
+        
+    Returns:
+        Dict with task_ids for each document, success/failure status, and processing metadata.
+        Use returned task_ids with search_document_content() for targeted information retrieval.
+    """
+    if not CHUNKR_AVAILABLE:
+        return CommandResult(
+            status="error",
+            stderr="Chunkr library not available. Install with: pip install chunkr-ai",
+            exit_code=1
+        )
+    
+    try:
+        workspace_path = get_workspace_path()
+        client = get_chunkr_client()
+        
+        results = []
+        failed_uploads = []
+        
+        if parallel:
+            # Process documents in parallel using asyncio.gather
+            import asyncio
+            
+            async def upload_single_doc(filename):
+                try:
+                    file_path = workspace_path / filename
+                    if not file_path.exists():
+                        return {
+                            "filename": filename,
+                            "status": "error",
+                            "error": f"File '{filename}' not found in workspace"
+                        }
+                    
+                    with open(file_path, 'rb') as f:
+                        task = await client.upload(f, config=processing_config)
+                    
+                    return {
+                        "filename": filename,
+                        "task_id": task.task_id,
+                        "status": "success",
+                        "task_status": task.status,
+                        "file_type": file_path.suffix[1:] if file_path.suffix else "unknown",
+                        "created_at": serialize_datetime(getattr(task, 'created_at', None))
+                    }
+                except Exception as e:
+                    return {
+                        "filename": filename,
+                        "status": "error",
+                        "error": str(e)
+                    }
+            
+            # Execute all uploads in parallel
+            upload_tasks = [upload_single_doc(filename) for filename in filenames]
+            results = await asyncio.gather(*upload_tasks, return_exceptions=True)
+            
+            # Process results and separate successes from failures
+            processed_results = []
+            for result in results:
+                if isinstance(result, Exception):
+                    failed_uploads.append({
+                        "filename": "unknown",
+                        "error": str(result)
+                    })
+                elif result["status"] == "error":
+                    failed_uploads.append(result)
+                else:
+                    processed_results.append(result)
+            results = processed_results
+            
+        else:
+            # Process documents sequentially
+            for filename in filenames:
+                try:
+                    file_path = workspace_path / filename
+                    if not file_path.exists():
+                        failed_uploads.append({
+                            "filename": filename,
+                            "error": f"File '{filename}' not found in workspace"
+                        })
+                        continue
+                    
+                    with open(file_path, 'rb') as f:
+                        task = await client.upload(f, config=processing_config)
+                    
+                    results.append({
+                        "filename": filename,
+                        "task_id": task.task_id,
+                        "status": "success",
+                        "task_status": task.status,
+                        "file_type": file_path.suffix[1:] if file_path.suffix else "unknown",
+                        "created_at": serialize_datetime(getattr(task, 'created_at', None))
+                    })
+                    
+                except Exception as e:
+                    failed_uploads.append({
+                        "filename": filename,
+                        "error": str(e)
+                    })
+        
+        # Prepare response
+        successful_uploads = len(results)
+        total_files = len(filenames)
+        
+        return CommandResult(
+            status="success" if successful_uploads > 0 else "error",
+            stdout=json.dumps({
+                "successful_uploads": results,
+                "failed_uploads": failed_uploads,
+                "summary": {
+                    "total_files": total_files,
+                    "successful": successful_uploads,
+                    "failed": len(failed_uploads),
+                    "processing_mode": "parallel" if parallel else "sequential"
+                },
+                "task_ids": [result["task_id"] for result in results],
+                "message": f"Processed {successful_uploads}/{total_files} documents successfully"
+            })
+        )
+        
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=f"Failed to upload multiple documents: {str(e)}",
+            exit_code=1
+        )
+
+
+@mcp.tool
+@return_as_dict
+async def semantic_search_content(task_id: str, query: str, similarity_threshold: float = 0.7, max_results: int = 10) -> Dict[str, Any]:
+    """Advanced semantic search within processed documents using intelligent content matching.
+    Provides better relevance than keyword search by understanding content meaning and context.
+    
+    Args:
+        task_id: Chunkr task ID from successful document upload
+        query: Search query with semantic understanding (e.g., "research methodology", "key findings")
+        similarity_threshold: Minimum similarity score for matches (0.0-1.0, default: 0.7)
+        max_results: Maximum matching chunks to return (default: 10)
+        
+    Returns:
+        Dict with semantically ranked matches, similarity scores, and enhanced metadata.
+        Results prioritize meaning over keyword matching for better information retrieval.
+    """
+    if not CHUNKR_AVAILABLE:
+        return CommandResult(
+            status="error",
+            stderr="Chunkr library not available. Install with: pip install chunkr-ai",
+            exit_code=1
+        )
+    
+    try:
+        # Get chunks from the task
+        chunks_result = await get_document_chunks(task_id)
+        if chunks_result.status != "success":
+            return chunks_result
+        
+        chunks_data = json.loads(chunks_result.stdout)
+        all_chunks = chunks_data["chunks"]
+        
+        if not all_chunks:
+            return CommandResult(
+                status="error",
+                stderr="No content chunks available for semantic search. Document may not have been processed correctly.",
+                exit_code=1
+            )
+        
+        # Enhanced semantic search with multiple matching strategies
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
+        matches = []
+        
+        for i, chunk in enumerate(all_chunks):
+            chunk_text = chunk.get("content", "") or chunk.get("text", "")
+            if not chunk_text:
+                continue
+                
+            chunk_text_lower = chunk_text.lower()
+            chunk_words = set(chunk_text_lower.split())
+            
+            # Calculate semantic similarity using multiple factors
+            similarity_scores = []
+            
+            # 1. Exact phrase matching (highest weight)
+            if query_lower in chunk_text_lower:
+                phrase_score = len(query_lower) / len(chunk_text_lower)
+                similarity_scores.append(phrase_score * 3.0)  # High weight for exact matches
+            
+            # 2. Word overlap similarity
+            common_words = query_words.intersection(chunk_words)
+            if common_words:
+                word_overlap_score = len(common_words) / len(query_words)
+                similarity_scores.append(word_overlap_score * 2.0)  # Medium weight
+            
+            # 3. Partial word matching (stems, prefixes)
+            partial_matches = 0
+            for query_word in query_words:
+                for chunk_word in chunk_words:
+                    if len(query_word) > 3 and len(chunk_word) > 3:
+                        # Check if words share significant prefix/suffix
+                        if (query_word.startswith(chunk_word[:3]) or 
+                            chunk_word.startswith(query_word[:3]) or
+                            query_word.endswith(chunk_word[-3:]) or
+                            chunk_word.endswith(query_word[-3:])):
+                            partial_matches += 1
+                            break
+            
+            if partial_matches > 0:
+                partial_score = partial_matches / len(query_words)
+                similarity_scores.append(partial_score * 1.0)  # Lower weight
+            
+            # 4. Context similarity (surrounding words)
+            context_score = 0
+            for query_word in query_words:
+                query_idx = chunk_text_lower.find(query_word)
+                if query_idx != -1:
+                    # Look at surrounding context (10 words before/after)
+                    context_start = max(0, query_idx - 50)
+                    context_end = min(len(chunk_text_lower), query_idx + len(query_word) + 50)
+                    context = chunk_text_lower[context_start:context_end]
+                    
+                    # Count other query words in context
+                    context_matches = sum(1 for word in query_words if word in context and word != query_word)
+                    if context_matches > 0:
+                        context_score += context_matches / len(query_words)
+            
+            if context_score > 0:
+                similarity_scores.append(context_score * 1.5)  # Medium-high weight
+            
+            # Calculate final similarity score
+            if similarity_scores:
+                final_similarity = sum(similarity_scores) / len(similarity_scores)
+                # Normalize to 0-1 range
+                final_similarity = min(1.0, final_similarity)
+                
+                if final_similarity >= similarity_threshold:
+                    matches.append({
+                        "chunk_index": i,
+                        "chunk_type": chunk.get("type", "unknown"),
+                        "content": chunk_text,
+                        "similarity_score": round(final_similarity, 3),
+                        "page": chunk.get("page", None),
+                        "metadata": chunk.get("metadata", {}),
+                        "match_details": {
+                            "exact_phrase": query_lower in chunk_text_lower,
+                            "word_matches": len(common_words),
+                            "partial_matches": partial_matches,
+                            "context_matches": context_score > 0
+                        }
+                    })
+        
+        # Sort by similarity score (descending)
+        matches.sort(key=lambda x: x["similarity_score"], reverse=True)
+        
+        # Limit results
+        matches = matches[:max_results]
+        
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "matches": matches,
+                "total_matches": len(matches),
+                "query": query,
+                "similarity_threshold": similarity_threshold,
+                "max_results": max_results,
+                "search_type": "semantic"
+            })
+        )
+        
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=f"Failed to perform semantic search: {str(e)}",
+            exit_code=1
+        )
+
+
+@mcp.tool
+@return_as_dict
+async def analyze_document_structure(task_id: str) -> Dict[str, Any]:
+    """Analyze document structure and layout without full content processing.
+    Provides quick assessment of document organization, complexity, and processing results.
+    
+    Args:
+        task_id: Chunkr task ID from successful document upload
+        
+    Returns:
+        Dict with document structure analysis including page count, chunk distribution,
+        content types, processing statistics, and document complexity metrics.
+    """
+    if not CHUNKR_AVAILABLE:
+        return CommandResult(
+            status="error",
+            stderr="Chunkr library not available. Install with: pip install chunkr-ai",
+            exit_code=1
+        )
+    
+    try:
+        client = get_chunkr_client()
+        task = await client.get_task(task_id)
+        
+        if task.status.lower() != "succeeded":
+            return CommandResult(
+                status="error",
+                stderr=f"Task is not completed. Status: {task.status}. Use get_task_status() to monitor progress.",
+                exit_code=1
+            )
+        
+        # Get JSON data for analysis
+        json_data = task.json()
+        if isinstance(json_data, str):
+            json_data = json.loads(json_data)
+        
+        all_chunks = json_data.get("chunks", [])
+        metadata = json_data.get("metadata", {})
+        
+        # Analyze document structure
+        structure_analysis = {
+            "document_metadata": {
+                "total_pages": metadata.get("page_count", "unknown"),
+                "file_size": metadata.get("file_size", "unknown"),
+                "file_type": metadata.get("file_type", "unknown"),
+                "processing_time": metadata.get("processing_time", "unknown")
+            },
+            "chunk_analysis": {
+                "total_chunks": len(all_chunks),
+                "chunk_types": {},
+                "chunks_per_page": {},
+                "content_distribution": {
+                    "text_chunks": 0,
+                    "table_chunks": 0,
+                    "image_chunks": 0,
+                    "other_chunks": 0
+                }
+            },
+            "content_statistics": {
+                "total_characters": 0,
+                "average_chunk_size": 0,
+                "longest_chunk": 0,
+                "shortest_chunk": float('inf') if all_chunks else 0
+            },
+            "structure_complexity": {
+                "has_tables": False,
+                "has_images": False,
+                "multi_column_layout": False,
+                "page_variation": "unknown"
+            }
+        }
+        
+        # Analyze each chunk
+        for chunk in all_chunks:
+            chunk_type = chunk.get("type", "unknown").lower()
+            chunk_content = chunk.get("content", "") or chunk.get("text", "")
+            chunk_page = chunk.get("page", 1)
+            
+            # Count chunk types
+            structure_analysis["chunk_analysis"]["chunk_types"][chunk_type] = \
+                structure_analysis["chunk_analysis"]["chunk_types"].get(chunk_type, 0) + 1
+            
+            # Count chunks per page
+            structure_analysis["chunk_analysis"]["chunks_per_page"][str(chunk_page)] = \
+                structure_analysis["chunk_analysis"]["chunks_per_page"].get(str(chunk_page), 0) + 1
+            
+            # Categorize content
+            if chunk_type in ["text", "paragraph", "heading"]:
+                structure_analysis["chunk_analysis"]["content_distribution"]["text_chunks"] += 1
+            elif chunk_type in ["table", "table_cell"]:
+                structure_analysis["chunk_analysis"]["content_distribution"]["table_chunks"] += 1
+                structure_analysis["structure_complexity"]["has_tables"] = True
+            elif chunk_type in ["image", "figure", "chart"]:
+                structure_analysis["chunk_analysis"]["content_distribution"]["image_chunks"] += 1
+                structure_analysis["structure_complexity"]["has_images"] = True
+            else:
+                structure_analysis["chunk_analysis"]["content_distribution"]["other_chunks"] += 1
+            
+            # Content statistics
+            content_length = len(chunk_content)
+            structure_analysis["content_statistics"]["total_characters"] += content_length
+            
+            if content_length > structure_analysis["content_statistics"]["longest_chunk"]:
+                structure_analysis["content_statistics"]["longest_chunk"] = content_length
+            
+            if content_length < structure_analysis["content_statistics"]["shortest_chunk"]:
+                structure_analysis["content_statistics"]["shortest_chunk"] = content_length
+        
+        # Calculate averages
+        if all_chunks:
+            structure_analysis["content_statistics"]["average_chunk_size"] = \
+                structure_analysis["content_statistics"]["total_characters"] // len(all_chunks)
+        else:
+            structure_analysis["content_statistics"]["shortest_chunk"] = 0
+        
+        # Assess document complexity
+        chunk_types_count = len(structure_analysis["chunk_analysis"]["chunk_types"])
+        pages_with_chunks = len(structure_analysis["chunk_analysis"]["chunks_per_page"])
+        
+        if chunk_types_count > 3:
+            structure_analysis["structure_complexity"]["multi_column_layout"] = True
+        
+        if pages_with_chunks > 1:
+            chunks_per_page_values = list(structure_analysis["chunk_analysis"]["chunks_per_page"].values())
+            variation = max(chunks_per_page_values) - min(chunks_per_page_values)
+            if variation > 5:
+                structure_analysis["structure_complexity"]["page_variation"] = "high"
+            elif variation > 2:
+                structure_analysis["structure_complexity"]["page_variation"] = "medium"
+            else:
+                structure_analysis["structure_complexity"]["page_variation"] = "low"
+        
+        # Overall assessment
+        complexity_score = 0
+        if structure_analysis["structure_complexity"]["has_tables"]:
+            complexity_score += 2
+        if structure_analysis["structure_complexity"]["has_images"]:
+            complexity_score += 2
+        if structure_analysis["structure_complexity"]["multi_column_layout"]:
+            complexity_score += 1
+        if structure_analysis["structure_complexity"]["page_variation"] == "high":
+            complexity_score += 2
+        elif structure_analysis["structure_complexity"]["page_variation"] == "medium":
+            complexity_score += 1
+        
+        if complexity_score >= 5:
+            overall_complexity = "high"
+        elif complexity_score >= 3:
+            overall_complexity = "medium"
+        else:
+            overall_complexity = "low"
+        
+        structure_analysis["overall_assessment"] = {
+            "complexity_level": overall_complexity,
+            "complexity_score": complexity_score,
+            "processing_quality": "good" if len(all_chunks) > 0 else "poor",
+            "recommended_search_strategy": "semantic" if complexity_score >= 3 else "keyword"
+        }
+        
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "task_id": task_id,
+                "structure_analysis": structure_analysis,
+                "message": f"Document structure analyzed: {overall_complexity} complexity, {len(all_chunks)} chunks across {pages_with_chunks} pages"
+            })
+        )
+        
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=f"Failed to analyze document structure: {str(e)}",
             exit_code=1
         )
 

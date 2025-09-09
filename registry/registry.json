@@ -208,7 +208,7 @@
       ]
   },
     "toolomics-chunkr": {
-      "description": "PERFECT FOR PDF QUESTION ANSWERING! Search specific information in documents with search_document_content(). Workflow: upload_document_from_url() → search_document_content(). Also converts PDFs to markdown. Advanced document intelligence with layout analysis and OCR.",
+      "description": "Advanced document intelligence powered by Chunkr AI with Vision Language Models. PERFECT FOR: PDF Q&A, research analysis, technical documentation. Features: intelligent layout analysis, high-quality OCR, semantic chunking. Workflow: upload_document_from_url() → search_document_content() for targeted info retrieval. Supports: PDF, PPT, Word, images. Export: Markdown, HTML, JSON.",
       "image": "holobiomicslab/toolomics:local",
       "transport": "streamable-http",
       "args": [
