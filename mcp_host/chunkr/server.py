@@ -158,12 +158,7 @@ async def upload_document(filename: str, processing_config: Optional[Dict[str, A
     
     Args:
         filename: Document file in workspace (supports: PDF, PPT, PPTX, DOC, DOCX, PNG, JPG)
-        processing_config: Optional configuration dict. Examples:
-            - None (recommended): Uses default configuration
-            - {"ocr_strategy": "Auto"}: Enable intelligent OCR
-            - {"segmentation_strategy": "LayoutAnalysis"}: Use layout analysis
-            - {"chunk_processing": {"target_length": 512}}: Custom chunk size
-            INVALID: "", "default", or any string value will cause validation errors
+        processing_config: Optional config dict or None for defaults
         
     Returns:
         Dict containing task_id (required for all subsequent operations), status, and metadata.
@@ -759,12 +754,7 @@ async def upload_multiple_documents(filenames: List[str], processing_config: Opt
     
     Args:
         filenames: List of document files in workspace (supports: PDF, PPT, PPTX, DOC, DOCX, PNG, JPG)
-        processing_config: Optional configuration dict. Examples:
-            - None (recommended): Uses default configuration
-            - {"ocr_strategy": "Auto"}: Enable intelligent OCR
-            - {"segmentation_strategy": "LayoutAnalysis"}: Use layout analysis
-            - {"chunk_processing": {"target_length": 512}}: Custom chunk size
-            INVALID: "", "default", or any string value will cause validation errors
+        processing_config: Optional config dict or None for defaults
         parallel: Process documents in parallel for faster completion (default: True)
         
     Returns:
