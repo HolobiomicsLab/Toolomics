@@ -208,7 +208,7 @@
       ]
   },
     "toolomics-chunkr": {
-      "description": "Document intelligence MCP server using Chunkr for RAG-ready document processing",
+      "description": "PERFECT FOR PDF QUESTION ANSWERING! Search specific information in documents with search_document_content(). Workflow: upload_document_from_url() → search_document_content(). Also converts PDFs to markdown. Advanced document intelligence with layout analysis and OCR.",
       "image": "holobiomicslab/toolomics:local",
       "transport": "streamable-http",
       "args": [

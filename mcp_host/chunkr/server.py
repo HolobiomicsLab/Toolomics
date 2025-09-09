@@ -35,10 +35,22 @@ except ImportError as e:
 from fastmcp import FastMCP
 
 description = """
-Chunkr MCP Server provides document intelligence tools for converting various document types 
-into RAG/LLM-ready chunks. Features include layout analysis, OCR, semantic chunking, and 
-export to multiple formats (HTML, Markdown, JSON). Supports PDFs, PPTs, Word docs, and images.
-All operations work with files in the centralized workspace directory.
+Chunkr MCP Server is PERFECT FOR PDF QUESTION ANSWERING AND DOCUMENT PROCESSING.
+This server specializes in document intelligence with advanced layout analysis, OCR, and semantic chunking.
+
+PRIMARY WORKFLOW - INFORMATION RETRIEVAL:
+1. Use upload_document_from_url() to download and process PDFs from URLs (gets task_id)
+2. Use upload_document() to process local PDFs in workspace (gets task_id)  
+3. Use search_document_content() with task_id to FIND SPECIFIC INFORMATION in the document
+4. Use get_document_chunks() to browse document structure and content
+
+SECONDARY WORKFLOW - FULL CONVERSION:
+1. Upload document (same as above)
+2. Use export_to_markdown() for complete document conversion to markdown
+
+IDEAL FOR: PDF question answering, document search, information extraction, content analysis.
+ALSO SUPPORTS: Full PDF-to-markdown conversion, document processing, layout-aware text extraction.
+File types: PDFs (primary), PPTs, Word docs, images. Export formats: HTML, Markdown, JSON.
 """
 
 mcp = FastMCP(
@@ -138,16 +150,17 @@ def list_workspace_documents() -> Dict[str, Any]:
 @mcp.tool
 @return_as_dict
 async def upload_document(filename: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Upload a document to Chunkr for processing
+    """Upload a local document from workspace to Chunkr for processing.
+    This is REQUIRED BEFORE any export operations. You MUST use this tool first to get a task_id.
     
     Args:
-        filename: Name of the document file in workspace
+        filename: Name of the document file in workspace (e.g., 'document.pdf')
         processing_config: Optional processing configuration (OCR settings, chunk size, etc.)
         
     Returns:
         Dict containing:
             - status: "success" or "error"
-            - task_id: Chunkr task ID for tracking processing
+            - task_id: Chunkr task ID (REQUIRED for all export functions)
             - task_info: Task information including status and metadata
     """
     if not CHUNKR_AVAILABLE:
@@ -203,14 +216,18 @@ async def upload_document(filename: str, processing_config: Optional[Dict[str, A
 @mcp.tool
 @return_as_dict
 async def upload_document_from_url(url: str, processing_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Upload a document from URL to Chunkr for processing
+    """Download and upload a document from URL to Chunkr for processing.
+    This downloads the PDF and processes it in one step.
+    This is REQUIRED BEFORE any export operations. You MUST use this tool first to get a task_id.
     
     Args:
-        url: URL of the document to process
+        url: URL of the PDF/document to download and process
         processing_config: Optional processing configuration
         
     Returns:
-        Dict containing task information for the uploaded document
+        Dict containing:
+            - task_id: Chunkr task ID (REQUIRED for all export functions)
+            - task_info: Task information including status and metadata
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -253,15 +270,16 @@ async def upload_document_from_url(url: str, processing_config: Optional[Dict[st
 @mcp.tool
 @return_as_dict
 async def get_task_status(task_id: str) -> Dict[str, Any]:
-    """Get the processing status of a Chunkr task
+    """Check the processing status of a Chunkr task.
+    Status must be "succeeded" before you can use export functions.
     
     Args:
-        task_id: Chunkr task ID
+        task_id: Chunkr task ID from upload_document() or upload_document_from_url()
         
     Returns:
         Dict containing:
             - status: "success" or "error"
-            - task_status: Current processing status
+            - task_status: Current processing status 
             - task_info: Complete task information
     """
     if not CHUNKR_AVAILABLE:
@@ -374,17 +392,22 @@ async def export_to_html(task_id: str, output_filename: Optional[str] = None) ->
 @mcp.tool
 @return_as_dict
 async def export_to_markdown(task_id: str, output_filename: Optional[str] = None) -> Dict[str, Any]:
-    """Export processed document to Markdown format
+    """Export processed document to clean Markdown format.
+    This produces high-quality markdown with proper formatting.
+    REQUIRES: task_id from upload_document() or upload_document_from_url() with "succeeded" status.
     
     Args:
-        task_id: Chunkr task ID
+        task_id: Chunkr task ID 
         output_filename: Optional output filename (defaults to task_id.md)
         
     Returns:
         Dict containing:
             - status: "success" or "error"
-            - output_file: Path to the generated Markdown file
-            - content_preview: Preview of the Markdown content
+            - output_file: Path to the generated Markdown file in workspace
+            - content_preview: Preview of the clean Markdown content
+            - content_length: Size of the converted content
+            
+    The generated markdown file will be saved in the workspace for use with other tools.
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -420,10 +443,21 @@ async def export_to_markdown(task_id: str, output_filename: Optional[str] = None
         # Export to Markdown
         markdown_content = task.markdown(output_file=str(output_path))
         
-        # Debug: Check if file was actually created
-        print(f"DEBUG: File created: {output_path.exists()}")
-        if output_path.exists():
-            print(f"DEBUG: File size: {output_path.stat().st_size} bytes")
+        # Check if file was created in expected location
+        actual_file_path = output_path
+        if not output_path.exists():
+            # Check if file was created in /projects directory instead
+            projects_path = Path("/projects") / output_filename
+            if projects_path.exists():
+                actual_file_path = projects_path
+                print(f"DEBUG: File found at {projects_path} instead of {output_path}")
+            else:
+                print(f"DEBUG: File not found at {output_path} or {projects_path}")
+        
+        print(f"DEBUG: Final file path: {actual_file_path}")
+        print(f"DEBUG: File exists: {actual_file_path.exists()}")
+        if actual_file_path.exists():
+            print(f"DEBUG: File size: {actual_file_path.stat().st_size} bytes")
         
         # Get content preview (first 500 chars)
         preview = markdown_content[:500] + "..." if len(markdown_content) > 500 else markdown_content
@@ -431,7 +465,8 @@ async def export_to_markdown(task_id: str, output_filename: Optional[str] = None
         return CommandResult(
             status="success",
             stdout=json.dumps({
-                "output_file": str(output_path),
+                "output_file": str(actual_file_path),
+                "workspace_file": str(output_path),
                 "content_preview": preview,
                 "content_length": len(markdown_content),
                 "message": f"Markdown exported to {output_filename}"
@@ -520,18 +555,22 @@ async def export_to_json(task_id: str, output_filename: Optional[str] = None) ->
 @mcp.tool
 @return_as_dict
 async def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str, Any]:
-    """Get processed chunks from a Chunkr task
+    """Browse document structure and get all processed chunks from a Chunkr task.
+    Use this to understand document organization or get all content for analysis.
+    For targeted information retrieval, use search_document_content() instead.
     
     Args:
-        task_id: Chunkr task ID
+        task_id: Chunkr task ID from upload_document() or upload_document_from_url()
         chunk_type: Type of chunks to return ("all", "text", "tables", "images")
         
     Returns:
         Dict containing:
             - status: "success" or "error"
-            - chunks: List of document chunks with metadata
-            - total_chunks: Total number of chunks
+            - chunks: List of document chunks with content and metadata
+            - total_chunks: Total number of chunks returned
             - chunk_types: Available chunk types in the document
+            
+    Use search_document_content() for targeted information extraction instead.
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -556,7 +595,18 @@ async def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str
         if isinstance(json_data, str):
             json_data = json.loads(json_data)
         
+        # Debug: Log the JSON structure to understand the data format
+        print(f"DEBUG: JSON data keys: {json_data.keys() if isinstance(json_data, dict) else 'Not a dict'}")
+        print(f"DEBUG: JSON data type: {type(json_data)}")
+        if isinstance(json_data, dict):
+            print(f"DEBUG: JSON data sample: {str(json_data)[:500]}...")
+        
         all_chunks = json_data.get("chunks", [])
+        
+        # Add helpful information if no chunks found
+        if not all_chunks:
+            print(f"WARNING: No chunks found in processed document. JSON data structure: {list(json_data.keys()) if isinstance(json_data, dict) else 'Not a dict'}")
+            print(f"Full JSON data (truncated): {str(json_data)[:1000]}...")
         
         # Filter chunks by type
         if chunk_type == "all":
@@ -592,19 +642,23 @@ async def get_document_chunks(task_id: str, chunk_type: str = "all") -> Dict[str
 @mcp.tool
 @return_as_dict
 async def search_document_content(task_id: str, query: str, max_results: int = 10) -> Dict[str, Any]:
-    """Search for content within processed document chunks
+    """PRIMARY TOOL: Search for specific information within processed document chunks.
+    Use this to ANSWER QUESTIONS about document content instead of converting entire documents.
+    Perfect for extracting hyperparameters, specific values, or targeted information.
     
     Args:
-        task_id: Chunkr task ID
-        query: Search query string
-        max_results: Maximum number of results to return
+        task_id: Chunkr task ID from upload_document() or upload_document_from_url()
+        query: Search query (e.g., "hyperparameter", "learning rate", "batch size")
+        max_results: Maximum number of matching chunks to return (default: 10)
         
     Returns:
         Dict containing:
             - status: "success" or "error"
-            - matches: List of matching chunks with relevance scores
+            - matches: List of matching text chunks with relevance scores
             - total_matches: Total number of matches found
             - query: The original search query
+            
+    Example: search_document_content(task_id, "learning rate OR optimizer")
     """
     if not CHUNKR_AVAILABLE:
         return CommandResult(
@@ -616,11 +670,19 @@ async def search_document_content(task_id: str, query: str, max_results: int = 1
     try:
         # Get chunks from the task
         chunks_result = await get_document_chunks(task_id)
-        if chunks_result["status"] != "success":
+        if chunks_result.status != "success":
             return chunks_result
         
-        chunks_data = json.loads(chunks_result["stdout"])
+        chunks_data = json.loads(chunks_result.stdout)
         all_chunks = chunks_data["chunks"]
+        
+        # Check if chunks are available
+        if not all_chunks:
+            return CommandResult(
+                status="error",
+                stderr="No content chunks available for search. The document may not have been processed correctly or may contain no extractable text content. Try using export_to_markdown() to get the full document content instead.",
+                exit_code=1
+            )
         
         # Simple text-based search (case-insensitive)
         query_lower = query.lower()
