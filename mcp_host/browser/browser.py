@@ -28,6 +28,42 @@ class Browser:
         self.driver = None  # Initialize driver instance variable
         self._start_browser()
 
+    def _with_timeout(self, operation_func, timeout_seconds: int = 15, operation_name: str = "browser operation"):
+        """Execute a browser operation with timeout protection.
+        
+        Args:
+            operation_func: Function to execute
+            timeout_seconds: Timeout in seconds
+            operation_name: Name for logging purposes
+            
+        Returns:
+            Result of operation_func or None if timeout/error
+        """
+        try:
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError(f"{operation_name} timeout after {timeout_seconds}s")
+            
+            # Set timeout
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(timeout_seconds)
+            
+            try:
+                result = operation_func()
+                signal.alarm(0)  # Clear alarm
+                return result
+            finally:
+                signal.alarm(0)  # Always clear alarm
+                signal.signal(signal.SIGALRM, old_handler)  # Restore handler
+                
+        except TimeoutError as e:
+            print(f"Timeout in {operation_name}: {e}")
+            return None
+        except Exception as e:
+            print(f"Error in {operation_name}: {e}")
+            return None
+
     def _setup_webdriver_service(self):
         """Setup WebDriver service with automatic driver management."""
         in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
@@ -245,7 +281,6 @@ class Browser:
     def _get_http_status_code(self, driver) -> int:
         """Get HTTP status code from the current page with robust fallback methods."""
         try:
-            # Method 1: Try to get status from performance logs (Chrome) - but handle gracefully if not supported
             try:
                 logs = driver.get_log('performance')
                 for log in reversed(logs):  # Check most recent logs first
@@ -254,7 +289,7 @@ class Browser:
                         import json
                         try:
                             message = json.loads(message)
-                        except:
+                        except json.JSONDecodeError:
                             continue
                             
                     if message.get('method') == 'Network.responseReceived':
@@ -263,97 +298,17 @@ class Browser:
                         if status and isinstance(status, int):
                             return status
             except Exception as log_error:
-                # Performance logs not supported or failed - continue to fallback methods
                 print(f"Performance logs not available: {log_error}")
-            
-            # Method 2: Try to execute JavaScript to get response status
             try:
-                # Use JavaScript to check if we can access performance API
-                status_code = driver.execute_script("""
-                    try {
-                        // Try to get status from performance entries
-                        const entries = performance.getEntriesByType('navigation');
-                        if (entries.length > 0 && entries[0].responseStatus) {
-                            return entries[0].responseStatus;
-                        }
-                        
-                        // Try to get from resource entries for the current page
-                        const resourceEntries = performance.getEntriesByType('resource');
-                        const currentUrl = window.location.href;
-                        for (let entry of resourceEntries) {
-                            if (entry.name === currentUrl && entry.responseStatus) {
-                                return entry.responseStatus;
-                            }
-                        }
-                        
-                        // Check if document indicates an error
-                        const title = document.title.toLowerCase();
-                        const body = document.body ? document.body.innerText.toLowerCase() : '';
-                        
-                        if (title.includes('404') || body.includes('404 not found')) {
-                            return 404;
-                        }
-                        if (title.includes('500') || body.includes('500 internal server error')) {
-                            return 500;
-                        }
-                        if (title.includes('403') || body.includes('403 forbidden')) {
-                            return 403;
-                        }
-                        
-                        return null; // Unknown status
-                    } catch (e) {
-                        return null;
-                    }
-                """)
-                
-                if status_code and isinstance(status_code, int):
-                    return status_code
-                    
-            except Exception as js_error:
-                print(f"JavaScript status detection failed: {js_error}")
-            
-            # Method 3: Fallback - analyze page content for error indicators
-            try:
-                page_source = driver.page_source.lower()
-                page_title = driver.title.lower()
-                
-                # Check for common error patterns
-                error_patterns = [
-                    (404, ['404', 'not found', 'page not found', 'file not found']),
-                    (500, ['500', 'internal server error', 'server error']),
-                    (403, ['403', 'forbidden', 'access denied']),
-                    (502, ['502', 'bad gateway']),
-                    (503, ['503', 'service unavailable']),
-                ]
-                
-                for status_code, patterns in error_patterns:
-                    for pattern in patterns:
-                        if (pattern in page_source or pattern in page_title):
-                            # Additional validation to avoid false positives
-                            if any(error_word in page_source for error_word in ['error', 'problem', 'issue']):
-                                return status_code
-                
-                # Method 4: Check current URL for redirects to error pages
-                current_url = driver.current_url.lower()
-                if any(error_path in current_url for error_path in ['/404', '/error', '/not-found']):
-                    return 404
-                    
-            except Exception as content_error:
-                print(f"Content analysis failed: {content_error}")
-            
-            # Method 5: If page loaded successfully and no errors detected, assume 200
-            try:
-                # Verify page actually loaded by checking if we have content
                 if driver.page_source and len(driver.page_source.strip()) > 100:
                     return 200
                 else:
-                    return 0  # Empty or minimal content might indicate an error
-            except:
+                    return 0
+            except Exception as content_error:
+                print(f"Content analysis failed: {content_error}")
                 return 200  # Default assumption
-            
         except Exception as e:
             print(f"All HTTP status detection methods failed: {e}")
-            # Final fallback - if we got here, assume the page loaded (even if with errors)
             return 200
 
     def _safe_human_scroll(self):
@@ -393,7 +348,7 @@ class Browser:
 
     def get_text(self) -> Optional[str]:
         """Get page text as formatted Markdown."""
-        try:
+        def _get_text_operation():
             page_source = get_driver().page_source
             soup = BeautifulSoup(page_source, "html.parser")
 
@@ -421,8 +376,8 @@ class Browser:
             result = "[Start of page]\n\n" + "\n\n".join(lines) + "\n\n[End of page]"
             result = re.sub(r"!\[(.*?)\]\(.*?\)", r"[IMAGE: \1]", result)
             return result[:4096]
-        except Exception:
-            return None
+        
+        return self._with_timeout(_get_text_operation, timeout_seconds=15, operation_name="get_text")
 
     def is_link_valid(self, url: str) -> bool:
         """Check if a URL is a valid navigable link."""
@@ -491,7 +446,7 @@ class Browser:
 
     def get_navigable(self) -> List[str]:
         """Get all navigable links on the current page."""
-        try:
+        def _get_navigable_operation():
             links = []
             link_elements = find_all(Link())
 
@@ -505,8 +460,9 @@ class Browser:
                     links.append(href)
 
             return list(set(links))  # Remove duplicates
-        except Exception:
-            return []
+        
+        result = self._with_timeout(_get_navigable_operation, timeout_seconds=20, operation_name="get_navigable")
+        return result if result is not None else []
 
     def _get_downloadable_extensions(self) -> List[str]:
         """Get list of downloadable file extensions."""
@@ -696,7 +652,7 @@ class Browser:
 
     def get_downloadable(self) -> List[str]:
         """Get all downloadable resource links on the current page."""
-        try:
+        def _get_downloadable_operation():
             current_url = self.get_current_url()
             base_url = (
                 f"{urlparse(current_url).scheme}://{urlparse(current_url).netloc}"
@@ -707,10 +663,9 @@ class Browser:
             attribute_links = self._extract_links_from_attributes(current_url, base_url)
             all_links.extend(attribute_links)
             return self._deduplicate_links(all_links)
-
-        except Exception as e:
-            print(f"Error getting downloadable links: {e}")
-            return []
+        
+        result = self._with_timeout(_get_downloadable_operation, timeout_seconds=25, operation_name="get_downloadable")
+        return result if result is not None else []
 
     def download_file(self, url: str) -> Optional[tuple[bool, str]]:
         """Download a file from URL to current directory.
@@ -842,22 +797,31 @@ class Browser:
 
     def get_current_url(self) -> str:
         """Get the current URL."""
-        return get_driver().current_url
+        def _get_current_url_operation():
+            return get_driver().current_url
+        
+        result = self._with_timeout(_get_current_url_operation, timeout_seconds=10, operation_name="get_current_url")
+        return result if result is not None else "about:blank"
 
     def get_page_title(self) -> str:
         """Get the page title."""
-        return get_driver().title
+        def _get_page_title_operation():
+            return get_driver().title
+        
+        result = self._with_timeout(_get_page_title_operation, timeout_seconds=10, operation_name="get_page_title")
+        return result if result is not None else "Unknown"
 
     def screenshot(self, filename: str = "updated_screen.png") -> bool:
         """Take a screenshot."""
-        try:
+        def _screenshot_operation():
             if not os.path.exists(self.screenshot_folder):
                 os.makedirs(self.screenshot_folder)
             path = os.path.join(self.screenshot_folder, filename)
             get_driver().save_screenshot(path)
             return True
-        except Exception:
-            return False
+        
+        result = self._with_timeout(_screenshot_operation, timeout_seconds=15, operation_name="screenshot")
+        return result if result is not None else False
 
     def get_screenshot(self) -> str:
         """Get screenshot path."""
