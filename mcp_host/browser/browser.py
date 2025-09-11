@@ -132,6 +132,15 @@ class Browser:
                 chrome_options.add_argument("--memory-pressure-off")
                 chrome_options.add_argument("--single-process")
                 print("Configured Chrome options for container environment")
+            
+            # Enable performance logging when possible (helps with status detection)
+            try:
+                chrome_options.add_experimental_option("useAutomationExtension", False)
+                chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+                # Enable performance logging if supported
+                chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
+            except Exception as e:
+                print(f"Could not enable performance logging: {e}")
 
             # Set browser binary
             browser_binary = self._get_browser_binary()
@@ -234,40 +243,117 @@ class Browser:
             return False, 0, f"Navigation failed: {str(e)}"
 
     def _get_http_status_code(self, driver) -> int:
-        """Get HTTP status code from the current page."""
+        """Get HTTP status code from the current page with robust fallback methods."""
         try:
-            # Try to get status from performance logs (Chrome)
-            logs = driver.get_log('performance')
-            for log in reversed(logs):  # Check most recent logs first
-                message = log.get('message', {})
-                if isinstance(message, str):
-                    import json
-                    try:
-                        message = json.loads(message)
-                    except:
-                        continue
+            # Method 1: Try to get status from performance logs (Chrome) - but handle gracefully if not supported
+            try:
+                logs = driver.get_log('performance')
+                for log in reversed(logs):  # Check most recent logs first
+                    message = log.get('message', {})
+                    if isinstance(message, str):
+                        import json
+                        try:
+                            message = json.loads(message)
+                        except:
+                            continue
+                            
+                    if message.get('method') == 'Network.responseReceived':
+                        response = message.get('params', {}).get('response', {})
+                        status = response.get('status')
+                        if status and isinstance(status, int):
+                            return status
+            except Exception as log_error:
+                # Performance logs not supported or failed - continue to fallback methods
+                print(f"Performance logs not available: {log_error}")
+            
+            # Method 2: Try to execute JavaScript to get response status
+            try:
+                # Use JavaScript to check if we can access performance API
+                status_code = driver.execute_script("""
+                    try {
+                        // Try to get status from performance entries
+                        const entries = performance.getEntriesByType('navigation');
+                        if (entries.length > 0 && entries[0].responseStatus) {
+                            return entries[0].responseStatus;
+                        }
                         
-                if message.get('method') == 'Network.responseReceived':
-                    response = message.get('params', {}).get('response', {})
-                    status = response.get('status')
-                    if status and isinstance(status, int):
-                        return status
+                        // Try to get from resource entries for the current page
+                        const resourceEntries = performance.getEntriesByType('resource');
+                        const currentUrl = window.location.href;
+                        for (let entry of resourceEntries) {
+                            if (entry.name === currentUrl && entry.responseStatus) {
+                                return entry.responseStatus;
+                            }
+                        }
+                        
+                        // Check if document indicates an error
+                        const title = document.title.toLowerCase();
+                        const body = document.body ? document.body.innerText.toLowerCase() : '';
+                        
+                        if (title.includes('404') || body.includes('404 not found')) {
+                            return 404;
+                        }
+                        if (title.includes('500') || body.includes('500 internal server error')) {
+                            return 500;
+                        }
+                        if (title.includes('403') || body.includes('403 forbidden')) {
+                            return 403;
+                        }
+                        
+                        return null; // Unknown status
+                    } catch (e) {
+                        return null;
+                    }
+                """)
+                
+                if status_code and isinstance(status_code, int):
+                    return status_code
+                    
+            except Exception as js_error:
+                print(f"JavaScript status detection failed: {js_error}")
             
-            # Fallback: check for common error indicators in page content
-            page_source = driver.page_source.lower()
-            if '404' in page_source and ('not found' in page_source or 'error' in page_source):
-                return 404
-            elif '500' in page_source and 'internal server error' in page_source:
-                return 500
-            elif '403' in page_source and 'forbidden' in page_source:
-                return 403
+            # Method 3: Fallback - analyze page content for error indicators
+            try:
+                page_source = driver.page_source.lower()
+                page_title = driver.title.lower()
+                
+                # Check for common error patterns
+                error_patterns = [
+                    (404, ['404', 'not found', 'page not found', 'file not found']),
+                    (500, ['500', 'internal server error', 'server error']),
+                    (403, ['403', 'forbidden', 'access denied']),
+                    (502, ['502', 'bad gateway']),
+                    (503, ['503', 'service unavailable']),
+                ]
+                
+                for status_code, patterns in error_patterns:
+                    for pattern in patterns:
+                        if (pattern in page_source or pattern in page_title):
+                            # Additional validation to avoid false positives
+                            if any(error_word in page_source for error_word in ['error', 'problem', 'issue']):
+                                return status_code
+                
+                # Method 4: Check current URL for redirects to error pages
+                current_url = driver.current_url.lower()
+                if any(error_path in current_url for error_path in ['/404', '/error', '/not-found']):
+                    return 404
+                    
+            except Exception as content_error:
+                print(f"Content analysis failed: {content_error}")
             
-            # If we can't determine status and page loaded, assume 200
-            return 200
+            # Method 5: If page loaded successfully and no errors detected, assume 200
+            try:
+                # Verify page actually loaded by checking if we have content
+                if driver.page_source and len(driver.page_source.strip()) > 100:
+                    return 200
+                else:
+                    return 0  # Empty or minimal content might indicate an error
+            except:
+                return 200  # Default assumption
             
         except Exception as e:
-            print(f"Could not determine HTTP status: {e}")
-            # If we can't get status, assume success if page loaded
+            print(f"All HTTP status detection methods failed: {e}")
+            # Final fallback - if we got here, assume the page loaded (even if with errors)
             return 200
 
     def _safe_human_scroll(self):
