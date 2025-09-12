@@ -15,7 +15,7 @@ import os
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import return_as_dict, run_bash_subprocess, CommandResult
+from shared import return_as_dict, run_bash_subprocess, CommandResult, get_workspace_path
 
 description = """
 R script MCP Server provides tools for executing R scripts and managing R environments.
@@ -29,17 +29,14 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server"""
-    return "R command MCP"
+
 
 
 # Ensure workspace directory exists
 # STORAGE_DIR = Path("./workspace")
 # STORAGE_DIR.mkdir(exist_ok=True)
 
-SCRIPT_DIR = Path("/projects")
+SCRIPT_DIR = get_workspace_path()
 SCRIPT_DIR.mkdir(exist_ok=True)
 
 
@@ -151,7 +148,7 @@ def list_workspace_files() -> List[str]:
         >>> list_workspace_files()
         ["analysis1.r", "data.csv", "results.txt"]
     """
-    return [f.name for f in Path(".").iterdir() if f.is_file()]
+    return [f.name for f in get_workspace_path().iterdir() if f.is_file()]
 
 
 @mcp.tool
@@ -166,7 +163,7 @@ def list_script_files() -> List[str]:
         >>> list_script_files()
         ["analysis.r", "preprocessing.r", "visualization.r"]
     """
-    return [f.name for f in Path(".").iterdir() if f.is_file()]
+    return [f.name for f in get_workspace_path().iterdir() if f.is_file()]
 
 
 @mcp.tool
@@ -190,7 +187,7 @@ def execute_r_script_file(filename: str) -> Dict[str, Any]:
             "exit_code": 0
         }}
     """
-    script_path =  Path(".") / filename
+    script_path = get_workspace_path() / filename
     if not script_path.exists() or not script_path.is_file():
         return f"File '{filename}' does not exist in script dir."
 

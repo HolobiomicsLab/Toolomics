@@ -9,31 +9,27 @@ import asyncio
 import json
 from fastmcp import Client
 
-
 async def test_shell():
     """Test all Shell operations comprehensively."""
-
+    
     shell_port = 5102
     # Connect to the MCP server
     async with Client(f"http://localhost:{shell_port}/mcp") as client:
         print("🚀 Connected to Shell MCP Server")
-
+        
         # List available tools
         tools = await client.list_tools()
         print(f"📋 Available tools: {[tool.name for tool in tools]}")
         print()
-
+        
         # Test 1
         print("=" * 50)
         print("TEST 1: calling ls commands")
         print("=" * 50)
-
-        result = await client.call_tool(
-            "execute_command",
-            {
-                "command": "ls",
-            },
-        )
+        
+        result = await client.call_tool("execute_command", {
+            "command": "ls",
+        })
 
         dict_result = json.loads(result[0].text) if result else {}
         print(f"📋 Command output: {dict_result['stdout']}")
@@ -42,13 +38,10 @@ async def test_shell():
         print("=" * 50)
         print("TEST 2: check file exists")
         print("=" * 50)
-
-        result = await client.call_tool(
-            "execute_command",
-            {
-                "command": "test -e , workspace/QC_0.mzML",
-            },
-        )
+        
+        result = await client.call_tool("execute_command", {
+            "command": "test -e , workspace/QC_0.mzML",
+        })
 
         dict_result = json.loads(result[0].text) if result else {}
         print(f"📋 Command output: {dict_result['stdout']}")
@@ -57,16 +50,14 @@ async def test_shell():
         print("=" * 50)
         print("TEST 3: try remove file")
         print("=" * 50)
-
-        result = await client.call_tool(
-            "execute_command",
-            {
-                "command": "rm -f workspace/QC_0_adducts.csv",
-            },
-        )
+        
+        result = await client.call_tool("execute_command", {
+            "command": "rm -f workspace/QC_0_adducts.csv",
+        })
 
         dict_result = json.loads(result[0].text) if result else {}
         print(f"📋 Command output: {dict_result['stdout']}")
+        
 
 
 if __name__ == "__main__":

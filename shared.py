@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from functools import wraps
 import subprocess
+from pathlib import Path
 
 
 @dataclass
@@ -33,13 +34,25 @@ def return_as_dict(func):
     return wrapper
 
 
+def get_workspace_path() -> Path:
+    """Get standardized workspace path with fallback.
+    
+    Returns:
+        Path: ./workspace if it exists (container environment), otherwise current working directory
+    """
+    workspace_path = Path("./workspace")
+    if not workspace_path.exists():
+        workspace_path = Path.cwd()
+    return workspace_path
+
+
 def run_bash_subprocess(
     command: str,
     timeout: int = 30,
 ) -> CommandResult:
     import os
-    # Set working directory to /projects for consistency
-    cwd = "/projects" if os.path.exists("/projects") else None
+    # Set working directory to ./workspace for consistency
+    cwd = "./workspace" if os.path.exists("./workspace") else None
     print(f"Running command: {command} with timeout: {timeout} seconds in {cwd}")
     try:
         result = subprocess.run(

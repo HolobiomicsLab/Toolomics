@@ -31,11 +31,6 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server"""
-    return "Bash command MCP"
-
 
 @mcp.tool
 @return_as_dict
@@ -58,17 +53,6 @@ def execute_command(command: str) -> dict:
     print(f"Executing command: {command}")
 
     dangerous_patterns = [
-        ["rm", "-r"],
-        ["rm", "-rf"],
-        ["rm", "-f"],
-        ["kill", "-9"],
-        ["chmod", "777"],
-        ["mv", "/etc"],
-        ["cp", "/etc"],
-        ["rm", "/etc"],
-        ["rm", "/usr"],
-        ["rm", "/var"],
-        ["rm", "/"],
     ]
     try:
         command_words = shlex.split(command.lower())
@@ -85,7 +69,7 @@ def execute_command(command: str) -> dict:
                 exit_code=-1,
             )
 
-    return run_bash_subprocess(command, timeout=1800)
+    return run_bash_subprocess(command, timeout=180)
 
 
 print("Starting Shell MCP server with streamable-http transport...")
