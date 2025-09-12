@@ -50,7 +50,7 @@ centralized workspace directory.
 
 mcp = FastMCP(
     name="PDF Processing MCP",
-    instructions=description,
+    instructions=description
 )
 
 # Global variables for RAG functionality and navigation state
