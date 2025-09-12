@@ -40,7 +40,6 @@ from toolomics_browser_test import BrowserMCPTest
 from toolomics_csv_test import CSVMCPTest
 from toolomics_pdf_test import PDFMCPTest
 from toolomics_shell_test import ShellMCPTest
-from toolomics_python_editor_test import PythonEditorMCPTest
 from fetch_server_test import FetchMCPTest
 from git_server_test import GitMCPTest
 from filesystem_server_test import FilesystemMCPTest
@@ -57,7 +56,6 @@ class MasterMCPTester:
             ("CSV MCP", CSVMCPTest),
             ("PDF MCP", PDFMCPTest),
             ("Shell MCP", ShellMCPTest),
-            ("Python Editor MCP", PythonEditorMCPTest),
             ("Fetch MCP", FetchMCPTest),
             ("Git MCP", GitMCPTest),
             ("Filesystem MCP", FilesystemMCPTest),
@@ -262,9 +260,6 @@ async def main():
             'pdf': ('PDF MCP', PDFMCPTest),
             'shell': ('Shell MCP', ShellMCPTest),
             'bash': ('Shell MCP', ShellMCPTest),
-            'python-editor': ('Python Editor MCP', PythonEditorMCPTest),
-            'python': ('Python Editor MCP', PythonEditorMCPTest),
-            'editor': ('Python Editor MCP', PythonEditorMCPTest),
             'fetch': ('Fetch MCP', FetchMCPTest),
             'git': ('Git MCP', GitMCPTest),
             'filesystem': ('Filesystem MCP', FilesystemMCPTest),

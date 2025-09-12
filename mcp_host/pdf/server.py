@@ -21,10 +21,11 @@ import hashlib
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import CommandResult, return_as_dict, get_workspace_path
+from shared import CommandResult, return_as_dict
 
 # PDF processing imports
 try:
+    import PyPDF2
     import fitz  # PyMuPDF
     from sentence_transformers import SentenceTransformer
     import numpy as np
@@ -101,6 +102,16 @@ class NavigationState:
 
 
 @mcp.tool
+def get_mcp_name() -> str:
+    """Get the name of this MCP server
+
+    Returns:
+        str: The name of this MCP server ("PDF Processing MCP")
+    """
+    return "PDF Processing MCP"
+
+
+@mcp.tool
 @return_as_dict
 def list_pdf_files() -> Dict[str, Any]:
     """List all PDF files in the workspace directory
@@ -113,7 +124,7 @@ def list_pdf_files() -> Dict[str, Any]:
             - message: Error message if applicable
     """
     try:
-        workspace_path = get_workspace_path()
+        workspace_path = Path.cwd()
         pdf_files = list(workspace_path.glob("*.pdf"))
         pdf_filenames = [f.name for f in pdf_files]
 
@@ -160,7 +171,7 @@ def initialize_pdf_navigation(
         )
 
     try:
-        pdf_path = get_workspace_path() / filename
+        pdf_path = Path.cwd() / filename
         if not pdf_path.exists():
             return CommandResult(
                 status="error",
@@ -835,7 +846,7 @@ def extract_text_from_pdf(
         )
 
     try:
-        pdf_path = get_workspace_path() / filename
+        pdf_path = Path.cwd() / filename
         if not pdf_path.exists():
             return CommandResult(
                 status="error",

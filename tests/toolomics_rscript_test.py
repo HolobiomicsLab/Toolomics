@@ -25,7 +25,7 @@ class RScriptMCPTest:
         self.rscript_mcp = None
         self.client = None
     
-    async def discover_mcp_servers(self) -> list:
+    async def discover_mcp_servers(self) -> List[MCP]:
         """Test MCP discovery"""
         print("🔍 Testing MCP server discovery...")
         
@@ -49,7 +49,7 @@ class RScriptMCPTest:
         print("🔍 Falling back to direct MCP discovery...")
         return await self._direct_discovery()
     
-    async def _direct_discovery(self) -> list:
+    async def _direct_discovery(self) -> List[MCP]:
         """Direct MCP server discovery by scanning ports"""
         mcps = []
         
@@ -59,10 +59,19 @@ class RScriptMCPTest:
                 async with Client(url, timeout=3.0) as client:
                     tools = await client.list_tools()
                     
+                    # Get server name
+                    name = f"MCP Server on port {port}"
+                    try:
+                        resp = await client.call_tool("get_mcp_name", {})
+                        if resp and len(resp) > 0:
+                            name = resp[0].text
+                    except Exception:
+                        pass
+                    
                     if tools and any("r" in tool.name.lower() for tool in tools):
-                        print(f"✅ Found R Script MCP on port {port}")
+                        print(f"✅ Found R Script MCP on port {port}: {name}")
                         self.rscript_mcp = create_mcp_object(
-                            name="test",
+                            name=name,
                             tools=[tool.name for tool in tools],
                             address="localhost",
                             port=port,

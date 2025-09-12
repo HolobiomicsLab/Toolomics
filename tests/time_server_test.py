@@ -64,10 +64,23 @@ class TimeMCPTest:
                 async with Client(url, timeout=3.0) as client:
                     tools = await client.list_tools()
                     
+                    # Get server name
+                    name = f"MCP Server on port {port}"
+                    try:
+                        # Time server may not have get_mcp_name
+                        resp = await client.call_tool("get_mcp_name", {})
+                        if resp and len(resp) > 0:
+                            name = resp[0].text
+                    except Exception:
+                        # Try to identify by tools
+                        tool_names = [tool.name.lower() for tool in tools]
+                        if any("time" in tool_name or "date" in tool_name for tool_name in tool_names):
+                            name = "Time MCP Server"
+                    
                     if tools and any("time" in tool.name.lower() or "date" in tool.name.lower() for tool in tools):
-                        print(f"✅ Found Time MCP on port {port}")
+                        print(f"✅ Found Time MCP on port {port}: {name}")
                         self.time_mcp = MCP(
-                            name="test",
+                            name=name,
                             tools=[tool.name for tool in tools],
                             address="localhost",
                             port=port,

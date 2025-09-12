@@ -42,7 +42,7 @@ else
 fi
 
 # Set registry configuration
-REGISTRY_FILE="$(pwd)/registry/registry.json"
+REGISTRY_FILE="$(pwd)/registry.json"
 echo "📋 Using registry file: $REGISTRY_FILE"
 
 # Check if registry file exists
@@ -93,12 +93,6 @@ else
     exit 1
 fi
 
-# Load environment variables from .env file
-if [[ -f .env ]]; then
-    echo "🔧 Loading environment variables from .env file..."
-    export $(cat .env | grep -E '^[A-Z]' | xargs)
-fi
-
 # Create workspace directory
 echo "📁 Creating workspace directory..."
 mkdir -p workspace
@@ -106,99 +100,18 @@ mkdir -p workspace
 # List of servers to start (Toolomics + Essential MCP servers)
 # Note: The registry contains many more MCP servers available.
 # Use 'thv run <server-name>' to start additional servers as needed.
-# Check if Chunkr API key is available to conditionally include the server
-CHUNKR_ENABLED=false
-if [[ -n "$CHUNKR_API_KEY" && "$CHUNKR_API_KEY" != "" ]]; then
-    CHUNKR_ENABLED=true
-    echo "✅ CHUNKR_API_KEY found - Chunkr server will be started"
-else
-    echo "⚠️  CHUNKR_API_KEY not found - Chunkr server will be skipped"
-    echo "   💡 Set CHUNKR_API_KEY in .env file to enable document intelligence features"
-fi
-
 SERVERS=(
-    "toolomics-browser"
-    "toolomics-chunkr"
-    "toolomics-zip"
-    "toolomics-csv"
-    "toolomics-graphrag"
-    "toolomics-pdf"
-    "toolomics-python-editor"
     "toolomics-rscript"
+    "toolomics-browser" 
+    "toolomics-csv"    
+    "toolomics-pdf"
     "toolomics-shell"
-    # Additional available servers :
-    # "fetch"
-    "filesystem"
+    "fetch"
     "git"
-    # "playwright"
-    "plotting"
+    "filesystem"
     "time"
-    # "adb-mysql-mcp-server"
-    # "agentql-mcp"
-    # "arxiv-mcp-server"
-    # "astra-db-mcp"
-    # "atlassian"
-    # "aws-diagram"
-    # "aws-documentation"
-    # "aws-pricing"
-    # "azure"
-    # "brightdata-mcp"
-    # "browserbase"
-    # "browserbase-mcp-server"
-    # "buildkite"
-    # "chroma-mcp"
-    # "cloud-run"
-    # "context7"
-    # "crowdstrike-falcon"
-    # "dolt"
-    # "elasticsearch"
-    # "everything"
-    # "fetch"
-    # "firecrawl"
-    # "genai-toolbox"
-    # "github"
-    # "gitlab"
-    # "grafana"
-    # "graphlit"
-    # "graphlit-mcp-server"
-    # "hass-mcp"
-    # "heroku"
-    # "heroku-mcp-server"
-    # "ida-pro-mcp"
-    # "k8s"
-    # "kyverno"
-    # "magic-mcp"
-    # "mcp-clickhouse"
-    # "mcp-jetbrains"
-    # "mcp-neo4j-aura-manager"
-    # "mcp-neo4j-cypher"
-    # "mcp-neo4j-memory"
-    # "mcp-server-box"
-    # "mcp-server-circleci"
-    # "mcp-server-neon"
-    # "memory"
-    # "mongodb"
-    # "netbird"
-    # "notion"
-    # "oci-registry"
-    # "onchain-mcp"
-    # "osv"
-    # "perplexity-ask"
-    # "phoenix"
-    # "postgres-mcp-pro"
-    # "redis"
-    # "semgrep"
-    # "sentry"
-    # "sequentialthinking"
-    # "sqlite"
-    # "stripe"
-    # "supabase"
-    # "tavily-mcp"
-    # "terraform"
+    "arxiv-mcp-server"
 )
-
-# Note: toolomics-chunkr is included in main SERVERS list above
-# and will be automatically skipped if CHUNKR_API_KEY is not available
 
 # Function to stop all servers on exit
 cleanup() {
@@ -232,33 +145,16 @@ successful_servers=()
 for server in "${SERVERS[@]}"; do
     echo "🔄 Starting $server..."
     
-    
     # Mount workspace directory to /projects in container (filesystem server standard)
     # Network configuration is handled by ToolHive registry
-    
-    # Special handling for servers that need environment variables
-    if [[ "$server" == "toolomics-chunkr" ]]; then
-        if [[ -n "$CHUNKR_API_KEY" ]]; then
-            if thv run "$server" --volume "$(pwd)/workspace:/projects" --env "CHUNKR_API_KEY=$CHUNKR_API_KEY" --detach; then
-                echo "✅ $server started successfully"
-                successful_servers+=("$server")
-
-                thv restart "$server"
-            else
-                echo "❌ Failed to start $server"
-                failed_servers+=("$server")
-            fi
-        else
-            echo "⚠️  Skipping $server - CHUNKR_API_KEY not found"
-        fi
+    if thv run "$server" --volume "$(pwd)/workspace:/projects" --detach; then
+        echo "✅ $server started successfully"
+        successful_servers+=("$server")
+        thv restart "$server" 
+        echo "🔄 Restarted $server to ensure proper initialization"
     else
-        if thv run "$server" --volume "$(pwd)/workspace:/projects" --detach; then
-            echo "✅ $server started successfully"
-            successful_servers+=("$server")
-        else
-            echo "❌ Failed to start $server"
-            failed_servers+=("$server")
-        fi
+        echo "❌ Failed to start $server"
+        failed_servers+=("$server")
     fi
     
     # Small delay between starts

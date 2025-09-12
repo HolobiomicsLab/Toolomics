@@ -63,10 +63,19 @@ class BrowserMCPTest:
                 async with Client(url, timeout=3.0) as client:
                     tools = await client.list_tools()
                     
+                    # Get server name
+                    name = f"MCP Server on port {port}"
+                    try:
+                        resp = await client.call_tool("get_mcp_name", {})
+                        if resp and len(resp) > 0:
+                            name = resp[0].text
+                    except Exception:
+                        pass
+                    
                     if tools and any(tool_name in tool.name.lower() for tool_name in ["search", "navigate", "browser", "screenshot"] for tool in tools):
-                        print(f"✅ Found Browser MCP on port {port}")
+                        print(f"✅ Found Browser MCP on port {port}: {name}")
                         self.browser_mcp = MCP(
-                            name="test",
+                            name=name,
                             tools=[tool.name for tool in tools],
                             address="localhost",
                             port=port,

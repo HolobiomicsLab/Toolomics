@@ -68,6 +68,16 @@ class GitMCPTest:
                     
                     # Get server name
                     name = f"MCP Server on port {port}"
+                    try:
+                        # Git server may not have get_mcp_name
+                        resp = await client.call_tool("get_mcp_name", {})
+                        if resp and len(resp) > 0:
+                            name = resp[0].text
+                    except Exception:
+                        # Try to identify by tools
+                        tool_names = [tool.name.lower() for tool in tools]
+                        if any("git" in tool_name for tool_name in tool_names):
+                            name = "Git MCP Server"
                     
                     if tools and any("git" in tool.name.lower() for tool in tools):
                         print(f"✅ Found Git MCP on port {port}: {name}")
