@@ -28,7 +28,7 @@ All operations work within the centralized workspace directory for seamless inte
 
 mcp = FastMCP(
     name="Zip File Operations MCP",
-    instructions=description,
+    instructions=description
 )
 
 # Default working directory for ZIP operations - use shared workspace

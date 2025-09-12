@@ -25,7 +25,7 @@ This tool should not be used for installing software or packages, as it is not d
 
 mcp = FastMCP(
     name="R script MCP",
-    instructions=description,
+    instructions=description
 )
 
 

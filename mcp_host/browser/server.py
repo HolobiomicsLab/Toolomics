@@ -36,7 +36,7 @@ It allows to search the web, navigate to URLs, retrieve page content, and manage
 
 mcp = FastMCP(
     name="Web Browsing MCP",
-    instructions=description,
+    instructions=description
 )
 
 

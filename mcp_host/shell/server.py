@@ -27,7 +27,7 @@ It should not be used to execute Rscript commands; use the dedicated Rscript too
 
 mcp = FastMCP(
     name="Bash command MCP",
-    instructions=description,
+    instructions=description
 )
 
 
@@ -69,7 +69,7 @@ def execute_command(command: str) -> dict:
                 exit_code=-1,
             )
 
-    return run_bash_subprocess(command, timeout=1800)
+    return run_bash_subprocess(command, timeout=180)
 
 
 print("Starting Shell MCP server with streamable-http transport...")

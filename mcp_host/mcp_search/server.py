@@ -13,6 +13,13 @@ import requests
 from fastmcp import FastMCP
 from typing import Dict, Any, Optional
 from urllib.parse import urljoin
+import json
+from pathlib import Path
+
+# Add project root to path for shared imports
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from shared import CommandResult
 
 description = """
 Search MCP Server allows to search for existing MCP servers registered in the Smithery registry.
@@ -21,7 +28,7 @@ It provides tools to search for servers by name, or keywords, and retrieve detai
 
 mcp = FastMCP(
     name="discover MCP",
-    instructions=description,
+    instructions=description
 )
 
 class MCPRegistryClient:
@@ -79,7 +86,7 @@ registry_client = MCPRegistryClient(api_key=apikey)
 
 
 @mcp.tool()
-def search_mcp_servers(query: str, limit: int = 10) -> Dict[str, Any]:
+def search_mcp_servers(query: str, limit: int = 10) -> CommandResult:
     """
     Search for MCP servers by name, description, or keywords.
 
@@ -88,44 +95,60 @@ def search_mcp_servers(query: str, limit: int = 10) -> Dict[str, Any]:
         limit: Maximum number of results to return (default: 10, max: 50)
 
     Returns:
-        Dictionary containing matching servers with their details
+        CommandResult: Standardized result containing matching servers with their details
     """
-    limit = max(1, min(limit, 50))
+    try:
+        limit = max(1, min(limit, 50))
 
-    servers_response = registry_client.list_servers(page_size=1000)
+        servers_response = registry_client.list_servers(page_size=1000)
 
-    if "error" in servers_response:
-        return {"success": False, "error": servers_response["error"], "servers": []}
+        if "error" in servers_response:
+            return CommandResult(
+                status="error",
+                stderr=servers_response["error"]
+            )
 
-    servers = servers_response.get("servers", [])
-    if not servers:
-        return {
-            "success": True,
-            "message": "No servers found in registry",
-            "servers": [],
-        }
-    formatted_servers = []
-    for server in servers:
-        formatted_servers.append(
-            {
-                "name": server.get("name", ""),
-                "display_name": server.get("displayName", ""),
-                "description": server.get("description", ""),
-                "connections": server.get("connections", []),
-                "tools": server.get("tools", []),
-            }
+        servers = servers_response.get("servers", [])
+        if not servers:
+            return CommandResult(
+                status="success",
+                stdout=json.dumps({
+                    "message": "No servers found in registry",
+                    "servers": [],
+                    "query": query,
+                    "total_returned": 0
+                })
+            )
+        
+        formatted_servers = []
+        for server in servers:
+            formatted_servers.append(
+                {
+                    "name": server.get("name", ""),
+                    "display_name": server.get("displayName", ""),
+                    "description": server.get("description", ""),
+                    "connections": server.get("connections", []),
+                    "tools": server.get("tools", []),
+                }
+            )
+
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "query": query,
+                "total_returned": len(formatted_servers),
+                "servers": formatted_servers
+            })
         )
-
-    return {
-        "success": True,
-        "query": query,
-        "total_returned": len(formatted_servers),
-        "servers": formatted_servers,
-    }
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool()
-def get_mcp_server_info(qualified_name: str) -> Dict[str, Any]:
+def get_mcp_server_info(qualified_name: str) -> CommandResult:
     """
     Get detailed information about a specific MCP server.
 
@@ -133,48 +156,60 @@ def get_mcp_server_info(qualified_name: str) -> Dict[str, Any]:
         qualified_name: The qualified name of the MCP server (e.g., "smithery-ai/fetch")
 
     Returns:
-        Dictionary containing detailed server information including tools and security status
+        CommandResult: Standardized result containing detailed server information including tools and security status
     """
-    if not qualified_name:
-        return {"success": False, "error": "qualified_name is required"}
+    try:
+        if not qualified_name:
+            return CommandResult(
+                status="error",
+                stderr="qualified_name is required"
+            )
 
-    server_details = registry_client.get_server_details(qualified_name)
+        server_details = registry_client.get_server_details(qualified_name)
 
-    if "error" in server_details:
-        return {
-            "success": False,
-            "error": server_details["error"],
-            "qualified_name": qualified_name,
-        }
-    security = server_details.get("security", {})
-    tools = server_details.get("tools", []) or []
+        if "error" in server_details:
+            return CommandResult(
+                status="error",
+                stderr=f"Error for {qualified_name}: {server_details['error']}"
+            )
+        
+        security = server_details.get("security", {})
+        tools = server_details.get("tools", []) or []
 
-    return {
-        "success": True,
-        "server": {
-            "name": server_details.get("name", ""),
-            "display_name": server_details.get("displayName", ""),
-            "description": server_details.get("description", ""),
-            "icon_url": server_details.get("iconUrl"),
-            "connections": server_details.get("connections", []),
-            "security": {
-                "scan_passed": security.get("scanPassed"),
-                "scan_details": security.get(
-                    "scanDetails", "Security scan status unknown"
-                ),
-            },
-            "tools": tools,
-            "tool_count": len(tools),
-            "tool_summary": [
-                {
-                    "name": tool.get("name", ""),
-                    "description": tool.get("description", ""),
-                    "input_schema": tool.get("inputSchema", {}),
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "qualified_name": qualified_name,
+                "server": {
+                    "name": server_details.get("name", ""),
+                    "display_name": server_details.get("displayName", ""),
+                    "description": server_details.get("description", ""),
+                    "icon_url": server_details.get("iconUrl"),
+                    "connections": server_details.get("connections", []),
+                    "security": {
+                        "scan_passed": security.get("scanPassed"),
+                        "scan_details": security.get(
+                            "scanDetails", "Security scan status unknown"
+                        ),
+                    },
+                    "tools": tools,
+                    "tool_count": len(tools),
+                    "tool_summary": [
+                        {
+                            "name": tool.get("name", ""),
+                            "description": tool.get("description", ""),
+                            "input_schema": tool.get("inputSchema", {}),
+                        }
+                        for tool in tools
+                    ],
                 }
-                for tool in tools
-            ],
-        },
-    }
+            })
+        )
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 if __name__ == "__main__":

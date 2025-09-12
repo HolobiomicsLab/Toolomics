@@ -14,10 +14,11 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from fastmcp import FastMCP
+import json
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import get_workspace_path
+from shared import get_workspace_path, CommandResult
 
 description = """CSV Management MCP Server provides tools for creating, reading, and manipulating CSV files.
 It allows users to create new CSV datasets, load existing CSV files, and perform various operations on them such as adding, updating, deleting rows, and querying data.
@@ -25,7 +26,7 @@ It allows users to create new CSV datasets, load existing CSV files, and perform
 
 mcp = FastMCP(
     name="CSV Management MCP",
-    instructions=description,
+    instructions=description
 )
 
 # Default working directory for CSV files - use shared workspace
@@ -61,7 +62,7 @@ def create_csv(
     name: str,
     columns: Optional[List[str]] = None,
     rows: Optional[List[Dict[str, Any]]] = None,
-) -> Dict[str, Any]:
+) -> CommandResult:
     """
     Create a new CSV dataset.
 
@@ -71,7 +72,7 @@ def create_csv(
         rows: List of row dictionaries (optional)
 
     Returns:
-        Dictionary with dataset info
+        CommandResult: Standardized result containing dataset info
     """
     try:
         if columns and rows:
@@ -85,19 +86,24 @@ def create_csv(
 
         _save_dataframe(name, df)
 
-        return {
-            "name": name,
-            "shape": list(df.shape),
-            "columns": df.columns.tolist(),
-            "message": f"Dataset '{name}' created successfully",
-            "status": "success",
-        }
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "name": name,
+                "shape": list(df.shape),
+                "columns": df.columns.tolist(),
+                "message": f"Dataset '{name}' created successfully"
+            })
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-def load_csv_from_path(source_path: str, name: str) -> Dict[str, Any]:
+def load_csv_from_path(source_path: str, name: str) -> CommandResult:
     """
     Load a CSV file from an external path into our managed datasets.
 
@@ -106,32 +112,40 @@ def load_csv_from_path(source_path: str, name: str) -> Dict[str, Any]:
         name: Name to give the dataset
 
     Returns:
-        Dictionary with dataset info and preview
+        CommandResult: Standardized result containing dataset info and preview
     """
     try:
         source = Path(source_path)
         if not source.exists():
-            return {"error": f"Source file '{source_path}' not found"}
+            return CommandResult(
+                status="error",
+                stderr=f"Source file '{source_path}' not found"
+            )
 
         df = pd.read_csv(source)
         _save_dataframe(name, df)
 
-        return {
-            "name": name,
-            "shape": list(df.shape),
-            "columns": df.columns.tolist(),
-            "preview": df.head(5).to_dict("records"),
-            "message": f"Dataset '{name}' loaded from '{source_path}'",
-            "status": "success",
-        }
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "name": name,
+                "shape": list(df.shape),
+                "columns": df.columns.tolist(),
+                "preview": df.head(5).to_dict("records"),
+                "message": f"Dataset '{name}' loaded from '{source_path}'"
+            })
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
 def get_csv_data(
     name: str, limit: Optional[int] = None, offset: int = 0
-) -> Dict[str, Any]:
+) -> CommandResult:
     """
     Get data from a CSV dataset.
 
@@ -141,7 +155,7 @@ def get_csv_data(
         offset: Number of rows to skip from the beginning
 
     Returns:
-        Dictionary with data and metadata
+        CommandResult: Standardized result containing data and metadata
     """
     try:
         df = _load_dataframe(name)
@@ -151,19 +165,24 @@ def get_csv_data(
         else:
             data = df.iloc[offset:].to_dict("records")
 
-        return {
-            "data": data,
-            "total_rows": len(df),
-            "returned_rows": len(data),
-            "offset": offset,
-            "status": "success",
-        }
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "data": data,
+                "total_rows": len(df),
+                "returned_rows": len(data),
+                "offset": offset
+            })
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-def add_csv_row(name: str, row: Dict[str, Any]) -> Dict[str, Any]:
+def add_csv_row(name: str, row: Dict[str, Any]) -> CommandResult:
     """
     Add a row to a CSV dataset.
 
@@ -172,7 +191,7 @@ def add_csv_row(name: str, row: Dict[str, Any]) -> Dict[str, Any]:
         row: Dictionary with row data
 
     Returns:
-        Dictionary with updated dataset info
+        CommandResult: Standardized result containing updated dataset info
     """
     try:
         df = _load_dataframe(name)
@@ -180,18 +199,23 @@ def add_csv_row(name: str, row: Dict[str, Any]) -> Dict[str, Any]:
         df = pd.concat([df, new_row], ignore_index=True)
         _save_dataframe(name, df)
 
-        return {
-            "name": name,
-            "shape": list(df.shape),
-            "message": f"Row added to dataset '{name}'",
-            "status": "success",
-        }
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "name": name,
+                "shape": list(df.shape),
+                "message": f"Row added to dataset '{name}'"
+            })
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-def update_csv_row(name: str, index: int, row: Dict[str, Any]) -> Dict[str, Any]:
+def update_csv_row(name: str, index: int, row: Dict[str, Any]) -> CommandResult:
     """
     Update a row in a CSV dataset.
 
@@ -201,13 +225,16 @@ def update_csv_row(name: str, index: int, row: Dict[str, Any]) -> Dict[str, Any]
         row: Dictionary with updated row data
 
     Returns:
-        Dictionary with updated row info
+        CommandResult: Standardized result containing updated row info
     """
     try:
         df = _load_dataframe(name)
 
         if index >= len(df) or index < 0:
-            return {"error": f"Row index {index} out of range"}
+            return CommandResult(
+                status="error",
+                stderr=f"Row index {index} out of range"
+            )
 
         for column, value in row.items():
             if column in df.columns:
@@ -215,18 +242,23 @@ def update_csv_row(name: str, index: int, row: Dict[str, Any]) -> Dict[str, Any]
 
         _save_dataframe(name, df)
 
-        return {
-            "name": name,
-            "updated_row": df.iloc[index].to_dict(),
-            "message": f"Row {index} updated in dataset '{name}'",
-            "status": "success",
-        }
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "name": name,
+                "updated_row": df.iloc[index].to_dict(),
+                "message": f"Row {index} updated in dataset '{name}'"
+            })
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-def delete_csv_row(name: str, index: int) -> Dict[str, Any]:
+def delete_csv_row(name: str, index: int) -> CommandResult:
     """
     Delete a row from a CSV dataset.
 
@@ -235,34 +267,42 @@ def delete_csv_row(name: str, index: int) -> Dict[str, Any]:
         index: Row index to delete
 
     Returns:
-        Dictionary with updated dataset info
+        CommandResult: Standardized result containing updated dataset info
     """
     try:
         df = _load_dataframe(name)
 
         if index >= len(df) or index < 0:
-            return {"error": f"Row index {index} out of range"}
+            return CommandResult(
+                status="error",
+                stderr=f"Row index {index} out of range"
+            )
 
         df = df.drop(index).reset_index(drop=True)
         _save_dataframe(name, df)
 
-        return {
-            "name": name,
-            "shape": list(df.shape),
-            "message": f"Row {index} deleted from dataset '{name}'",
-            "status": "success",
-        }
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "name": name,
+                "shape": list(df.shape),
+                "message": f"Row {index} deleted from dataset '{name}'"
+            })
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-def list_csv_datasets() -> Dict[str, Any]:
+def list_csv_datasets() -> CommandResult:
     """
     List all available CSV datasets.
 
     Returns:
-        Dictionary with list of datasets
+        CommandResult: Standardized result containing list of datasets
     """
     try:
         datasets = []
@@ -282,13 +322,22 @@ def list_csv_datasets() -> Dict[str, Any]:
                     {"name": csv_file.stem, "error": f"Failed to read: {str(e)}"}
                 )
 
-        return {"datasets": datasets, "total_count": len(datasets), "status": "success"}
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "datasets": datasets,
+                "total_count": len(datasets)
+            })
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-def delete_csv_dataset(name: str) -> Dict[str, Any]:
+def delete_csv_dataset(name: str) -> CommandResult:
     """
     Delete a CSV dataset.
 
@@ -296,24 +345,33 @@ def delete_csv_dataset(name: str) -> Dict[str, Any]:
         name: Name of the dataset to delete
 
     Returns:
-        Dictionary with deletion status
+        CommandResult: Standardized result containing deletion status
     """
     try:
         csv_path = _get_csv_path(name)
         if csv_path.exists():
             csv_path.unlink()
-            return {
-                "message": f"Dataset '{name}' deleted successfully",
-                "status": "success",
-            }
+            return CommandResult(
+                status="success",
+                stdout=json.dumps({
+                    "message": f"Dataset '{name}' deleted successfully",
+                    "name": name
+                })
+            )
         else:
-            return {"status": f"Dataset '{name}' not found"}
+            return CommandResult(
+                status="error",
+                stderr=f"Dataset '{name}' not found"
+            )
     except Exception as e:
-        return {"error": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-def query_csv(name: str, query: str) -> Dict[str, Any]:
+def query_csv(name: str, query: str) -> CommandResult:
     """
     Query a CSV dataset using pandas query syntax.
 
@@ -322,26 +380,31 @@ def query_csv(name: str, query: str) -> Dict[str, Any]:
         query: Pandas query string (e.g., "age > 25 and city == 'New York'")
 
     Returns:
-        Dictionary with query results
+        CommandResult: Standardized result containing query results
     """
     try:
         df = _load_dataframe(name)
         result = df.query(query)
 
-        return {
-            "name": name,
-            "query": query,
-            "results": result.to_dict("records"),
-            "result_count": len(result),
-            "total_rows": len(df),
-            "status": "success",
-        }
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "name": name,
+                "query": query,
+                "results": result.to_dict("records"),
+                "result_count": len(result),
+                "total_rows": len(df)
+            })
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-def get_csv_stats(name: str) -> Dict[str, Any]:
+def get_csv_stats(name: str) -> CommandResult:
     """
     Get statistical summary of a CSV dataset.
 
@@ -349,7 +412,7 @@ def get_csv_stats(name: str) -> Dict[str, Any]:
         name: Name of the dataset
 
     Returns:
-        Dictionary with statistical information
+        CommandResult: Standardized result containing statistical information
     """
     try:
         df = _load_dataframe(name)
@@ -371,9 +434,15 @@ def get_csv_stats(name: str) -> Dict[str, Any]:
         if stats["numeric_columns"]:
             stats["numeric_summary"] = df.describe().to_dict()
 
-        return stats
+        return CommandResult(
+            status="success",
+            stdout=json.dumps(stats)
+        )
     except Exception as e:
-        return {"status": str(e)}
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 print("Starting CSV MCP server with streamable-http transport...")

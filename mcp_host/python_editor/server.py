@@ -31,12 +31,17 @@ extracting method implementations, creating new methods, and writing complete fi
 
 mcp = FastMCP(
     name="Python File Editor MCP",
-    instructions=description,
+    instructions=description
 )
 
 # Working directory for Python files - use shared workspace
-WORKSPACE_DIR = Path("/projects")
-WORKSPACE_DIR.mkdir(exist_ok=True)
+try:
+    WORKSPACE_DIR = Path("/projects")
+    WORKSPACE_DIR.mkdir(exist_ok=True)
+except Exception as e:
+    WORKSPACE_DIR = Path("./workspace")
+    WORKSPACE_DIR.mkdir(exist_ok=True)
+
 
 
 def _get_python_path(filename: str) -> Path:

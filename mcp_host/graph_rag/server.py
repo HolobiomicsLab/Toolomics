@@ -7,10 +7,11 @@ import pymupdf
 import os
 import sys
 import shutil
+import json
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import get_workspace_path
+from shared import get_workspace_path, CommandResult
 
 
 description = """
@@ -21,7 +22,7 @@ GraphRAG also allows searching for information inside large documents and should
 
 mcp = FastMCP(
     name="GraphRAG MCP",
-    instructions=description,
+    instructions=description
 )
 
 executor = ThreadPoolExecutor(max_workers=2)
@@ -46,7 +47,7 @@ def move_files_to_rag(file: str):
 
 
 @mcp.tool
-async def files_to_graph(filenames: list[str]):
+async def files_to_graph(filenames: list[str]) -> CommandResult:
     """Process files and add create the GraphRAG knowledge graph
 
     Args:
@@ -55,53 +56,79 @@ async def files_to_graph(filenames: list[str]):
     Exemple: files_to_graph(["document1.txt", "document2.pdf"])
 
     Returns:
-        String confirmation message that files were processed for GraphRAG
+        CommandResult: Standardized result containing processing information
     """
-    # Clear the input directory first
-    for file in project_path.iterdir():
-        if file.is_file():
-            file.unlink()
-    print(f"Cleared all files from {project_path}")
+    try:
+        # Clear the input directory first
+        for file in project_path.iterdir():
+            if file.is_file():
+                file.unlink()
+        print(f"Cleared all files from {project_path}")
 
-    # Process files first
-    for filename in filenames:
-        if filename.lower().endswith(".txt"):
-            move_files_to_rag(filename)
-        elif filename.lower().endswith(".pdf"):
-            await convert_pdf_txt(filename)
-        else:
-            raise ValueError(f"Unsupported file type: {filename}")
+        # Process files first
+        processed_files = []
+        for filename in filenames:
+            if filename.lower().endswith(".txt"):
+                move_files_to_rag(filename)
+                processed_files.append({"filename": filename, "type": "txt", "status": "moved"})
+            elif filename.lower().endswith(".pdf"):
+                await convert_pdf_txt(filename)
+                processed_files.append({"filename": filename, "type": "pdf", "status": "converted"})
+            else:
+                return CommandResult(
+                    status="error",
+                    stderr=f"Unsupported file type: {filename}"
+                )
 
-    # Define function to run in thread pool
-    def run_indexing():
-        try:
-            result = subprocess.run(
-                ["graphrag", "index", "--root", "./rag"],
-                encoding="utf-8",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=300,
+        # Define function to run in thread pool
+        def run_indexing():
+            try:
+                result = subprocess.run(
+                    ["graphrag", "index", "--root", "./rag"],
+                    encoding="utf-8",
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=300,
+                )
+                return result
+            except Exception as e:
+                return None, str(e), -1
+
+        # Run in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(executor, run_indexing)
+
+        # Handle potential errors
+        if isinstance(result, tuple):  # Error case
+            return CommandResult(
+                status="error",
+                stderr=f"Error during indexing: {result[1]}"
             )
-            return result
-        except Exception as e:
-            return None, str(e), -1
 
-    # Run in thread pool to avoid blocking
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(executor, run_indexing)
+        if result.returncode != 0:
+            return CommandResult(
+                status="error",
+                stderr=f"Error during indexing: {result.stderr}"
+            )
 
-    # Handle potential errors
-    if isinstance(result, tuple):  # Error case
-        return f"Error during indexing: {result[1]}"
-
-    if result.returncode != 0:
-        return f"Error during indexing: {result.stderr}"
-
-    return "Files processed and indexed for GraphRAG successfully."
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "message": "Files processed and indexed for GraphRAG successfully",
+                "processed_files": processed_files,
+                "total_files": len(filenames),
+                "indexing_output": result.stdout
+            })
+        )
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 @mcp.tool
-async def query(query: str) -> str:
+async def query(query: str) -> CommandResult:
     """Query the GraphRAG knowledge graph with a natural language query
 
     Args:
@@ -110,41 +137,60 @@ async def query(query: str) -> str:
     Exemple: query("What is the main topic of the documents?")
 
     Returns:
-        String response from GraphRAG"""
+        CommandResult: Standardized result containing GraphRAG response
+    """
+    try:
+        def run_query():
+            try:
+                result = subprocess.run(
+                    [
+                        "graphrag",
+                        "query",
+                        "--root",
+                        "./rag",
+                        "--method",
+                        "local",
+                        "--query",
+                        query,
+                    ],
+                    encoding="utf-8",
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=300,
+                )
+                return result
+            except Exception as e:
+                return None, str(e), -1
 
-    def run_query():
-        try:
-            result = subprocess.run(
-                [
-                    "graphrag",
-                    "query",
-                    "--root",
-                    "./rag",
-                    "--method",
-                    "local",
-                    "--query",
-                    query,
-                ],
-                encoding="utf-8",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=300,
+        # Run in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(executor, run_query)
+
+        if isinstance(result, tuple):  # Error case
+            return CommandResult(
+                status="error",
+                stderr=f"Error: {result[1]}"
             )
-            return result
-        except Exception as e:
-            return None, str(e), -1
 
-    # Run in thread pool to avoid blocking
-    loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(executor, run_query)
+        if result.returncode != 0:
+            return CommandResult(
+                status="error",
+                stderr=f"Error: {result.stderr}"
+            )
 
-    if isinstance(result, tuple):  # Error case
-        return f"Error: {result[1]}"
-
-    if result.returncode != 0:
-        return f"Error: {result.stderr}"
-
-    return result.stdout
+        return CommandResult(
+            status="success",
+            stdout=json.dumps({
+                "query": query,
+                "response": result.stdout,
+                "method": "local"
+            })
+        )
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=str(e)
+        )
 
 
 print(f"Starting {mcp.name} server with streamable-http transport...")

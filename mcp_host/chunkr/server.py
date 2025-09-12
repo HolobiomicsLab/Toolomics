@@ -43,7 +43,7 @@ All operations work with files in the centralized workspace directory.
 
 mcp = FastMCP(
     name="Chunkr Document Intelligence",
-    instructions=description,
+    instructions=description
 )
 
 # Global Chunkr client instance
