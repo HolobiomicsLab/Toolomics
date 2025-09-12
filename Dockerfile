@@ -9,10 +9,10 @@ FROM python:3.10
 # Set the working directory
 WORKDIR /app
 
-COPY workspace /app/workspace
+COPY workspace /app/
 
 # Copy the application code
-COPY requirements.txt /app/requirements.txt
+COPY mcp_docker/requirements.txt /app/requirements.txt
 #COPY . /app
 
 # Install Python dependencies
