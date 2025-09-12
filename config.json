@@ -1,0 +1,29 @@
+[
+    {
+        "mcp_docker/shell/server.py": 5100
+    },
+    {
+        "mcp_host/Rscript/server.py": 5000
+    },
+    {
+        "mcp_host/browser/server.py": 5001
+    },
+    {
+        "mcp_host/csv/server.py": 5002
+    },
+    {
+        "mcp_host/mcp_search/server.py": 5003
+    },
+    {
+        "mcp_host/pdf/server.py": 5004
+    },
+    {
+        "mcp_host/graph_rag/server.py": 5005
+    },
+    {
+        "mcp_host/zip/server.py": 5006
+    },
+    {
+        "mcp_host/python_editor/server.py": 5007
+    }
+]

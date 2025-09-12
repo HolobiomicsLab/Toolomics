@@ -3,6 +3,8 @@ import sys
 import re
 import time
 import random
+import tempfile
+import uuid
 import markdownify
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
@@ -23,10 +25,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class Browser:
     def __init__(self, headless: bool = True):
         """Initialize the browser with Helium."""
-        # Use /projects path as mounted by start.sh
-        self.screenshot_folder = "/projects/.screenshots"
+        # Use ./workspace path as mounted by start.sh
+        self.screenshot_folder = "./workspace/.screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
+        self.user_data_dir = None  # Track user data directory for cleanup
         self._start_browser()
 
     def _setup_webdriver_service(self):
@@ -113,6 +116,11 @@ class Browser:
             # Setup Chrome options
             chrome_options = helium.ChromeOptions()
 
+            # Create unique user data directory to avoid conflicts
+            self.user_data_dir = tempfile.mkdtemp(prefix=f"chrome_user_data_{uuid.uuid4().hex[:8]}_")
+            chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
+            print(f"Using unique user data directory: {self.user_data_dir}")
+
             # Detect environment
             in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
                 "/.dockerenv"
@@ -122,6 +130,18 @@ class Browser:
             if self.headless:
                 chrome_options.add_argument("--headless=new")
 
+            # Additional options to prevent conflicts and improve stability
+            chrome_options.add_argument("--no-first-run")
+            chrome_options.add_argument("--disable-default-apps")
+            chrome_options.add_argument("--disable-sync")
+            chrome_options.add_argument("--disable-background-networking")
+            chrome_options.add_argument("--disable-background-timer-throttling")
+            chrome_options.add_argument("--disable-renderer-backgrounding")
+            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+            chrome_options.add_argument("--disable-client-side-phishing-detection")
+            chrome_options.add_argument("--disable-component-update")
+            chrome_options.add_argument("--disable-domain-reliability")
+
             if in_container:
                 # Container-specific options
                 chrome_options.add_argument("--no-sandbox")
@@ -129,7 +149,6 @@ class Browser:
                 chrome_options.add_argument("--disable-gpu")
                 chrome_options.add_argument("--disable-software-rasterizer")
                 chrome_options.add_argument("--disable-extensions")
-                chrome_options.add_argument("--disable-background-timer-throttling")
                 chrome_options.add_argument("--memory-pressure-off")
                 chrome_options.add_argument("--single-process")
                 print("Configured Chrome options for container environment")
@@ -172,9 +191,17 @@ class Browser:
             try:
                 print("Attempting basic fallback initialization...")
                 chrome_options = helium.ChromeOptions()
+                
+                # Create unique user data directory for fallback too
+                if not self.user_data_dir:
+                    self.user_data_dir = tempfile.mkdtemp(prefix=f"chrome_user_data_fallback_{uuid.uuid4().hex[:8]}_")
+                chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
+                
                 chrome_options.add_argument("--headless=new")
                 chrome_options.add_argument("--no-sandbox")
                 chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--no-first-run")
+                chrome_options.add_argument("--disable-default-apps")
 
                 # Try to use basic start_chrome
                 start_chrome(options=chrome_options)
@@ -645,7 +672,7 @@ class Browser:
             filename = filename.strip()
 
             # Save to /workspace directory for cross-container sharing
-            workspace_dir = "/projects"
+            workspace_dir = "./workspace"
             if not os.path.exists(workspace_dir):
                 os.makedirs(workspace_dir)
             
@@ -710,8 +737,8 @@ class Browser:
             filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
             filename = filename.strip()
             
-            # Save to /projects directory
-            workspace_dir = "/projects"
+            # Save to ./workspace directory
+            workspace_dir = "./workspace"
             
             filepath = os.path.join(workspace_dir, filename)
             
@@ -786,19 +813,74 @@ class Browser:
         except Exception:
             return False
 
-    def quit(self):
-        """Quit the browser session."""
+    def _cleanup_user_data_dir(self):
+        """Clean up the temporary user data directory."""
+        if self.user_data_dir and os.path.exists(self.user_data_dir):
+            try:
+                import shutil
+                shutil.rmtree(self.user_data_dir, ignore_errors=True)
+                print(f"Cleaned up user data directory: {self.user_data_dir}")
+            except Exception as e:
+                print(f"Warning: Could not clean up user data directory {self.user_data_dir}: {e}")
+
+    def _force_kill_chromedriver(self):
+        """Force kill hanging chromedriver processes."""
         try:
-            kill_browser()
-        except Exception:
-            pass
+            import psutil
+            import signal
+            
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    if 'chromedriver' in proc.info['name'].lower():
+                        print(f"Force killing chromedriver process: {proc.info['pid']}")
+                        proc.send_signal(signal.SIGTERM)
+                        try:
+                            proc.wait(timeout=5)
+                        except psutil.TimeoutExpired:
+                            proc.kill()  # Force kill if SIGTERM doesn't work
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+        except ImportError:
+            print("psutil not available for force cleanup")
+        except Exception as e:
+            print(f"Error in force cleanup: {e}")
+
+    def quit(self):
+        """Quit the browser session with improved cleanup."""
+        try:
+            # First try graceful shutdown
+            if self.driver:
+                try:
+                    # Close all windows first
+                    for handle in self.driver.window_handles:
+                        self.driver.switch_to.window(handle)
+                        self.driver.close()
+                except:
+                    pass
+                
+                # Then quit the driver
+                try:
+                    self.driver.quit()
+                except:
+                    pass
+                
+            # Kill any remaining browser processes
+            try:
+                kill_browser()
+            except:
+                pass
+                
+        except Exception as e:
+            print(f"Error during browser cleanup: {e}")
+            # Force kill chromedriver processes if needed
+            self._force_kill_chromedriver()
+        finally:
+            self.driver = None
+            self._cleanup_user_data_dir()
 
     def close(self):
-        """Close the browser."""
-        try:
-            kill_browser()
-        except Exception:
-            pass
+        """Close the browser with improved cleanup."""
+        self.quit()
 
     def __enter__(self):
         return self
