@@ -15,12 +15,13 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.core.os_manager import ChromeType
+import subprocess
+import signal
 
 # Override helium's ChromeOptions with selenium's for better compatibility
 helium.ChromeOptions = ChromeOptions
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 
 class Browser:
     def __init__(self, headless: bool = True):
@@ -33,7 +34,7 @@ class Browser:
         self._start_browser()
 
     def _setup_webdriver_service(self):
-        """Setup WebDriver service with automatic driver management."""
+        """Setup WebDriver service with automatic driver management and timeout protection."""
         in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
             "/.dockerenv"
         )
@@ -62,7 +63,13 @@ class Browser:
             try:
                 if strategy_name.startswith("system"):
                     if os.path.exists(driver_path):
-                        service = ChromeService(executable_path=driver_path)
+                        # Create service with timeout protection
+                        service = ChromeService(
+                            executable_path=driver_path,
+                            service_args=['--verbose', '--whitelisted-ips=']
+                        )
+                        # Set shorter timeout to prevent hanging
+                        service.start_error_message = "ChromeDriver failed to start"
                         print(f"Using system driver: {driver_path}")
                         return service
                 elif strategy_name.startswith("download"):
@@ -74,7 +81,15 @@ class Browser:
                     else:
                         driver_path = ChromeDriverManager().install()
                         print(f"Downloaded Chrome driver: {driver_path}")
-                    return ChromeService(executable_path=driver_path)
+                    
+                    # Create service with timeout protection
+                    service = ChromeService(
+                        executable_path=driver_path,
+                        service_args=['--verbose', '--whitelisted-ips=']
+                    )
+                    # Set shorter timeout to prevent hanging
+                    service.start_error_message = "ChromeDriver failed to start"
+                    return service
             except Exception as e:
                 print(f"Strategy {strategy_name} failed: {e}")
                 continue
@@ -845,24 +860,46 @@ class Browser:
         except Exception as e:
             print(f"Error in force cleanup: {e}")
 
-    def quit(self):
-        """Quit the browser session with improved cleanup."""
-        try:
-            # First try graceful shutdown
-            if self.driver:
-                try:
-                    # Close all windows first
-                    for handle in self.driver.window_handles:
+    def _quit_driver_with_timeout(self, timeout=10):
+        """Quit driver with timeout to prevent hanging."""
+        if not self.driver:
+            return
+            
+        import threading
+        import time
+        
+        def quit_worker():
+            try:
+                # Close all windows first
+                for handle in self.driver.window_handles:
+                    try:
                         self.driver.switch_to.window(handle)
                         self.driver.close()
-                except:
-                    pass
+                    except:
+                        pass
                 
                 # Then quit the driver
-                try:
-                    self.driver.quit()
-                except:
-                    pass
+                self.driver.quit()
+            except Exception as e:
+                print(f"Error in quit worker: {e}")
+        
+        # Run quit in separate thread with timeout
+        quit_thread = threading.Thread(target=quit_worker)
+        quit_thread.daemon = True
+        quit_thread.start()
+        quit_thread.join(timeout=timeout)
+        
+        if quit_thread.is_alive():
+            print(f"Driver quit timed out after {timeout}s, forcing cleanup")
+            # Force kill chromedriver processes
+            self._force_kill_chromedriver()
+
+    def quit(self):
+        """Quit the browser session with improved cleanup and timeout protection."""
+        try:
+            # First try graceful shutdown with timeout
+            if self.driver:
+                self._quit_driver_with_timeout(timeout=10)
                 
             # Kill any remaining browser processes
             try:
@@ -892,11 +929,13 @@ class Browser:
 # Usage example:
 if __name__ == "__main__":
     with Browser(headless=False) as browser:
-        browser.go_to("https://www.google.com")
-        browser.screenshot()
-        text = browser.get_text()
-        navigable_links = browser.get_navigable()
-        print(f"Current URL: {browser.get_current_url()}")
-        print(f"Page title: {browser.get_page_title()}")
-        print(f"Page text: {text[:200]}...")
-        print(f"Navigable links: {navigable_links[:5]}")
+        while True:
+            browser.go_to("https://www.google.com")
+            browser.go_to("https://github.com/tanjeffreyz/batch-normalization")
+            browser.screenshot()
+            text = browser.get_text()
+            navigable_links = browser.get_navigable()
+            print(f"Current URL: {browser.get_current_url()}")
+            print(f"Page title: {browser.get_page_title()}")
+            print(f"Page text: {text[:200]}...")
+            print(f"Navigable links: {navigable_links[:5]}")

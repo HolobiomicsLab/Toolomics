@@ -9,11 +9,10 @@ FROM python:3.10
 # Set the working directory
 WORKDIR /app
 
-COPY workspace /app/
+# workspace/ is mounted at runtime via volume mount, not copied during build
 
 # Copy the application code
-COPY mcp_docker/requirements.txt /app/requirements.txt
-#COPY . /app
+COPY . /app
 
 # Install Python dependencies
 RUN pip3 install -r /app/requirements.txt
