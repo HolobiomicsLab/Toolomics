@@ -33,7 +33,6 @@ mcp = FastMCP(
 
 # Default working directory for ZIP operations - use shared workspace
 ZIP_DIR = get_workspace_path()
-ZIP_DIR.mkdir(exist_ok=True)
 
 
 def _get_zip_path(name: str) -> Path:

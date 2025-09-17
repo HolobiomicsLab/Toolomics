@@ -28,17 +28,7 @@ mcp = FastMCP(
     instructions=description,
 )
 
-
-
-
-
-# Ensure workspace directory exists
-# STORAGE_DIR = Path("./workspace")
-# STORAGE_DIR.mkdir(exist_ok=True)
-
 SCRIPT_DIR = get_workspace_path()
-SCRIPT_DIR.mkdir(exist_ok=True)
-
 
 # print(f"Using workspace directory: {STORAGE_DIR}")
 print(f"Using script directory: {SCRIPT_DIR}")

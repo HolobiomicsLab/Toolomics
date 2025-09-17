@@ -30,7 +30,6 @@ mcp = FastMCP(
 
 # Default working directory for CSV files - use shared workspace
 CSV_DIR = get_workspace_path()
-CSV_DIR.mkdir(exist_ok=True)
 
 
 def _get_csv_path(name: str) -> Path:

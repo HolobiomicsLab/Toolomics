@@ -15,19 +15,22 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.core.os_manager import ChromeType
-import subprocess
+from pathlib import Path
 import signal
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from shared import get_workspace_path
 
 # Override helium's ChromeOptions with selenium's for better compatibility
 helium.ChromeOptions = ChromeOptions
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+WORKSPACE_DIR = get_workspace_path()
 
 class Browser:
     def __init__(self, headless: bool = True):
         """Initialize the browser with Helium."""
         # Use ./workspace path as mounted by start.sh
-        self.screenshot_folder = "./workspace/.screenshots"
+        self.screenshot_folder = "./.screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
         self.user_data_dir = None  # Track user data directory for cleanup
@@ -687,11 +690,10 @@ class Browser:
             filename = filename.strip()
 
             # Save to /workspace directory for cross-container sharing
-            workspace_dir = "./workspace"
-            if not os.path.exists(workspace_dir):
-                os.makedirs(workspace_dir)
+            if not os.path.exists(WORKSPACE_DIR):
+                os.makedirs(WORKSPACE_DIR)
             
-            filepath = os.path.join(workspace_dir, filename)
+            filepath = os.path.join(WORKSPACE_DIR, filename)
             
             # Ensure we don't overwrite existing files
             original_filename = filename
@@ -699,7 +701,7 @@ class Browser:
             while os.path.exists(filepath):
                 name, ext = os.path.splitext(original_filename)
                 filename = f"{name}_{counter}{ext}"
-                filepath = os.path.join(workspace_dir, filename)
+                filepath = os.path.join(WORKSPACE_DIR, filename)
                 counter += 1
 
             # Save to workspace directory
@@ -709,7 +711,7 @@ class Browser:
                         f.write(chunk)
 
             print(
-                f"Successfully downloaded: {filename} to {workspace_dir} ({os.path.getsize(filepath)} bytes)"
+                f"Successfully downloaded: {filename} to {WORKSPACE_DIR} ({os.path.getsize(filepath)} bytes)"
             )
             return (True, filename)
 
@@ -753,9 +755,9 @@ class Browser:
             filename = filename.strip()
             
             # Save to ./workspace directory
-            workspace_dir = "./workspace"
+            WORKSPACE_DIR = "./workspace"
             
-            filepath = os.path.join(workspace_dir, filename)
+            filepath = os.path.join(WORKSPACE_DIR, filename)
             
             # Ensure we don't overwrite existing files
             original_filename = filename
@@ -763,7 +765,7 @@ class Browser:
             while os.path.exists(filepath):
                 name, ext = os.path.splitext(original_filename)
                 filename = f"{name}_{counter}{ext}"
-                filepath = os.path.join(workspace_dir, filename)
+                filepath = os.path.join(WORKSPACE_DIR, filename)
                 counter += 1
             
             # Connect to FTP server and download the file
@@ -789,7 +791,7 @@ class Browser:
             
             ftp.quit()
             
-            return f"Successfully downloaded: {filename} to {workspace_dir} ({os.path.getsize(filepath)} bytes)"
+            return f"Successfully downloaded: {filename} to {WORKSPACE_DIR} ({os.path.getsize(filepath)} bytes)"
             
         except Exception as e:
             return f"Error downloading file from FTP {ftp_url}: {e}"

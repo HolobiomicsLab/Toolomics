@@ -53,6 +53,8 @@ mcp = FastMCP(
     instructions=description,
 )
 
+PDF_DIR = get_workspace_path()
+
 # Global variables for RAG functionality and navigation state
 _embedding_model = None
 _document_embeddings = {}
@@ -113,8 +115,7 @@ def list_pdf_files() -> Dict[str, Any]:
             - message: Error message if applicable
     """
     try:
-        workspace_path = get_workspace_path()
-        pdf_files = list(workspace_path.glob("*.pdf"))
+        pdf_files = list(PDF_DIR.glob("*.pdf"))
         pdf_filenames = [f.name for f in pdf_files]
 
         return CommandResult(
@@ -123,7 +124,7 @@ def list_pdf_files() -> Dict[str, Any]:
                 {
                     "files": pdf_filenames,
                     "count": len(pdf_filenames),
-                    "workspace": str(workspace_path),
+                    "workspace": str(PDF_DIR),
                 }
             ),
         )
@@ -160,7 +161,7 @@ def initialize_pdf_navigation(
         )
 
     try:
-        pdf_path = get_workspace_path() / filename
+        pdf_path = PDF_DIR / filename
         if not pdf_path.exists():
             return CommandResult(
                 status="error",
@@ -835,7 +836,7 @@ def extract_text_from_pdf(
         )
 
     try:
-        pdf_path = get_workspace_path() / filename
+        pdf_path = PDF_DIR / filename
         if not pdf_path.exists():
             return CommandResult(
                 status="error",

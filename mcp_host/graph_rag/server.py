@@ -167,4 +167,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print(f"Starting server on port {port}")
-    mcp.run(transport="http", port=port, host="0.0.0.0")
+    #mcp.run(transport="http", port=port, host="0.0.0.0")

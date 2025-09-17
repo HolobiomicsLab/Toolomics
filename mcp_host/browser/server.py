@@ -351,7 +351,7 @@ def take_screenshot() -> Dict[str, str]:
         return {"status": "error", "message": str(e)}
 
 # Ensure screenshots directory exists - use ./workspace as mounted by start.sh
-screenshots_dir = "./workspace/.screenshots"
+screenshots_dir = "./.screenshots"
 try:
     if not os.path.exists(screenshots_dir):
         os.makedirs(screenshots_dir, exist_ok=True)
