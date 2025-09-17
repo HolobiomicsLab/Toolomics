@@ -29,8 +29,7 @@ WORKSPACE_DIR = get_workspace_path()
 class Browser:
     def __init__(self, headless: bool = True):
         """Initialize the browser with Helium."""
-        # Use ./workspace path as mounted by start.sh
-        self.screenshot_folder = "./.screenshots"
+        self.screenshot_folder = WORKSPACE_DIR / ".screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
         self.user_data_dir = None  # Track user data directory for cleanup
@@ -753,9 +752,6 @@ class Browser:
             filename = unquote(filename)  # URL decode
             filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
             filename = filename.strip()
-            
-            # Save to ./workspace directory
-            WORKSPACE_DIR = "./workspace"
             
             filepath = os.path.join(WORKSPACE_DIR, filename)
             

@@ -40,9 +40,9 @@ def get_workspace_path() -> Path:
     Returns:
         Path: ./workspace if it exists (container environment), otherwise current working directory
     """
-    workspace_path = Path("./workspace")
-    if not workspace_path.exists():
-        workspace_path = Path.cwd()
+    workspace_path = Path("./")
+    #if not workspace_path.exists():
+    #    workspace_path = Path.cwd()
     return workspace_path
 
 
