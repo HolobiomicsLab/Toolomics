@@ -16,7 +16,7 @@ import re
 import json
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import hashlib
 
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -44,7 +44,7 @@ from fastmcp import FastMCP
 description = """
 PDF Tools MCP Server provides comprehensive tools for PDF manipulation and analysis.
 Features include agentic RAG with page-by-page navigation, text extraction, keyword search,
-metadata extraction, and content analysis. All operations work with files in the 
+metadata extraction, and content analysis. All operations work with files in the
 centralized workspace directory.
 """
 
@@ -221,23 +221,8 @@ def initialize_pdf_navigation(
         )
 
 
-@mcp.tool
-@return_as_dict
-def navigate_to_page(session_id: str, page_number: int) -> Dict[str, Any]:
-    """Navigate to a specific page in the PDF
-
-    Args:
-        session_id: Session identifier for the navigation session
-        page_number: Page number to navigate to (1-indexed)
-
-    Returns:
-        Dict containing:
-            - status: "success" or "error"
-            - current_page: Current page number
-            - page_content: Text content of the current page
-            - total_pages: Total number of pages
-            - navigation_info: Navigation context
-    """
+def _navigate_to_page_helper(session_id: str, page_number: int) -> CommandResult:
+    """Helper function to navigate to a specific page (not decorated as MCP tool)"""
     try:
         if session_id not in _navigation_state:
             return CommandResult(
@@ -289,6 +274,26 @@ def navigate_to_page(session_id: str, page_number: int) -> Dict[str, Any]:
         return CommandResult(
             status="error", stderr=f"Failed to navigate to page: {str(e)}", exit_code=1
         )
+
+
+@mcp.tool
+@return_as_dict
+def navigate_to_page(session_id: str, page_number: int) -> Dict[str, Any]:
+    """Navigate to a specific page in the PDF
+
+    Args:
+        session_id: Session identifier for the navigation session
+        page_number: Page number to navigate to (1-indexed)
+
+    Returns:
+        Dict containing:
+            - status: "success" or "error"
+            - current_page: Current page number
+            - page_content: Text content of the current page
+            - total_pages: Total number of pages
+            - navigation_info: Navigation context
+    """
+    return _navigate_to_page_helper(session_id, page_number)
 
 
 @mcp.tool
@@ -376,7 +381,7 @@ def navigate_next_page(session_id: str) -> Dict[str, Any]:
                 exit_code=1,
             )
 
-        return navigate_to_page(session_id, next_page)
+        return _navigate_to_page_helper(session_id, next_page)
 
     except Exception as e:
         return CommandResult(
@@ -413,7 +418,7 @@ def navigate_previous_page(session_id: str) -> Dict[str, Any]:
                 status="error", stderr="Already at first page (1)", exit_code=1
             )
 
-        return navigate_to_page(session_id, prev_page)
+        return _navigate_to_page_helper(session_id, prev_page)
 
     except Exception as e:
         return CommandResult(
@@ -808,26 +813,10 @@ def close_navigation_session(session_id: str) -> Dict[str, Any]:
         )
 
 
-@mcp.tool
-@return_as_dict
-def extract_text_from_pdf(
+def _extract_text_from_pdf_helper(
     filename: str, start_page: int = 1, end_page: Optional[int] = None
-) -> Dict[str, Any]:
-    """Extract text content from a PDF file, limited to 32000 characters, preserving page breaks.
-    Always navigate 2-3 pages at a time, avoid using this tool for large documents.
-
-    Args:
-        filename: Name of the PDF file in workspace
-        start_page: Starting page number (1-indexed)
-        end_page: Ending page number (1-indexed), None for all pages
-
-    Returns:
-        Dict containing:
-            - status: "success" or "error"
-            - text: Extracted text content
-            - pages_processed: Number of pages processed
-            - message: Error message if applicable
-    """
+) -> CommandResult:
+    """Helper function to extract text from PDF (not decorated as MCP tool)"""
     if not PDF_LIBS_AVAILABLE:
         return CommandResult(
             status="error",
@@ -896,6 +885,29 @@ def extract_text_from_pdf(
 
 @mcp.tool
 @return_as_dict
+def extract_text_from_pdf(
+    filename: str, start_page: int = 1, end_page: Optional[int] = None
+) -> Dict[str, Any]:
+    """Extract text content from a PDF file, limited to 32000 characters, preserving page breaks.
+    Always navigate 2-3 pages at a time, avoid using this tool for large documents.
+
+    Args:
+        filename: Name of the PDF file in workspace
+        start_page: Starting page number (1-indexed)
+        end_page: Ending page number (1-indexed), None for all pages
+
+    Returns:
+        Dict containing:
+            - status: "success" or "error"
+            - text: Extracted text content
+            - pages_processed: Number of pages processed
+            - message: Error message if applicable
+    """
+    return _extract_text_from_pdf_helper(filename, start_page, end_page)
+
+
+@mcp.tool
+@return_as_dict
 def search_keywords_in_pdf(
     filename: str, keywords: str, case_sensitive: bool = False
 ) -> Dict[str, Any]:
@@ -914,12 +926,12 @@ def search_keywords_in_pdf(
             - keywords_searched: List of keywords that were searched
     """
     try:
-        # First extract text
-        extract_result = extract_text_from_pdf(filename)
-        if extract_result["status"] != "success":
-            return extract_result
+        # First extract text using helper function (not decorated function)
+        extract_result = _extract_text_from_pdf_helper(filename)
+        if extract_result.status != "success":
+            return asdict(extract_result)
 
-        text_data = json.loads(extract_result["stdout"])
+        text_data = json.loads(extract_result.stdout)
         full_text = text_data["text"]
 
         # Parse keywords
