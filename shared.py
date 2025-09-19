@@ -38,12 +38,11 @@ def get_workspace_path() -> Path:
     """Get standardized workspace path with fallback.
     
     Returns:
-        Path: ./workspace if it exists (container environment), otherwise current working directory
+        Path: Current working directory (which should be the workspace when MCP servers run)
     """
-    workspace_path = Path("./")
-    #if not workspace_path.exists():
-    #    workspace_path = Path.cwd()
-    return workspace_path
+    # When MCP servers are deployed, they run with cwd=workspace_dir
+    # So the current working directory IS the workspace
+    return Path(".")
 
 
 def run_bash_subprocess(
@@ -51,9 +50,9 @@ def run_bash_subprocess(
     timeout: int = 30,
 ) -> CommandResult:
     import os
-    # Set working directory to ./workspace for consistency
-    cwd = "./workspace" if os.path.exists("./workspace") else None
-    print(f"Running command: {command} with timeout: {timeout} seconds in {cwd}")
+    # MCP servers already run in the workspace directory, so use current directory
+    cwd = None  # Use current working directory (which is the workspace)
+    print(f"Running command: {command} with timeout: {timeout} seconds in current directory")
     try:
         result = subprocess.run(
             command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
