@@ -665,38 +665,17 @@ def list_python_files() -> Dict[str, Any]:
     try:
         python_files = []
         
-        for py_file in WORKSPACE_DIR.rglob("*.py"):
-            try:
-                with open(py_file, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                
-                lines = len(content.split('\n'))
-                size = py_file.stat().st_size
-                
-                # Try to get basic code structure
+        for dirpath, dirnames, filenames in os.walk(WORKSPACE_DIR):
+            for filename in filenames:
                 try:
-                    tree = ast.parse(content)
-                    code_elements = _find_methods_and_classes(tree)
-                    structure = {
-                        "classes": len(code_elements["classes"]),
-                        "functions": len(code_elements["functions"]),
-                        "methods": len(code_elements["methods"])
-                    }
-                except:
-                    structure = {"error": "Could not parse"}
-                
-                python_files.append({
-                    "name": str(py_file.relative_to(WORKSPACE_DIR)),
-                    "size": size,
-                    "lines": lines,
-                    "structure": structure
-                })
-                
-            except Exception as e:
-                python_files.append({
-                    "name": str(py_file.relative_to(WORKSPACE_DIR)),
-                    "error": f"Could not read: {str(e)}"
-                })
+                    python_files.append({
+                        "name": str(filename.relative_to(WORKSPACE_DIR))
+                    })
+                except Exception as e:
+                    python_files.append({
+                        "name": str(filename.relative_to(WORKSPACE_DIR)),
+                        "error": f"Could not read: {str(e)}"
+                    })
         
         return CommandResult(
             status="success",
