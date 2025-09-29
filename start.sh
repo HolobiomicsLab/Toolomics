@@ -46,7 +46,7 @@ fi
 
 echo "Starting on-host MCP..."
 # Start MCP server on host
-python3.10 deploy.py --config config.json --mcp-dir mcp_host &
+python3 deploy.py --config config.json --mcp-dir mcp_host &
 HOST_PID=$!
 
 # start the MCP server in docker

@@ -6,13 +6,13 @@ Demonstrates all functionality with realistic test scenarios.
 """
 
 import asyncio
+import sys
 import json
 from fastmcp import Client
 
-async def test_shell():
+async def test_shell(shell_port: int = 5002):
     """Test all Shell operations comprehensively."""
     
-    shell_port = 5102
     # Connect to the MCP server
     async with Client(f"http://localhost:{shell_port}/mcp") as client:
         print("🚀 Connected to Shell MCP Server")
@@ -31,8 +31,8 @@ async def test_shell():
             "command": "ls",
         })
 
-        dict_result = json.loads(result[0].text) if result else {}
-        print(f"📋 Command output: {dict_result['stdout']}")
+        dict_result = json.loads(result.content[0].text) if result else {}
+        print(f"📋 Command output: {dict_result}")
 
         # Test 2
         print("=" * 50)
@@ -43,8 +43,8 @@ async def test_shell():
             "command": "test -e , workspace/QC_0.mzML",
         })
 
-        dict_result = json.loads(result[0].text) if result else {}
-        print(f"📋 Command output: {dict_result['stdout']}")
+        dict_result = json.loads(result.content[0].text) if result else {}
+        print(f"📋 Command output: {dict_result}")
 
         # Test 3
         print("=" * 50)
@@ -55,11 +55,18 @@ async def test_shell():
             "command": "rm -f workspace/QC_0_adducts.csv",
         })
 
-        dict_result = json.loads(result[0].text) if result else {}
-        print(f"📋 Command output: {dict_result['stdout']}")
+        dict_result = json.loads(result.content[0].text) if result else {}
+        print(f"📋 Command output: {dict_result}")
         
 
+def help():
+    print("USAGE")
+    print(f"\t{sys.argv[0]} <port>")
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        help()
+        exit()
     print("🧪 Starting Shell MCP server.py Tests")
-    asyncio.run(test_shell())
+    port = sys.argv[1]
+    asyncio.run(test_shell(port))

@@ -339,42 +339,6 @@ def query_csv(name: str, query: str) -> Dict[str, Any]:
         return {"status": str(e)}
 
 
-@mcp.tool
-def get_csv_stats(name: str) -> Dict[str, Any]:
-    """
-    Get statistical summary of a CSV dataset.
-
-    Args:
-        name: Name of the dataset
-
-    Returns:
-        Dictionary with statistical information
-    """
-    try:
-        df = _load_dataframe(name)
-
-        # Basic stats
-        stats = {
-            "name": name,
-            "shape": list(df.shape),
-            "columns": df.columns.tolist(),
-            "numeric_columns": df.select_dtypes(include=["number"]).columns.tolist(),
-            "categorical_columns": df.select_dtypes(
-                include=["object"]
-            ).columns.tolist(),
-            "missing_values": df.isnull().sum().to_dict(),
-            "duplicate_rows": df.duplicated().sum(),
-        }
-
-        # Add numeric statistics if there are numeric columns
-        if stats["numeric_columns"]:
-            stats["numeric_summary"] = df.describe().to_dict()
-
-        return stats
-    except Exception as e:
-        return {"status": str(e)}
-
-
 print("Starting CSV MCP server with streamable-http transport...")
 if __name__ == "__main__":
     # Get port from environment variable (set by ToolHive) or command line argument as fallback
