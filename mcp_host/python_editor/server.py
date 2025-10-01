@@ -667,15 +667,19 @@ def list_python_files() -> Dict[str, Any]:
         
         for dirpath, dirnames, filenames in os.walk(WORKSPACE_DIR):
             for filename in filenames:
-                try:
-                    python_files.append({
-                        "name": str(filename.relative_to(WORKSPACE_DIR))
-                    })
-                except Exception as e:
-                    python_files.append({
-                        "name": str(filename.relative_to(WORKSPACE_DIR)),
-                        "error": f"Could not read: {str(e)}"
-                    })
+                if filename.endswith('.py'):
+                    try:
+                        # Create full path and get relative path
+                        full_path = Path(dirpath) / filename
+                        relative_path = full_path.relative_to(WORKSPACE_DIR)
+                        python_files.append({
+                            "name": str(relative_path)
+                        })
+                    except Exception as e:
+                        python_files.append({
+                            "name": filename,
+                            "error": f"Could not process path: {str(e)}"
+                        })
         
         return CommandResult(
             status="success",

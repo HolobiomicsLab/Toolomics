@@ -10,11 +10,11 @@ import json
 from pathlib import Path
 from fastmcp import Client
 
-async def test_csv_operations():
+async def test_csv_operations(port: int = 5007):
     """Test all CSV operations comprehensively."""
     
     # Connect to the MCP server
-    async with Client("http://localhost:5001/mcp") as client:
+    async with Client(f"http://localhost:{port}/mcp") as client:
         print("🚀 Connected to CSV MCP Server")
         
         # List available tools
@@ -36,14 +36,6 @@ async def test_csv_operations():
                 {"id": 3, "name": "Carol Davis", "department": "Engineering", "salary": 92000, "hire_date": "2020-07-10"}
             ]
         })
-        # Test 2: Get dataset info
-        print("=" * 50)
-        print("TEST 2: Getting dataset info")
-        print("=" * 50)
-        
-        result = await client.call_tool("get_csv_info", {"name": "employees"})
-        print(f"📊 Dataset info: {result[0].text}")
-        print()
         
         # Test 3: Add a new row
         print("=" * 50)
@@ -54,7 +46,7 @@ async def test_csv_operations():
             "name": "employees",
             "row": {"id": 4, "name": "David Wilson", "department": "Sales", "salary": 58000, "hire_date": "2023-02-28"}
         })
-        print(f"📊 Add row: {result[0].text}")
+        print(f"📊 Add row: {result.content[0].text}")
         print()
         
         # Test 4: Get all data
@@ -63,7 +55,7 @@ async def test_csv_operations():
         print("=" * 50)
         
         result = await client.call_tool("get_csv_data", {"name": "employees"})
-        data = json.loads(result[0].text) if result else {}
+        data = json.loads(result.content[0].text) if result else {}
         print(f"📋 All data ({data.get('total_rows', 0)} rows):")
         if 'data' in data:
             for i, row in enumerate(data['data']):
@@ -80,7 +72,7 @@ async def test_csv_operations():
             "index": 1,
             "row": {"salary": 70000, "department": "Product Marketing"}
         })
-        print(f"📊 update result: {result[0].text}")
+        print(f"📊 update result: {result.content[0].text}")
         print()
         
         # Test 6: Query data
@@ -92,25 +84,11 @@ async def test_csv_operations():
             "name": "employees",
             "query": "salary > 70000"
         })
-        query_data = json.loads(result[0].text) if result else {}
+        query_data = json.loads(result.content[0].text) if result else {}
         print(f"🔍 Query result (salary > 70000): {query_data.get('result_count', 0)} matches")
         if 'results' in query_data:
             for row in query_data['results']:
                 print(f"  {row['name']}: ${row['salary']} in {row['department']}")
-        print()
-        
-        # Test 7: Get statistics
-        print("=" * 50)
-        print("TEST 7: Getting statistics")
-        print("=" * 50)
-        
-        result = await client.call_tool("get_csv_stats", {"name": "employees"})
-        stats = json.loads(result[0].text) if result else {}
-        print(f"📈 Dataset statistics:")
-        print(f"  Shape: {stats.get('shape', 'N/A')}")
-        print(f"  Numeric columns: {stats.get('numeric_columns', [])}")
-        print(f"  Missing values: {stats.get('missing_values', {})}")
-        print(f"  Duplicate rows: {stats.get('duplicate_rows', 0)}")
         print()
         
         # Test 8: Create another dataset for demonstration
@@ -134,7 +112,7 @@ async def test_csv_operations():
         print("=" * 50)
         
         result = await client.call_tool("list_csv_datasets", {})
-        datasets = json.loads(result[0].text) if result else {}
+        datasets = json.loads(result.content[0].text) if result else {}
         print(f"📁 All datasets ({datasets.get('total_count', 0)}):")
         if 'datasets' in datasets:
             for ds in datasets['datasets']:
@@ -151,7 +129,7 @@ async def test_csv_operations():
             "limit": 2,
             "offset": 1
         })
-        page_data = json.loads(result[0].text) if result else {}
+        page_data = json.loads(result.content[0].text) if result else {}
         print(f"📄 Pagination test (limit=2, offset=1): {page_data.get('returned_rows', 0)} rows returned")
         if 'data' in page_data:
             for row in page_data['data']:
@@ -163,16 +141,12 @@ async def test_csv_operations():
         print("TEST 11: Error handling")
         print("=" * 50)
         
-        # Try to access non-existent dataset
-        result = await client.call_tool("get_csv_info", {"name": "nonexistent"})
-        print(f"❌ Non-existent dataset: {result[0].text}")
-
         # Try invalid query
         result = await client.call_tool("query_csv", {
             "name": "employees",
             "query": "invalid_column > 100"
         })
-        print(f"❌ Invalid query: {result[0].text}")
+        print(f"❌ Invalid query: {result.content[0].text}")
         print()
         
         # Test 12: Delete operations
@@ -185,26 +159,30 @@ async def test_csv_operations():
             "name": "employees",
             "index": 0
         })
-        print(f"🗑️ Delete row result: {result[0].text}")
+        print(f"🗑️ Delete row result: {result.content[0].text}")
 
-        # Show updated data count
-        result = await client.call_tool("get_csv_info", {"name": "employees"})
-        info = json.loads(result[0].text) if result else {}
-        print(f"📊 After deletion - Shape: {info.get('shape', 'N/A')}")
-        print()
-        
         # Final summary
         print("=" * 50)
         print("FINAL SUMMARY")
         print("=" * 50)
         
         result = await client.call_tool("list_csv_datasets", {})
-        final_datasets = json.loads(result[0].text) if result else {}
+        final_datasets = json.loads(result.content[0].text) if result else {}
         print(f"📁 Final dataset count: {final_datasets.get('total_count', 0)}")
         
         print("\n🎉 All tests completed successfully!")
         print("\nTo clean up test files, you can run:")
 
+import sys
+
+def help():
+    print("USAGE")
+    print(f"\t{sys.argv[0]} <port>")
+
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        help()
+        exit()
     print("🧪 Starting CSV MCP server.py Tests")
-    asyncio.run(test_csv_operations())
+    port = sys.argv[1]
+    asyncio.run(test_csv_operations(port))

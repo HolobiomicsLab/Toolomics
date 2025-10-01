@@ -9,10 +9,9 @@ import asyncio
 import json
 from fastmcp import Client
 
-async def test_r():
+async def test_r(port: int = 5001):
     """Test all R operations comprehensively."""
     
-    port = 5001
     # Connect to the MCP server
     async with Client(f"http://localhost:{port}/mcp") as client:
         print("🚀 Connected to Rscript MCP Server")
@@ -44,7 +43,7 @@ print("xcmsSet completed successfully")'''
             "r_code": r_code,
         })
 
-        print(f"📋 Command output: {result[0].text}")
+        print(f"📋 Command output: {result.content[0].text}")
 
         print("=" * 50)
         print("TEST 2: write find adduct csv")
@@ -76,7 +75,7 @@ print(paste("Adduct detection completed. Found", nrow(adducts), "features.")) ''
             "filename" : 'adduct_detection.R'
         })
 
-        print(f"📋 Command output: {result[0].text}")
+        print(f"📋 Command output: {result.content[0].text}")
 
         print("=" * 50)
         print("TEST 3: list script folder")
@@ -85,7 +84,7 @@ print(paste("Adduct detection completed. Found", nrow(adducts), "features.")) ''
         result = await client.call_tool("list_script_files", {
         })
 
-        print(f"📋 Command output: {result[0].text}")
+        print(f"📋 Command output: {result.content[0].text}")
 
         print("=" * 50)
         print("TEST 4: execute adduct_detection.R")
@@ -95,10 +94,18 @@ print(paste("Adduct detection completed. Found", nrow(adducts), "features.")) ''
             "filename" : 'adduct_detection.R'
         })
 
-        print(f"📋 Command output: {result[0].text}")
-        
+        print(f"📋 Command output: {result.content[0].text}")
 
+import sys
+
+def help():
+    print("USAGE")
+    print(f"\t{sys.argv[0]} <port>")
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        help()
+        exit()
     print("🧪 Starting R MCP server.py Tests")
-    asyncio.run(test_r())
+    port = sys.argv[1]
+    asyncio.run(test_r(port))

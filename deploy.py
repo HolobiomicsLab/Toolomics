@@ -66,7 +66,9 @@ class ProcessManager:
         
         # Use absolute path for the server file since we're changing working directory
         absolute_server_path = server_path.resolve()
-        cmd = [sys.executable, str(absolute_server_path), str(port)]
+        py_cmd = sys.executable
+        #py_cmd = "python3"
+        cmd = [py_cmd, str(absolute_server_path), str(port)]
         proc = subprocess.Popen(
             cmd,
             cwd=self.workspace_dir,  # Execute in workspace directory

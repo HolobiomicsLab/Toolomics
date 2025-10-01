@@ -69,7 +69,7 @@ def execute_command(command: str) -> dict:
                 exit_code=-1,
             )
 
-    return run_bash_subprocess(command, timeout=180)
+    return run_bash_subprocess(command, timeout=600)
 
 
 print("Starting Shell MCP server with streamable-http transport...")
