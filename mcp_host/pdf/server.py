@@ -63,7 +63,7 @@ _navigation_state = {}
 def get_embedding_model():
     """Lazy load the embedding model"""
     global _embedding_model
-    if _embedding_model is None and PDF_LIBS_AVAILABLE:
+    if _embedding_model is None:
         try:
             _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
         except Exception as e:
@@ -150,13 +150,6 @@ def initialize_pdf_navigation(
             - current_page: Current page (starts at 1)
             - filename: Name of the PDF file
     """
-    if not PDF_LIBS_AVAILABLE:
-        return CommandResult(
-            status="error",
-            stderr="PDF libraries not available. Install PyPDF2 and PyMuPDF.",
-            exit_code=1,
-        )
-
     try:
         pdf_path = PDF_DIR / filename
         if not pdf_path.exists():
@@ -592,12 +585,7 @@ def rag_query_current_session(
     Returns:
         Dict containing semantically relevant content chunks with navigation info
     """
-    if not PDF_LIBS_AVAILABLE:
-        return CommandResult(
-            status="error",
-            stderr="PDF libraries not available. Install required packages.",
-            exit_code=1,
-        )
+
 
     try:
         if session_id not in _navigation_state:
@@ -814,12 +802,7 @@ def _extract_text_from_pdf_helper(
     filename: str, start_page: int = 1, end_page: Optional[int] = None
 ) -> CommandResult:
     """Helper function to extract text from PDF (not decorated as MCP tool)"""
-    if not PDF_LIBS_AVAILABLE:
-        return CommandResult(
-            status="error",
-            stderr="PDF libraries not available. Install PyPDF2 and PyMuPDF.",
-            exit_code=1,
-        )
+
 
     try:
         pdf_path = PDF_DIR / filename
@@ -992,9 +975,6 @@ def search_keywords_in_pdf(
 
 
 print("Starting PDF Processing MCP server with streamable-http transport...")
-if not PDF_LIBS_AVAILABLE:
-    print("Warning: PDF libraries not fully available. Some features may not work.")
-    print("Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn")
 
 if __name__ == "__main__":
     # Get port from environment variable (set by ToolHive) or command line argument as fallback
