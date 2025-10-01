@@ -28,5 +28,8 @@
     },
     {
         "mcp_host/html/server.py": 5008
+    },
+    {
+        "mcp_host/txt_editor/server.py": 5009
     }
 ]
