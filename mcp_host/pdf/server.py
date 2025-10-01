@@ -29,15 +29,12 @@ try:
     from sentence_transformers import SentenceTransformer
     import numpy as np
     from sklearn.metrics.pairwise import cosine_similarity
-
-    PDF_LIBS_AVAILABLE = True
-
 except ImportError as e:
     print(f"Warning: Some PDF libraries not available: {e}")
     print(
         "Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn nltk"
     )
-    PDF_LIBS_AVAILABLE = False
+    raise e
 
 from fastmcp import FastMCP
 
