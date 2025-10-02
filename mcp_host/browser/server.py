@@ -295,23 +295,38 @@ def download_file(url: str) -> Dict[str, Any]:
     Notes:
         - Uses browser session for download
         - Only downloads files with common extensions (PDFs, videos, documents, etc.)
+        - Provides detailed error messages for troubleshooting
     """
     print(f"Downloading file from URL: {url}")
     
     try:
         browser = get_browser()
         result = safe_browser_operation("download_file", browser.download_file, url)
+        
         if result is None:
-            return {"status": "error", "message": "Failed to download file"}
+            return {
+                "status": "error",
+                "message": "Failed to download file - browser operation returned None"
+            }
 
-        success, filename = result
+        success, message_or_filename = result
+        
         if success:
-            return {"status": "success", "filename": filename}
-        return {"status": "error", "message": "Download failed"}
+            return {
+                "status": "success",
+                "filename": message_or_filename
+            }
+        else:
+            # message_or_filename contains the error message when success is False
+            return {
+                "status": "error",
+                "message": message_or_filename
+            }
             
     except Exception as e:
-        print(f"Error downloading file: {e}")
-        return {"status": "error", "message": str(e)}
+        error_msg = f"Unexpected error in download_file tool: {type(e).__name__}: {str(e)}"
+        print(error_msg)
+        return {"status": "error", "message": error_msg}
 
 @mcp.tool
 def take_screenshot() -> Dict[str, str]:

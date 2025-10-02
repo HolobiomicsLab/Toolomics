@@ -1,4 +1,6 @@
 workspace/
+emma_paper/
+final_outputs/
 *.wav
 *.DS_Store
 *.log
