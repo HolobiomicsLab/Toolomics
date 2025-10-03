@@ -9,12 +9,12 @@ aiohttp>=3.12.0
 httpx>=0.28.0
 
 # PDF and document processing
-pymupdf>=1.26.0
+PyMuPDF>=1.26.4
 chunkr-ai>=0.3.0
 
 # Data processing
 pandas>=2.3.0
-numpy
+numpy==2.3.0
 scikit-learn>=1.7.0
 
 # ML and NLP
@@ -47,4 +47,3 @@ webdriver-manager>=4.0.0
 python-multipart>=0.0.20
 
 matplotlib>=3.9.0
-graphrag

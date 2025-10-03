@@ -591,14 +591,16 @@ class Browser:
             print(f"Error getting downloadable links: {e}")
             return []
 
-    def download_file(self, url: str) -> Optional[tuple[bool, str]]:
+    def download_file(self, url: str) -> tuple[bool, str]:
         """Download a file from URL to current directory.
 
         Args:
             url: The URL of file to download
 
         Returns:
-            tuple[bool, str] | None: (success_status, filename) if successful, None on failure
+            tuple[bool, str]: (success_status, message_or_filename)
+                - If success: (True, filename)
+                - If failure: (False, error_message)
         """
         try:
             import requests
@@ -609,7 +611,7 @@ class Browser:
             # Validate URL is downloadable
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
-                return None
+                return (False, f"Invalid URL: missing scheme or netloc in '{url}'")
 
             session = requests.Session()
             session.headers.update(
@@ -626,11 +628,21 @@ class Browser:
             try:
                 head_response = session.head(url, allow_redirects=True, timeout=10)
                 final_url = head_response.url
-            except:
+            except Exception as head_error:
+                print(f"HEAD request failed, proceeding with GET: {head_error}")
                 final_url = url
 
-            response = session.get(url, stream=True, allow_redirects=True, timeout=30)
-            response.raise_for_status()
+            try:
+                response = session.get(url, stream=True, allow_redirects=True, timeout=30)
+                response.raise_for_status()
+            except requests.exceptions.HTTPError as http_err:
+                return (False, f"HTTP error {response.status_code}: {http_err}")
+            except requests.exceptions.ConnectionError as conn_err:
+                return (False, f"Connection error: {conn_err}")
+            except requests.exceptions.Timeout as timeout_err:
+                return (False, f"Request timeout (30s): {timeout_err}")
+            except requests.exceptions.RequestException as req_err:
+                return (False, f"Request failed: {req_err}")
 
             filename = None
 
@@ -709,14 +721,18 @@ class Browser:
                     if chunk:
                         f.write(chunk)
 
-            print(
-                f"Successfully downloaded: {filename} to {WORKSPACE_DIR} ({os.path.getsize(filepath)} bytes)"
-            )
+            file_size = os.path.getsize(filepath)
+            print(f"Successfully downloaded: {filename} to {WORKSPACE_DIR} ({file_size} bytes)")
             return (True, filename)
 
+        except IOError as io_err:
+            return (False, f"File I/O error: {io_err}")
+        except OSError as os_err:
+            return (False, f"OS error during file save: {os_err}")
         except Exception as e:
-            print(f"Error downloading file from {url}: {e}")
-            return None
+            error_msg = f"Unexpected error downloading file: {type(e).__name__}: {str(e)}"
+            print(error_msg)
+            return (False, error_msg)
             
     def download_ftp_file(self, ftp_url: str) -> str:
         """Download a file from FTP URL to projects directory.
