@@ -4,6 +4,7 @@
 Browser Tools MCP Server
 
 Provides tools for web browsing, navigation, and interaction using a headless browser.
+Simplified single-browser architecture.
 
 Author: Martin Legrand - HolobiomicsLab, CNRS
 """
@@ -13,14 +14,15 @@ import threading
 import time
 import os
 import sys
-import subprocess
 import atexit
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import signal
-from contextlib import contextmanager
 
 from browser import Browser
 from searxng import search_searx
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 description = """
 Browser Tools MCP Server provides tools for web browsing, navigation, and interaction using a headless browser.
@@ -32,31 +34,33 @@ mcp = FastMCP(
     instructions=description,
 )
 
-
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server
-
-    Returns:
-        str: The name of this MCP server ("Web Browser MCP")
-
-    Example:
-        >>> get_mcp_name()
-        "Web Browser MCP"
-    """
-    return "Web Browser MCP"
-
-
 # Global browser instance with thread safety
 browser_lock = threading.Lock()
 browser_instance = None
 
-BROWSER_TIMEOUT = 30
+def get_browser():
+    """Get or create the global browser instance"""
+    global browser_instance
+    with browser_lock:
+        if browser_instance is None:
+            print("Creating new browser instance...")
+            browser_instance = Browser(headless=True)
+        elif not browser_instance.is_session_valid():
+            print("Browser session invalid, creating new instance...")
+            try:
+                browser_instance.quit()
+            except:
+                pass
+            browser_instance = Browser(headless=True)
+    return browser_instance
 
-# SearxNG management
-searxng_process = None
-searxng_dir = os.path.join(os.path.dirname(__file__), "searxng")
-
+def safe_browser_operation(operation_name: str, operation_func, *args, **kwargs):
+    """Execute browser operation with error handling"""
+    try:
+        return operation_func(*args, **kwargs)
+    except Exception as e:
+        print(f"Browser operation '{operation_name}' failed: {e}")
+        return None
 
 def check_external_searxng():
     """Check if external SearxNG service is accessible"""
@@ -85,7 +89,6 @@ def check_external_searxng():
     print("Make sure SearxNG is running externally (e.g., via docker-compose in the searxng directory)")
     return False, None
 
-
 def get_searxng_url():
     """Get the accessible SearxNG URL"""
     searxng_available, searxng_url = check_external_searxng()
@@ -93,92 +96,8 @@ def get_searxng_url():
         return searxng_url
     return "http://host.docker.internal:8080/"  # Default fallback
 
-
 # SearxNG URL will be determined at runtime
 searxng_url = None
-
-
-@contextmanager
-def timeout_handler(seconds):
-    """Context manager for operation timeouts"""
-
-    def timeout_signal_handler(signum, frame):
-        raise TimeoutError(f"Operation timed out after {seconds} seconds")
-
-    # Set the signal handler
-    old_handler = signal.signal(signal.SIGALRM, timeout_signal_handler)
-    signal.alarm(seconds)
-
-    try:
-        yield
-    finally:
-        # Restore the old signal handler
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
-
-
-def safe_browser_operation(operation_name, operation_func, *args, **kwargs):
-    """Execute browser operation with timeout and error handling"""
-    try:
-        with timeout_handler(BROWSER_TIMEOUT):
-            return operation_func(*args, **kwargs)
-    except TimeoutError:
-        print(f"Browser operation '{operation_name}' timed out")
-        # Force restart browser after timeout
-        restart_browser()
-        return None
-    except Exception as e:
-        print(f"Browser operation '{operation_name}' failed: {e}")
-        return None
-
-
-def is_session_valid():
-    """Check if browser session is still valid"""
-    global browser_instance
-    if browser_instance is None:
-        return False
-    try:
-        return browser_instance.is_session_valid()
-    except Exception as e:
-        print(f"Session validation error: {e}")
-        return False
-
-
-def restart_browser():
-    """Restart browser instance"""
-    global browser_instance
-    with browser_lock:
-        try:
-            if browser_instance:
-                try:
-                    browser_instance.quit()
-                except Exception as e:
-                    print(f"Error quitting browser: {e}")
-            print("Restarting browser instance")
-            browser_instance = Browser()
-            print("Browser instance restarted successfully")
-            return True
-        except Exception as e:
-            print(f"Failed to restart browser: {e}")
-            browser_instance = None
-            return False
-
-
-def init_browser():
-    """Initialize or recover browser instance"""
-    global browser_instance
-    with browser_lock:
-        if browser_instance is None or not is_session_valid():
-            try:
-                print("Initializing browser instance")
-                browser_instance = Browser()
-                print("Browser instance created successfully")
-                return True
-            except Exception as e:
-                print(f"Error initializing browser: {e}")
-                return False
-        return True
-
 
 @mcp.tool
 def search(query: str) -> Dict[str, str]:
@@ -209,13 +128,11 @@ def search(query: str) -> Dict[str, str]:
     """
     print(f"Searching for query: {query}")
     try:
-        # Search doesn't use browser, so no timeout needed
         search_result = search_searx(query)
         return {"status": "success", "result": search_result}
     except Exception as e:
         print(f"Error searching: {e}")
         return {"status": "error", "message": str(e)}
-
 
 @mcp.tool
 def navigate(url: str) -> Dict[str, str]:
@@ -242,37 +159,29 @@ def navigate(url: str) -> Dict[str, str]:
         }
 
     Notes:
-        - Will automatically initialize browser if not already running
-        - Has 30 second timeout for navigation
+        - Uses a single global browser instance
         - Returns simplified text content (no HTML markup)
     """
     print(f"Navigating to URL: {url}")
 
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-
-    # Use timeout for browser lock acquisition
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-
     try:
-        if not browser_instance.is_link_valid(url):
+        browser = get_browser()
+        
+        if not browser.is_link_valid(url):
             return {
                 "status": "error",
                 "message": "Invalid URL, File is a PDF or unsupported format for navigation, consider downloading instead.",
             }
 
-        # Navigate with timeout
-        success = safe_browser_operation("navigate", browser_instance.go_to, url)
+        # Navigate with browser
+        success = safe_browser_operation("navigate", browser.go_to, url)
         if success is None:
-            return {"status": "error", "message": "Navigation timed out"}
+            return {"status": "error", "message": "Navigation failed"}
 
-        # Get page info with timeout
-        current_url = safe_browser_operation(
-            "get_url", browser_instance.get_current_url
-        )
-        title = safe_browser_operation("get_title", browser_instance.get_page_title)
-        content = safe_browser_operation("get_content", browser_instance.get_text)
+        # Get page info
+        current_url = safe_browser_operation("get_url", browser.get_current_url)
+        title = safe_browser_operation("get_title", browser.get_page_title)
+        content = safe_browser_operation("get_content", browser.get_text)
 
         return {
             "status": "success" if success else "failed",
@@ -280,12 +189,10 @@ def navigate(url: str) -> Dict[str, str]:
             "title": title or "unknown",
             "content": content or "content unavailable",
         }
+            
     except Exception as e:
         print(f"Error navigating to URL {url}: {e}")
         return {"status": "error", "message": f"Navigation failed: {str(e)}"}
-    finally:
-        browser_lock.release()
-
 
 @mcp.tool
 def get_links() -> Dict[str, Any]:
@@ -305,19 +212,15 @@ def get_links() -> Dict[str, Any]:
         }
 
     Notes:
-        - Requires an active browser session
+        - Requires an active browser session (call navigate first)
         - Only returns navigable links (not all hrefs)
         - Links are returned as plain text
     """
     print("Fetching page links")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-
+    
     try:
-        links = safe_browser_operation("get_links", browser_instance.get_navigable)
+        browser = get_browser()
+        links = safe_browser_operation("get_links", browser.get_navigable)
         if links is None:
             return {"status": "error", "message": "Failed to get links"}
 
@@ -325,12 +228,10 @@ def get_links() -> Dict[str, Any]:
             "status": "success",
             "links": "\n".join(links) if links else "No links found",
         }
+            
     except Exception as e:
         print(f"Error fetching links: {e}")
         return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
-
 
 @mcp.tool
 def get_downloadable_links() -> Dict[str, Any]:
@@ -350,21 +251,15 @@ def get_downloadable_links() -> Dict[str, Any]:
         }
 
     Notes:
-        - Requires an active browser session
+        - Requires an active browser session (call navigate first)
         - Returns links to common downloadable resources (PDFs, videos, documents, archives, etc.)
         - Links are returned as plain text
     """
     print("Fetching downloadable resource links")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-
+    
     try:
-        links = safe_browser_operation(
-            "get_downloadable", browser_instance.get_downloadable
-        )
+        browser = get_browser()
+        links = safe_browser_operation("get_downloadable", browser.get_downloadable)
         if links is None:
             return {"status": "error", "message": "Failed to get downloadable links"}
 
@@ -372,12 +267,10 @@ def get_downloadable_links() -> Dict[str, Any]:
             "status": "success",
             "links": "\n".join(links) if links else "No downloadable links found",
         }
+            
     except Exception as e:
         print(f"Error fetching downloadable links: {e}")
         return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
-
 
 @mcp.tool
 def download_file(url: str) -> Dict[str, Any]:
@@ -400,34 +293,40 @@ def download_file(url: str) -> Dict[str, Any]:
         }
 
     Notes:
-        - Requires an active browser session
+        - Uses browser session for download
         - Only downloads files with common extensions (PDFs, videos, documents, etc.)
-        - Files are saved to /projects directory
+        - Provides detailed error messages for troubleshooting
     """
     print(f"Downloading file from URL: {url}")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-
+    
     try:
-        result = safe_browser_operation(
-            "download_file", browser_instance.download_file, url
-        )
+        browser = get_browser()
+        result = safe_browser_operation("download_file", browser.download_file, url)
+        
         if result is None:
-            return {"status": "error", "message": "Failed to download file"}
+            return {
+                "status": "error",
+                "message": "Failed to download file - browser operation returned None"
+            }
 
-        success, filename = result
+        success, message_or_filename = result
+        
         if success:
-            return {"status": "success", "filename": filename}
-        return {"status": "error", "message": "Download failed"}
+            return {
+                "status": "success",
+                "filename": message_or_filename
+            }
+        else:
+            # message_or_filename contains the error message when success is False
+            return {
+                "status": "error",
+                "message": message_or_filename
+            }
+            
     except Exception as e:
-        print(f"Error downloading file: {e}")
-        return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
-
+        error_msg = f"Unexpected error in download_file tool: {type(e).__name__}: {str(e)}"
+        print(error_msg)
+        return {"status": "error", "message": error_msg}
 
 @mcp.tool
 def take_screenshot() -> Dict[str, str]:
@@ -447,36 +346,35 @@ def take_screenshot() -> Dict[str, str]:
         }
 
     Notes:
-        - Screenshots are saved in /projects/.screenshots/ directory
+        - Screenshots are saved in .screenshots/ directory
         - Filename contains timestamp when taken
         - PNG format is used
     """
     print("Taking screenshot")
-    if not init_browser():
-        return {"status": "error", "message": "Failed to initialize browser"}
-
-    if not browser_lock.acquire(timeout=10):
-        return {"status": "error", "message": "Browser is busy, try again later"}
-
+    
     try:
+        browser = get_browser()
         filename = f"screenshot_{int(time.time())}.png"
-        success = safe_browser_operation(
-            "screenshot", browser_instance.screenshot, filename
-        )
+        success = safe_browser_operation("screenshot", browser.screenshot, filename)
         if not success:
             return {"status": "error", "message": "Failed to take screenshot"}
 
         return {"status": "success", "filename": filename}
+            
     except Exception as e:
         print(f"Error taking screenshot: {e}")
         return {"status": "error", "message": str(e)}
-    finally:
-        browser_lock.release()
 
-
-screenshots_dir = "/projects/.screenshots"
-if not os.path.exists(screenshots_dir):
-    os.makedirs(screenshots_dir)
+# Ensure screenshots directory exists - use ./workspace as mounted by start.sh
+screenshots_dir = "./.screenshots"
+try:
+    if not os.path.exists(screenshots_dir):
+        os.makedirs(screenshots_dir, exist_ok=True)
+    print(f"Screenshots directory: {screenshots_dir}")
+except PermissionError:
+    print(f"Warning: Could not create screenshots directory {screenshots_dir}, using fallback")
+    screenshots_dir = "/tmp/.screenshots"
+    os.makedirs(screenshots_dir, exist_ok=True)
 
 print("Starting Browser MCP server with streamable-http transport...")
 
@@ -485,8 +383,28 @@ searxng_available, searxng_url = check_external_searxng()
 if not searxng_available:
     searxng_url = "http://host.docker.internal:8080/"  # Default fallback
 
-# Initialize browser
-init_browser()
+# Cleanup function for graceful shutdown
+def cleanup_on_exit():
+    """Cleanup function called on server shutdown"""
+    global browser_instance
+    if browser_instance:
+        try:
+            print("Shutting down browser...")
+            browser_instance.quit()
+        except Exception as e:
+            print(f"Error during browser cleanup: {e}")
+
+# Register cleanup function
+atexit.register(cleanup_on_exit)
+
+# Signal handlers for graceful shutdown
+def signal_handler(signum, frame):
+    print(f"Received signal {signum}, shutting down gracefully...")
+    cleanup_on_exit()
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == "__main__":
     # Get port from environment variable (set by ToolHive) or command line argument as fallback

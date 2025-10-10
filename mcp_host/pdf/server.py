@@ -16,36 +16,32 @@ import re
 import json
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import hashlib
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
-from shared import CommandResult, return_as_dict
+from shared import CommandResult, return_as_dict, get_workspace_path
 
 # PDF processing imports
 try:
-    import PyPDF2
     import fitz  # PyMuPDF
     from sentence_transformers import SentenceTransformer
     import numpy as np
     from sklearn.metrics.pairwise import cosine_similarity
-
-    PDF_LIBS_AVAILABLE = True
-
 except ImportError as e:
     print(f"Warning: Some PDF libraries not available: {e}")
     print(
         "Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn nltk"
     )
-    PDF_LIBS_AVAILABLE = False
+    raise e
 
 from fastmcp import FastMCP
 
 description = """
 PDF Tools MCP Server provides comprehensive tools for PDF manipulation and analysis.
 Features include agentic RAG with page-by-page navigation, text extraction, keyword search,
-metadata extraction, and content analysis. All operations work with files in the 
+metadata extraction, and content analysis. All operations work with files in the
 centralized workspace directory.
 """
 
@@ -53,6 +49,8 @@ mcp = FastMCP(
     name="PDF Processing MCP",
     instructions=description,
 )
+
+PDF_DIR = get_workspace_path()
 
 # Global variables for RAG functionality and navigation state
 _embedding_model = None
@@ -65,7 +63,7 @@ _navigation_state = {}
 def get_embedding_model():
     """Lazy load the embedding model"""
     global _embedding_model
-    if _embedding_model is None and PDF_LIBS_AVAILABLE:
+    if _embedding_model is None:
         try:
             _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
         except Exception as e:
@@ -102,16 +100,6 @@ class NavigationState:
 
 
 @mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server
-
-    Returns:
-        str: The name of this MCP server ("PDF Processing MCP")
-    """
-    return "PDF Processing MCP"
-
-
-@mcp.tool
 @return_as_dict
 def list_pdf_files() -> Dict[str, Any]:
     """List all PDF files in the workspace directory
@@ -124,8 +112,7 @@ def list_pdf_files() -> Dict[str, Any]:
             - message: Error message if applicable
     """
     try:
-        workspace_path = Path.cwd()
-        pdf_files = list(workspace_path.glob("*.pdf"))
+        pdf_files = list(PDF_DIR.glob("*.pdf"))
         pdf_filenames = [f.name for f in pdf_files]
 
         return CommandResult(
@@ -134,7 +121,7 @@ def list_pdf_files() -> Dict[str, Any]:
                 {
                     "files": pdf_filenames,
                     "count": len(pdf_filenames),
-                    "workspace": str(workspace_path),
+                    "workspace": str(PDF_DIR),
                 }
             ),
         )
@@ -163,15 +150,8 @@ def initialize_pdf_navigation(
             - current_page: Current page (starts at 1)
             - filename: Name of the PDF file
     """
-    if not PDF_LIBS_AVAILABLE:
-        return CommandResult(
-            status="error",
-            stderr="PDF libraries not available. Install PyPDF2 and PyMuPDF.",
-            exit_code=1,
-        )
-
     try:
-        pdf_path = Path.cwd() / filename
+        pdf_path = PDF_DIR / filename
         if not pdf_path.exists():
             return CommandResult(
                 status="error",
@@ -231,23 +211,8 @@ def initialize_pdf_navigation(
         )
 
 
-@mcp.tool
-@return_as_dict
-def navigate_to_page(session_id: str, page_number: int) -> Dict[str, Any]:
-    """Navigate to a specific page in the PDF
-
-    Args:
-        session_id: Session identifier for the navigation session
-        page_number: Page number to navigate to (1-indexed)
-
-    Returns:
-        Dict containing:
-            - status: "success" or "error"
-            - current_page: Current page number
-            - page_content: Text content of the current page
-            - total_pages: Total number of pages
-            - navigation_info: Navigation context
-    """
+def _navigate_to_page_helper(session_id: str, page_number: int) -> CommandResult:
+    """Helper function to navigate to a specific page (not decorated as MCP tool)"""
     try:
         if session_id not in _navigation_state:
             return CommandResult(
@@ -299,6 +264,26 @@ def navigate_to_page(session_id: str, page_number: int) -> Dict[str, Any]:
         return CommandResult(
             status="error", stderr=f"Failed to navigate to page: {str(e)}", exit_code=1
         )
+
+
+@mcp.tool
+@return_as_dict
+def navigate_to_page(session_id: str, page_number: int) -> Dict[str, Any]:
+    """Navigate to a specific page in the PDF
+
+    Args:
+        session_id: Session identifier for the navigation session
+        page_number: Page number to navigate to (1-indexed)
+
+    Returns:
+        Dict containing:
+            - status: "success" or "error"
+            - current_page: Current page number
+            - page_content: Text content of the current page
+            - total_pages: Total number of pages
+            - navigation_info: Navigation context
+    """
+    return _navigate_to_page_helper(session_id, page_number)
 
 
 @mcp.tool
@@ -386,7 +371,7 @@ def navigate_next_page(session_id: str) -> Dict[str, Any]:
                 exit_code=1,
             )
 
-        return navigate_to_page(session_id, next_page)
+        return _navigate_to_page_helper(session_id, next_page)
 
     except Exception as e:
         return CommandResult(
@@ -423,7 +408,7 @@ def navigate_previous_page(session_id: str) -> Dict[str, Any]:
                 status="error", stderr="Already at first page (1)", exit_code=1
             )
 
-        return navigate_to_page(session_id, prev_page)
+        return _navigate_to_page_helper(session_id, prev_page)
 
     except Exception as e:
         return CommandResult(
@@ -600,12 +585,7 @@ def rag_query_current_session(
     Returns:
         Dict containing semantically relevant content chunks with navigation info
     """
-    if not PDF_LIBS_AVAILABLE:
-        return CommandResult(
-            status="error",
-            stderr="PDF libraries not available. Install required packages.",
-            exit_code=1,
-        )
+
 
     try:
         if session_id not in _navigation_state:
@@ -818,35 +798,14 @@ def close_navigation_session(session_id: str) -> Dict[str, Any]:
         )
 
 
-@mcp.tool
-@return_as_dict
-def extract_text_from_pdf(
+def _extract_text_from_pdf_helper(
     filename: str, start_page: int = 1, end_page: Optional[int] = None
-) -> Dict[str, Any]:
-    """Extract text content from a PDF file, limited to 32000 characters, preserving page breaks.
-    Always navigate 2-3 pages at a time, avoid using this tool for large documents.
+) -> CommandResult:
+    """Helper function to extract text from PDF (not decorated as MCP tool)"""
 
-    Args:
-        filename: Name of the PDF file in workspace
-        start_page: Starting page number (1-indexed)
-        end_page: Ending page number (1-indexed), None for all pages
-
-    Returns:
-        Dict containing:
-            - status: "success" or "error"
-            - text: Extracted text content
-            - pages_processed: Number of pages processed
-            - message: Error message if applicable
-    """
-    if not PDF_LIBS_AVAILABLE:
-        return CommandResult(
-            status="error",
-            stderr="PDF libraries not available. Install PyPDF2 and PyMuPDF.",
-            exit_code=1,
-        )
 
     try:
-        pdf_path = Path.cwd() / filename
+        pdf_path = PDF_DIR / filename
         if not pdf_path.exists():
             return CommandResult(
                 status="error",
@@ -906,6 +865,29 @@ def extract_text_from_pdf(
 
 @mcp.tool
 @return_as_dict
+def extract_text_from_pdf(
+    filename: str, start_page: int = 1, end_page: Optional[int] = None
+) -> Dict[str, Any]:
+    """Extract text content from a PDF file, limited to 32000 characters, preserving page breaks.
+    Always navigate 2-3 pages at a time, avoid using this tool for large documents.
+
+    Args:
+        filename: Name of the PDF file in workspace
+        start_page: Starting page number (1-indexed)
+        end_page: Ending page number (1-indexed), None for all pages
+
+    Returns:
+        Dict containing:
+            - status: "success" or "error"
+            - text: Extracted text content
+            - pages_processed: Number of pages processed
+            - message: Error message if applicable
+    """
+    return _extract_text_from_pdf_helper(filename, start_page, end_page)
+
+
+@mcp.tool
+@return_as_dict
 def search_keywords_in_pdf(
     filename: str, keywords: str, case_sensitive: bool = False
 ) -> Dict[str, Any]:
@@ -924,12 +906,12 @@ def search_keywords_in_pdf(
             - keywords_searched: List of keywords that were searched
     """
     try:
-        # First extract text
-        extract_result = extract_text_from_pdf(filename)
-        if extract_result["status"] != "success":
-            return extract_result
+        # First extract text using helper function (not decorated function)
+        extract_result = _extract_text_from_pdf_helper(filename)
+        if extract_result.status != "success":
+            return asdict(extract_result)
 
-        text_data = json.loads(extract_result["stdout"])
+        text_data = json.loads(extract_result.stdout)
         full_text = text_data["text"]
 
         # Parse keywords
@@ -993,9 +975,6 @@ def search_keywords_in_pdf(
 
 
 print("Starting PDF Processing MCP server with streamable-http transport...")
-if not PDF_LIBS_AVAILABLE:
-    print("Warning: PDF libraries not fully available. Some features may not work.")
-    print("Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn")
 
 if __name__ == "__main__":
     # Get port from environment variable (set by ToolHive) or command line argument as fallback

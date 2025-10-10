@@ -15,6 +15,10 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from fastmcp import FastMCP
 
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from shared import get_workspace_path
+
 description = """CSV Management MCP Server provides tools for creating, reading, and manipulating CSV files.
 It allows users to create new CSV datasets, load existing CSV files, and perform various operations on them such as adding, updating, deleting rows, and querying data.
 """
@@ -24,16 +28,8 @@ mcp = FastMCP(
     instructions=description,
 )
 
-
-@mcp.tool
-def get_mcp_name() -> str:
-    """Get the name of this MCP server"""
-    return "CSV Management"
-
-
 # Default working directory for CSV files - use shared workspace
-CSV_DIR = Path("/projects")
-CSV_DIR.mkdir(exist_ok=True)
+CSV_DIR = get_workspace_path()
 
 
 def _get_csv_path(name: str) -> Path:
@@ -339,42 +335,6 @@ def query_csv(name: str, query: str) -> Dict[str, Any]:
             "total_rows": len(df),
             "status": "success",
         }
-    except Exception as e:
-        return {"status": str(e)}
-
-
-@mcp.tool
-def get_csv_stats(name: str) -> Dict[str, Any]:
-    """
-    Get statistical summary of a CSV dataset.
-
-    Args:
-        name: Name of the dataset
-
-    Returns:
-        Dictionary with statistical information
-    """
-    try:
-        df = _load_dataframe(name)
-
-        # Basic stats
-        stats = {
-            "name": name,
-            "shape": list(df.shape),
-            "columns": df.columns.tolist(),
-            "numeric_columns": df.select_dtypes(include=["number"]).columns.tolist(),
-            "categorical_columns": df.select_dtypes(
-                include=["object"]
-            ).columns.tolist(),
-            "missing_values": df.isnull().sum().to_dict(),
-            "duplicate_rows": df.duplicated().sum(),
-        }
-
-        # Add numeric statistics if there are numeric columns
-        if stats["numeric_columns"]:
-            stats["numeric_summary"] = df.describe().to_dict()
-
-        return stats
     except Exception as e:
         return {"status": str(e)}
 

@@ -2,8 +2,9 @@
 
 
 import asyncio
+import json
+from pathlib import Path
 from fastmcp import Client
-
 
 async def discover_mcp_servers():
     """Discover MCP servers on ports 5000-5050 and list their tools."""
@@ -19,11 +20,10 @@ async def discover_mcp_servers():
                 else:
                     print("   No tools available")
                 print()
-        except Exception:
+        except Exception as e:
             continue
-
+    
     print("🏁 Discovery complete")
-
 
 if __name__ == "__main__":
     print("🧪 Starting MCP Server Discovery")

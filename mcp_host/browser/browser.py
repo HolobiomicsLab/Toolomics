@@ -3,6 +3,8 @@ import sys
 import re
 import time
 import random
+import tempfile
+import uuid
 import markdownify
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
@@ -13,23 +15,28 @@ from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.core.os_manager import ChromeType
+from pathlib import Path
+import signal
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))
+from shared import get_workspace_path
 
 # Override helium's ChromeOptions with selenium's for better compatibility
 helium.ChromeOptions = ChromeOptions
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+WORKSPACE_DIR = get_workspace_path()
 
 class Browser:
     def __init__(self, headless: bool = True):
         """Initialize the browser with Helium."""
-        self.screenshot_folder = "/projects/.screenshots"
+        self.screenshot_folder = WORKSPACE_DIR / ".screenshots"
         self.headless = headless
         self.driver = None  # Initialize driver instance variable
+        self.user_data_dir = None  # Track user data directory for cleanup
         self._start_browser()
 
     def _setup_webdriver_service(self):
-        """Setup WebDriver service with automatic driver management."""
+        """Setup WebDriver service with automatic driver management and timeout protection."""
         in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
             "/.dockerenv"
         )
@@ -58,7 +65,13 @@ class Browser:
             try:
                 if strategy_name.startswith("system"):
                     if os.path.exists(driver_path):
-                        service = ChromeService(executable_path=driver_path)
+                        # Create service with timeout protection
+                        service = ChromeService(
+                            executable_path=driver_path,
+                            service_args=['--verbose', '--whitelisted-ips=']
+                        )
+                        # Set shorter timeout to prevent hanging
+                        service.start_error_message = "ChromeDriver failed to start"
                         print(f"Using system driver: {driver_path}")
                         return service
                 elif strategy_name.startswith("download"):
@@ -70,7 +83,15 @@ class Browser:
                     else:
                         driver_path = ChromeDriverManager().install()
                         print(f"Downloaded Chrome driver: {driver_path}")
-                    return ChromeService(executable_path=driver_path)
+                    
+                    # Create service with timeout protection
+                    service = ChromeService(
+                        executable_path=driver_path,
+                        service_args=['--verbose', '--whitelisted-ips=']
+                    )
+                    # Set shorter timeout to prevent hanging
+                    service.start_error_message = "ChromeDriver failed to start"
+                    return service
             except Exception as e:
                 print(f"Strategy {strategy_name} failed: {e}")
                 continue
@@ -112,6 +133,11 @@ class Browser:
             # Setup Chrome options
             chrome_options = helium.ChromeOptions()
 
+            # Create unique user data directory to avoid conflicts
+            self.user_data_dir = tempfile.mkdtemp(prefix=f"chrome_user_data_{uuid.uuid4().hex[:8]}_")
+            chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
+            print(f"Using unique user data directory: {self.user_data_dir}")
+
             # Detect environment
             in_container = os.environ.get("DISPLAY") == ":99" or os.path.exists(
                 "/.dockerenv"
@@ -121,6 +147,18 @@ class Browser:
             if self.headless:
                 chrome_options.add_argument("--headless=new")
 
+            # Additional options to prevent conflicts and improve stability
+            chrome_options.add_argument("--no-first-run")
+            chrome_options.add_argument("--disable-default-apps")
+            chrome_options.add_argument("--disable-sync")
+            chrome_options.add_argument("--disable-background-networking")
+            chrome_options.add_argument("--disable-background-timer-throttling")
+            chrome_options.add_argument("--disable-renderer-backgrounding")
+            chrome_options.add_argument("--disable-backgrounding-occluded-windows")
+            chrome_options.add_argument("--disable-client-side-phishing-detection")
+            chrome_options.add_argument("--disable-component-update")
+            chrome_options.add_argument("--disable-domain-reliability")
+
             if in_container:
                 # Container-specific options
                 chrome_options.add_argument("--no-sandbox")
@@ -128,7 +166,6 @@ class Browser:
                 chrome_options.add_argument("--disable-gpu")
                 chrome_options.add_argument("--disable-software-rasterizer")
                 chrome_options.add_argument("--disable-extensions")
-                chrome_options.add_argument("--disable-background-timer-throttling")
                 chrome_options.add_argument("--memory-pressure-off")
                 chrome_options.add_argument("--single-process")
                 print("Configured Chrome options for container environment")
@@ -171,14 +208,28 @@ class Browser:
             try:
                 print("Attempting basic fallback initialization...")
                 chrome_options = helium.ChromeOptions()
+                
+                # Create unique user data directory for fallback too
+                if not self.user_data_dir:
+                    self.user_data_dir = tempfile.mkdtemp(prefix=f"chrome_user_data_fallback_{uuid.uuid4().hex[:8]}_")
+                chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
+                
                 chrome_options.add_argument("--headless=new")
                 chrome_options.add_argument("--no-sandbox")
                 chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--no-first-run")
+                chrome_options.add_argument("--disable-default-apps")
 
                 # Try to use basic start_chrome
-                self.driver = start_chrome(options=chrome_options)
+                start_chrome(options=chrome_options)
+                # Get the driver that Helium created
+                self.driver = get_driver()
                 if self.driver is not None:
                     print("Fallback initialization succeeded")
+                    # Validate the driver is accessible
+                    current_url = self.driver.current_url
+                    if current_url is None:
+                        raise RuntimeError("Driver session is not valid after fallback")
                 else:
                     raise RuntimeError("Fallback initialization failed - driver is None")
             except Exception as fallback_error:
@@ -540,14 +591,16 @@ class Browser:
             print(f"Error getting downloadable links: {e}")
             return []
 
-    def download_file(self, url: str) -> Optional[tuple[bool, str]]:
+    def download_file(self, url: str) -> tuple[bool, str]:
         """Download a file from URL to current directory.
 
         Args:
             url: The URL of file to download
 
         Returns:
-            tuple[bool, str] | None: (success_status, filename) if successful, None on failure
+            tuple[bool, str]: (success_status, message_or_filename)
+                - If success: (True, filename)
+                - If failure: (False, error_message)
         """
         try:
             import requests
@@ -558,7 +611,7 @@ class Browser:
             # Validate URL is downloadable
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
-                return None
+                return (False, f"Invalid URL: missing scheme or netloc in '{url}'")
 
             session = requests.Session()
             session.headers.update(
@@ -575,11 +628,21 @@ class Browser:
             try:
                 head_response = session.head(url, allow_redirects=True, timeout=10)
                 final_url = head_response.url
-            except:
+            except Exception as head_error:
+                print(f"HEAD request failed, proceeding with GET: {head_error}")
                 final_url = url
 
-            response = session.get(url, stream=True, allow_redirects=True, timeout=30)
-            response.raise_for_status()
+            try:
+                response = session.get(url, stream=True, allow_redirects=True, timeout=30)
+                response.raise_for_status()
+            except requests.exceptions.HTTPError as http_err:
+                return (False, f"HTTP error {response.status_code}: {http_err}")
+            except requests.exceptions.ConnectionError as conn_err:
+                return (False, f"Connection error: {conn_err}")
+            except requests.exceptions.Timeout as timeout_err:
+                return (False, f"Request timeout (30s): {timeout_err}")
+            except requests.exceptions.RequestException as req_err:
+                return (False, f"Request failed: {req_err}")
 
             filename = None
 
@@ -638,11 +701,10 @@ class Browser:
             filename = filename.strip()
 
             # Save to /workspace directory for cross-container sharing
-            workspace_dir = "/projects"
-            if not os.path.exists(workspace_dir):
-                os.makedirs(workspace_dir)
+            if not os.path.exists(WORKSPACE_DIR):
+                os.makedirs(WORKSPACE_DIR)
             
-            filepath = os.path.join(workspace_dir, filename)
+            filepath = os.path.join(WORKSPACE_DIR, filename)
             
             # Ensure we don't overwrite existing files
             original_filename = filename
@@ -650,7 +712,7 @@ class Browser:
             while os.path.exists(filepath):
                 name, ext = os.path.splitext(original_filename)
                 filename = f"{name}_{counter}{ext}"
-                filepath = os.path.join(workspace_dir, filename)
+                filepath = os.path.join(WORKSPACE_DIR, filename)
                 counter += 1
 
             # Save to workspace directory
@@ -659,14 +721,92 @@ class Browser:
                     if chunk:
                         f.write(chunk)
 
-            print(
-                f"Successfully downloaded: {filename} to {workspace_dir} ({os.path.getsize(filepath)} bytes)"
-            )
+            file_size = os.path.getsize(filepath)
+            print(f"Successfully downloaded: {filename} to {WORKSPACE_DIR} ({file_size} bytes)")
             return (True, filename)
 
+        except IOError as io_err:
+            return (False, f"File I/O error: {io_err}")
+        except OSError as os_err:
+            return (False, f"OS error during file save: {os_err}")
         except Exception as e:
-            print(f"Error downloading file from {url}: {e}")
-            return None
+            error_msg = f"Unexpected error downloading file: {type(e).__name__}: {str(e)}"
+            print(error_msg)
+            return (False, error_msg)
+            
+    def download_ftp_file(self, ftp_url: str) -> str:
+        """Download a file from FTP URL to projects directory.
+        
+        Args:
+            ftp_url: The FTP URL of file to download (format: ftp://host/path/to/file)
+            
+        Returns:
+            tuple[bool, str] | None: (success_status, filename) if successful, None on failure
+        """
+        try:
+            import ftplib
+            from urllib.parse import urlparse, unquote
+            import os
+            import re
+            import time
+            
+            # Parse the FTP URL
+            parsed = urlparse(ftp_url)
+            if parsed.scheme != 'ftp':
+                return f"Not an FTP URL: {ftp_url}"
+                
+            # Extract components from URL
+            hostname = parsed.netloc
+            path = parsed.path
+            
+            # Get filename from path
+            filename = os.path.basename(path)
+            if not filename:
+                filename = f"ftp_download_{int(time.time())}"
+            
+            # Clean filename - remove invalid characters
+            filename = unquote(filename)  # URL decode
+            filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
+            filename = filename.strip()
+            
+            filepath = os.path.join(WORKSPACE_DIR, filename)
+            
+            # Ensure we don't overwrite existing files
+            original_filename = filename
+            counter = 1
+            while os.path.exists(filepath):
+                name, ext = os.path.splitext(original_filename)
+                filename = f"{name}_{counter}{ext}"
+                filepath = os.path.join(WORKSPACE_DIR, filename)
+                counter += 1
+            
+            # Connect to FTP server and download the file
+            ftp = ftplib.FTP()
+            ftp.connect(hostname)
+            ftp.login()  # Anonymous login
+            
+            # Navigate to the directory containing the file
+            directory = os.path.dirname(path)
+            if directory:
+                # Split the directory path and navigate through each component
+                for dir_part in directory.strip('/').split('/'):
+                    if dir_part:
+                        try:
+                            ftp.cwd(dir_part)
+                        except ftplib.error_perm as e:
+                            ftp.quit()
+                            return f"FTP directory navigation error: {e}"
+                                    
+            # Download the file
+            with open(filepath, 'wb') as f:
+                ftp.retrbinary(f'RETR {os.path.basename(path)}', f.write)
+            
+            ftp.quit()
+            
+            return f"Successfully downloaded: {filename} to {WORKSPACE_DIR} ({os.path.getsize(filepath)} bytes)"
+            
+        except Exception as e:
+            return f"Error downloading file from FTP {ftp_url}: {e}"
 
     def get_current_url(self) -> str:
         """Get the current URL."""
@@ -702,19 +842,96 @@ class Browser:
         except Exception:
             return False
 
-    def quit(self):
-        """Quit the browser session."""
+    def _cleanup_user_data_dir(self):
+        """Clean up the temporary user data directory."""
+        if self.user_data_dir and os.path.exists(self.user_data_dir):
+            try:
+                import shutil
+                shutil.rmtree(self.user_data_dir, ignore_errors=True)
+                print(f"Cleaned up user data directory: {self.user_data_dir}")
+            except Exception as e:
+                print(f"Warning: Could not clean up user data directory {self.user_data_dir}: {e}")
+
+    def _force_kill_chromedriver(self):
+        """Force kill hanging chromedriver processes."""
         try:
-            kill_browser()
-        except Exception:
-            pass
+            import psutil
+            import signal
+            
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    if 'chromedriver' in proc.info['name'].lower():
+                        print(f"Force killing chromedriver process: {proc.info['pid']}")
+                        proc.send_signal(signal.SIGTERM)
+                        try:
+                            proc.wait(timeout=5)
+                        except psutil.TimeoutExpired:
+                            proc.kill()  # Force kill if SIGTERM doesn't work
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+        except ImportError:
+            print("psutil not available for force cleanup")
+        except Exception as e:
+            print(f"Error in force cleanup: {e}")
+
+    def _quit_driver_with_timeout(self, timeout=10):
+        """Quit driver with timeout to prevent hanging."""
+        if not self.driver:
+            return
+            
+        import threading
+        import time
+        
+        def quit_worker():
+            try:
+                # Close all windows first
+                for handle in self.driver.window_handles:
+                    try:
+                        self.driver.switch_to.window(handle)
+                        self.driver.close()
+                    except:
+                        pass
+                
+                # Then quit the driver
+                self.driver.quit()
+            except Exception as e:
+                print(f"Error in quit worker: {e}")
+        
+        # Run quit in separate thread with timeout
+        quit_thread = threading.Thread(target=quit_worker)
+        quit_thread.daemon = True
+        quit_thread.start()
+        quit_thread.join(timeout=timeout)
+        
+        if quit_thread.is_alive():
+            print(f"Driver quit timed out after {timeout}s, forcing cleanup")
+            # Force kill chromedriver processes
+            self._force_kill_chromedriver()
+
+    def quit(self):
+        """Quit the browser session with improved cleanup and timeout protection."""
+        try:
+            # First try graceful shutdown with timeout
+            if self.driver:
+                self._quit_driver_with_timeout(timeout=10)
+                
+            # Kill any remaining browser processes
+            try:
+                kill_browser()
+            except:
+                pass
+                
+        except Exception as e:
+            print(f"Error during browser cleanup: {e}")
+            # Force kill chromedriver processes if needed
+            self._force_kill_chromedriver()
+        finally:
+            self.driver = None
+            self._cleanup_user_data_dir()
 
     def close(self):
-        """Close the browser."""
-        try:
-            kill_browser()
-        except Exception:
-            pass
+        """Close the browser with improved cleanup."""
+        self.quit()
 
     def __enter__(self):
         return self
@@ -726,11 +943,13 @@ class Browser:
 # Usage example:
 if __name__ == "__main__":
     with Browser(headless=False) as browser:
-        browser.go_to("https://www.google.com")
-        browser.screenshot()
-        text = browser.get_text()
-        navigable_links = browser.get_navigable()
-        print(f"Current URL: {browser.get_current_url()}")
-        print(f"Page title: {browser.get_page_title()}")
-        print(f"Page text: {text[:200]}...")
-        print(f"Navigable links: {navigable_links[:5]}")
+        while True:
+            browser.go_to("https://www.google.com")
+            browser.go_to("https://github.com/tanjeffreyz/batch-normalization")
+            browser.screenshot()
+            text = browser.get_text()
+            navigable_links = browser.get_navigable()
+            print(f"Current URL: {browser.get_current_url()}")
+            print(f"Page title: {browser.get_page_title()}")
+            print(f"Page text: {text[:200]}...")
+            print(f"Navigable links: {navigable_links[:5]}")

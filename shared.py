@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from functools import wraps
 import subprocess
+from pathlib import Path
 
 
 @dataclass
@@ -33,14 +34,25 @@ def return_as_dict(func):
     return wrapper
 
 
+def get_workspace_path() -> Path:
+    """Get standardized workspace path with fallback.
+    
+    Returns:
+        Path: Current working directory (which should be the workspace when MCP servers run)
+    """
+    # When MCP servers are deployed, they run with cwd=workspace_dir
+    # So the current working directory IS the workspace
+    return Path(".")
+
+
 def run_bash_subprocess(
     command: str,
     timeout: int = 30,
 ) -> CommandResult:
     import os
-    # Set working directory to /projects for consistency
-    cwd = "/projects" if os.path.exists("/projects") else None
-    print(f"Running command: {command} with timeout: {timeout} seconds in {cwd}")
+    # MCP servers already run in the workspace directory, so use current directory
+    cwd = None  # Use current working directory (which is the workspace)
+    print(f"Running command: {command} with timeout: {timeout} seconds in current directory")
     try:
         result = subprocess.run(
             command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
