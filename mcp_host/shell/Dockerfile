@@ -8,7 +8,6 @@ COPY shared.py /app/shared.py
 
 # Copy the shell MCP server code
 COPY mcp_host/shell /app
-COPY workspace /app/workspace
 
 # Install Python dependencies
 RUN pip3 install -r /app/requirements.txt
