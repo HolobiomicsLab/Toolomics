@@ -42,8 +42,6 @@ def _get_python_path(filename: str) -> Path:
     """Get the full path for a Python file, ensuring it's in our workspace."""
     # Sanitize filename
     safe_name = "".join(c for c in filename if c.isalnum() or c in "._-/")
-    if not safe_name.endswith(".py"):
-        safe_name += ".py"
     return WORKSPACE_DIR / safe_name
 
 
@@ -721,7 +719,9 @@ def validate_python_syntax(filename: str) -> Dict[str, Any]:
             content = f.read()
         
         try:
-            tree = ast.parse(content)
+            content = content.replace('\\n', '\n')
+            content = content.replace('\\t', '\t')
+            _ = ast.parse(content)
             return CommandResult(
                 status="success",
                 stdout=f"Python file '{filename}' has valid syntax",

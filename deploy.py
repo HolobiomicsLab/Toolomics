@@ -90,16 +90,24 @@ class ProcessManager:
         logger.info(f"Started Python server: {absolute_server_path} on port {port} (workspace: {self.workspace_dir})")
         return process_info
     
-    def start_docker_compose(self, compose_file: Path) -> ProcessInfo:
-        """Start docker-compose service"""
+    def start_docker_compose(self, compose_file: Path, port: Optional[int] = None) -> ProcessInfo:
+        """Start docker-compose service with optional port configuration"""
         platform = sys.platform
         if platform == "linux":
             cmd = ['docker', 'compose', '-f', str(compose_file), 'up', '-d']
         else:
             cmd = ['docker-compose', '-f', str(compose_file), 'up', '-d']
+        
+        # Set up environment with port if provided
+        env = os.environ.copy()
+        if port is not None:
+            env['MCP_PORT'] = str(port)
+            env['FASTMCP_PORT'] = str(port)
+            logger.info(f"Setting MCP_PORT={port} for docker-compose: {compose_file}")
             
         proc = subprocess.Popen(
             cmd,
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -109,12 +117,13 @@ class ProcessManager:
         process_info = ProcessInfo(
             proc=proc,
             file_path=str(compose_file),
+            port=port,
             process_type='docker',
             is_critical=False
         )
         
         self.processes.append(process_info)
-        logger.info(f"Started Docker compose: {compose_file}")
+        logger.info(f"Started Docker compose: {compose_file}" + (f" on port {port}" if port else ""))
         return process_info
     
     def monitor_processes(self, check_interval: float = 0.1):
@@ -275,11 +284,17 @@ class ServerDiscovery:
     
     @staticmethod
     def find_server_files(mcp_dir: Path) -> List[Path]:
-        """Find all server.py files in subdirectories"""
+        """Find all server.py files in subdirectories, excluding those with docker-compose.yml in the same folder"""
         server_files = []
         for server_file in mcp_dir.rglob('server.py'):
             if server_file.parent != mcp_dir:  # Must be in subdirectory
-                server_files.append(server_file)
+                # Check if there's a docker-compose.yml in the same directory
+                docker_compose_in_same_dir = (server_file.parent / 'docker-compose.yml').exists()
+                
+                if not docker_compose_in_same_dir:
+                    server_files.append(server_file)
+                else:
+                    logger.info(f"Skipping {server_file} - docker-compose.yml found in same directory")
         return server_files
     
     @staticmethod
@@ -297,30 +312,66 @@ class ConfigManager:
     def __init__(self, config_path: str):
         self.config_path = Path(config_path)
         
-    def load_config(self) -> Dict[str, int]:
-        """Load port configuration"""
+    def load_config(self) -> Dict[str, dict]:
+        """
+        Load port configuration with enabled flag.
+        Returns dict mapping path to {"port": int, "enabled": bool}
+        """
         if not self.config_path.exists():
             return {}
             
         try:
             with open(self.config_path, 'r') as f:
                 config_list = json.load(f)
-                # Convert list format to dict
-                return {list(item.keys())[0]: list(item.values())[0] for item in config_list}
+                config_dict = {}
+                
+                for item in config_list:
+                    # Handle both old format (single key-value) and new format (with 'path', 'port', 'enabled')
+                    if 'path' in item and 'port' in item:
+                        # New format
+                        path = item['path']
+                        config_dict[path] = {
+                            'port': item['port'],
+                            'enabled': item.get('enabled', True)  # Default to enabled
+                        }
+                    else:
+                        # Old format - single key-value pair
+                        path = list(item.keys())[0]
+                        port = list(item.values())[0]
+                        config_dict[path] = {
+                            'port': port,
+                            'enabled': True  # Default to enabled for old configs
+                        }
+                
+                return config_dict
         except (json.JSONDecodeError, KeyError, IndexError) as e:
             logger.error(f"Error loading config: {e}")
             return {}
     
-    def save_config(self, config: Dict[str, int]) -> None:
-        """Save port configuration"""
-        # Convert dict to list format for compatibility
-        config_list = [{path: port} for path, port in config.items()]
+    def save_config(self, config: Dict[str, dict]) -> None:
+        """
+        Save port configuration with enabled flag.
+        Config dict maps path to {"port": int, "enabled": bool}
+        """
+        # Convert dict to list format with new structure
+        config_list = [
+            {
+                "path": path,
+                "port": info['port'],
+                "enabled": info['enabled']
+            }
+            for path, info in config.items()
+        ]
         
         with open(self.config_path, 'w') as f:
             json.dump(config_list, f, indent=4)
     
-    def assign_ports(self, server_files: List[Path], starting_port: int = STARTING_PORT) -> Dict[str, int]:
-        """Assign ports to server files with proper range management"""
+    def assign_ports(self, server_files: List[Path], compose_files: List[Path] = None, starting_port: int = STARTING_PORT) -> Dict[str, dict]:
+        """
+        Assign ports to server files and docker-compose files with proper range management.
+        Preserves enabled status for existing servers, new servers are enabled by default.
+        Returns dict mapping path to {"port": int, "enabled": bool}
+        """
         config = self.load_config()
         
         # Define port ranges
@@ -334,13 +385,10 @@ class ConfigManager:
         docker_servers = []
         
         for server_file in server_files:
-            if "mcp_docker" in str(server_file):
-                docker_servers.append(server_file)
-            else:
-                host_servers.append(server_file)
+            host_servers.append(server_file)
         
         # Get currently used ports
-        used_ports = set(config.values())
+        used_ports = set(info['port'] for info in config.values())
         
         # Assign ports to host servers (5000-5099)
         next_host_port = starting_port
@@ -355,28 +403,64 @@ class ConfigManager:
                     if next_host_port > HOST_PORT_MAX:
                         raise RuntimeError(f"No available ports in host range ({HOST_PORT_MIN}-{HOST_PORT_MAX}) for server {server_str}")
                 
-                config[server_str] = next_host_port
+                config[server_str] = {'port': next_host_port, 'enabled': True}
                 used_ports.add(next_host_port)
-                logger.info(f"Assigned host port {next_host_port} to {server_str}")
+                logger.info(f"Assigned host port {next_host_port} to {server_str} (enabled by default)")
                 next_host_port += 1
         
         # Assign ports to docker servers (5100-5199)
         next_docker_port = DOCKER_PORT_MIN
-        for server_file in docker_servers:
-            server_str = str(server_file)
-            if server_str not in config:
-                # Find next available port in docker range
-                while (next_docker_port in used_ports or 
-                       next_docker_port < DOCKER_PORT_MIN or 
-                       next_docker_port > DOCKER_PORT_MAX):
-                    next_docker_port += 1
-                    if next_docker_port > DOCKER_PORT_MAX:
-                        raise RuntimeError(f"No available ports in docker range ({DOCKER_PORT_MIN}-{DOCKER_PORT_MAX}) for server {server_str}")
-                
-                config[server_str] = next_docker_port
-                used_ports.add(next_docker_port)
-                logger.info(f"Assigned docker port {next_docker_port} to {server_str}")
-                next_docker_port += 1
+        #for server_file in docker_servers:
+        #    server_str = str(server_file)
+        #    if server_str not in config:
+        #        # Find next available port in docker range
+        #        while (next_docker_port in used_ports or 
+        #               next_docker_port < DOCKER_PORT_MIN or 
+        #               next_docker_port > DOCKER_PORT_MAX):
+        #            next_docker_port += 1
+        #            if next_docker_port > DOCKER_PORT_MAX:
+        #                raise RuntimeError(f"No available ports in docker range ({DOCKER_PORT_MIN}-{DOCKER_PORT_MAX}) for server {server_str}")
+        #        
+        #        config[server_str] = next_docker_port
+        #        used_ports.add(next_docker_port)
+        #        logger.info(f"Assigned docker port {next_docker_port} to {server_str}")
+        #        next_docker_port += 1
+        
+        # Assign ports to docker-compose files
+        if compose_files:
+            for compose_file in compose_files:
+                compose_str = str(compose_file)
+                if compose_str not in config:
+                    # Check if there's a server.py in the same directory
+                    server_in_same_dir = (compose_file.parent / 'server.py').exists()
+                    
+                    # Determine appropriate port range based on location
+                    if "mcp_host" in compose_str or not server_in_same_dir:
+                        # Pure docker service or legacy mcp_host location
+                        while (next_docker_port in used_ports or 
+                               next_docker_port < DOCKER_PORT_MIN or 
+                               next_docker_port > DOCKER_PORT_MAX):
+                            next_docker_port += 1
+                            if next_docker_port > DOCKER_PORT_MAX:
+                                raise RuntimeError(f"No available ports in docker range ({DOCKER_PORT_MIN}-{DOCKER_PORT_MAX}) for compose {compose_str}")
+                        
+                        config[compose_str] = {'port': next_docker_port, 'enabled': True}
+                        used_ports.add(next_docker_port)
+                        logger.info(f"Assigned docker port {next_docker_port} to {compose_str} (enabled by default)")
+                        next_docker_port += 1
+                    else:
+                        # Docker-compose with server.py in mcp_host - use host range
+                        while (next_host_port in used_ports or 
+                               next_host_port < HOST_PORT_MIN or 
+                               next_host_port > HOST_PORT_MAX):
+                            next_host_port += 1
+                            if next_host_port > HOST_PORT_MAX:
+                                raise RuntimeError(f"No available ports in host range ({HOST_PORT_MIN}-{HOST_PORT_MAX}) for compose {compose_str}")
+                        
+                        config[compose_str] = {'port': next_host_port, 'enabled': True}
+                        used_ports.add(next_host_port)
+                        logger.info(f"Assigned host port {next_host_port} to {compose_str} (enabled by default)")
+                        next_host_port += 1
         
         self.save_config(config)
         return config
@@ -405,12 +489,20 @@ class MCPDeploymentManager:
         if not self.mcp_dir.exists():
             raise FileNotFoundError(f"MCP directory {self.mcp_dir} does not exist")
         
+        # Discover all services first
+        compose_files = ServerDiscovery.find_docker_compose_files(self.mcp_dir)
+        server_files = ServerDiscovery.find_server_files(self.mcp_dir)
+        
+        # Assign ports to all services
+        logger.info("Assigning ports to all services...")
+        port_config = self.config_manager.assign_ports(server_files, compose_files, starting_port)
+        
         # Start Docker services
         if not skip_docker:
-            self._deploy_docker_services()
+            self._deploy_docker_services(compose_files, port_config)
         
         # Start MCP servers
-        self._deploy_mcp_servers(starting_port)
+        self._deploy_mcp_servers(server_files, port_config)
         
         # Monitor processes
         logger.info("All services started. Monitoring processes...")
@@ -418,44 +510,67 @@ class MCPDeploymentManager:
         logger.info("All MCP servers will create files directly in the workspace directory")
         self.process_manager.monitor_processes()
     
-    def _deploy_docker_services(self):
-        """Deploy Docker Compose services"""
-        compose_files = ServerDiscovery.find_docker_compose_files(self.mcp_dir)
-        
+    def _deploy_docker_services(self, compose_files: List[Path], port_config: Dict[str, dict]):
+        """Deploy Docker Compose services with assigned ports (only if enabled)"""
         if not compose_files:
             logger.info("No Docker Compose files found")
             return
         
         logger.info(f"Found {len(compose_files)} Docker Compose files")
+        started_count = 0
+        disabled_count = 0
+        
         for compose_file in compose_files:
             try:
-                self.process_manager.start_docker_compose(compose_file)
+                compose_str = str(compose_file)
+                config_entry = port_config.get(compose_str, {})
+                
+                if not config_entry.get('enabled', True):
+                    logger.info(f"Skipping disabled Docker service: {compose_str}")
+                    disabled_count += 1
+                    continue
+                
+                port = config_entry.get('port')
+                self.process_manager.start_docker_compose(compose_file, port)
+                started_count += 1
             except Exception as e:
                 logger.error(f"Failed to start Docker service {compose_file}: {e}")
         
-        if compose_files:
+        if started_count > 0:
+            logger.info(f"Started {started_count} Docker services ({disabled_count} disabled)")
             logger.info("Waiting for Docker services to start...")
             time.sleep(3)
+        elif disabled_count > 0:
+            logger.info(f"All {disabled_count} Docker services are disabled")
     
-    def _deploy_mcp_servers(self, starting_port: int):
-        """Deploy MCP Python servers"""
-        server_files = ServerDiscovery.find_server_files(self.mcp_dir)
-        
+    def _deploy_mcp_servers(self, server_files: List[Path], port_config: Dict[str, dict]):
+        """Deploy MCP Python servers with assigned ports (only if enabled)"""
         if not server_files:
             logger.info("No MCP server files found")
             return
         
         logger.info(f"Found {len(server_files)} MCP servers")
-        port_config = self.config_manager.assign_ports(server_files, starting_port)
+        started_count = 0
+        disabled_count = 0
         
         for server_file in server_files:
             server_str = str(server_file)
-            port = port_config[server_str]
+            config_entry = port_config.get(server_str, {})
+            
+            if not config_entry.get('enabled', True):
+                logger.info(f"Skipping disabled MCP server: {server_str}")
+                disabled_count += 1
+                continue
+            
+            port = config_entry.get('port')
             
             try:
                 self.process_manager.start_python_server(server_file, port)
+                started_count += 1
             except Exception as e:
                 logger.error(f"Failed to start server {server_file}: {e}")
+        
+        logger.info(f"Started {started_count} MCP servers ({disabled_count} disabled)")
 
 def main():
     parser = argparse.ArgumentParser(description="Deploy MCP servers with centralized workspace file management")

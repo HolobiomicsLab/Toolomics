@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install base dependencies first
-COPY mcp_docker/decimer/requirements.txt /app/requirements.txt
+COPY mcp_host/decimer/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install DECIMER packages in the recommended order: Classifier → Segmentation → Transformer
@@ -35,14 +35,11 @@ RUN pip install decimer-segmentation
 # 3. Install DECIMER Transformer (from PyPI - official release)
 RUN pip install decimer
 
-# Copy model download script
-COPY mcp_docker/decimer/download_models.py /app/download_models.py
-
 # Copy pre-downloaded models to their proper locations
 # This avoids runtime downloads and speeds up first-time usage
-COPY mcp_docker/decimer/models/classifier /tmp/classifier_models
-COPY mcp_docker/decimer/models/segmentation /tmp/segmentation_models  
-COPY mcp_docker/decimer/models/transformer /tmp/transformer_models
+COPY mcp_host/decimer/models/classifier /tmp/classifier_models
+COPY mcp_host/decimer/models/segmentation /tmp/segmentation_models  
+COPY mcp_host/decimer/models/transformer /tmp/transformer_models
 
 # Install models to their proper locations
 RUN cp -r /tmp/classifier_models/* /usr/local/lib/python3.10/site-packages/decimer_image_classifier/model/ && \
@@ -52,11 +49,11 @@ RUN cp -r /tmp/classifier_models/* /usr/local/lib/python3.10/site-packages/decim
     rm -rf /tmp/classifier_models /tmp/segmentation_models /tmp/transformer_models && \
     echo "✅ Pre-downloaded models installed successfully"
 
-# Copy shared utilities from the project
+# Copy shared.py from project root
 COPY shared.py /app/shared.py
 
 # Copy the MCP server
-COPY mcp_docker/decimer/server.py /app/server.py
+COPY mcp_host/decimer/server.py /app/server.py
 
 # Make server executable
 RUN chmod +x /app/server.py
