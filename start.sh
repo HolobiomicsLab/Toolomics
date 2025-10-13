@@ -29,8 +29,7 @@ if [ "$PROCESSES_FOUND" = true ]; then
 fi
 
 echo "Deploying MCPs servers..."
-python3 -m pip install -r requirements.txt
 python3 deploy.py --config config.json --mcp-dir mcp_host &
-HOST_PID=$!
 
+HOST_PID=$!
 wait $HOST_PID

@@ -49,12 +49,12 @@ class ProcessManager:
         self.failure_event = threading.Event()  # Set when a critical process fails
         self.workspace_dir = workspace_dir
         self.failed_processes: List[ProcessInfo] = []  # Track failed processes
-        
+    
     def start_python_server(self, server_path: Path, port: int) -> ProcessInfo:
         """Start a Python MCP server in the workspace directory"""
         if not server_path.exists():
             raise FileNotFoundError(f"Server file not found: {server_path}")
-        
+
         # Set up environment with server directory in PYTHONPATH
         server_dir = server_path.parent
         env = os.environ.copy()
@@ -66,8 +66,10 @@ class ProcessManager:
         
         # Use absolute path for the server file since we're changing working directory
         absolute_server_path = server_path.resolve()
-#py_cmd = sys.executable
-        py_cmd = "python3"
+        
+        # Use the same Python interpreter that's running this script
+        py_cmd = sys.executable
+        
         cmd = [py_cmd, str(absolute_server_path), str(port)]
         proc = subprocess.Popen(
             cmd,
