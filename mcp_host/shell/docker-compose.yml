@@ -8,4 +8,4 @@ services:
     environment:
       - MCP_PORT=${MCP_PORT}
     volumes:
-      - ../../workspace:/workspace
+      - ../../workspace:/app/workspace
