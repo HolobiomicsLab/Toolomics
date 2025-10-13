@@ -31,5 +31,8 @@
     },
     {
         "mcp_host/txt_editor/server.py": 5009
+    },
+    {
+        "mcp_docker/decimer/server.py": 5101
     }
 ]
