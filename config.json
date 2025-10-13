@@ -1,8 +1,5 @@
 [
     {
-        "mcp_docker/shell/server.py": 5100
-    },
-    {
         "mcp_host/Rscript/server.py": 5000
     },
     {
@@ -33,6 +30,15 @@
         "mcp_host/txt_editor/server.py": 5009
     },
     {
-        "mcp_docker/decimer/server.py": 5101
+        "mcp_host/Rscript/docker-compose.yml": 5100
+    },
+    {
+        "mcp_host/shell/docker-compose.yml": 5101
+    },
+    {
+        "mcp_host/browser/searxng/docker-compose.yml": 5102
+    },
+    {
+        "mcp_host/decimer/docker-compose.yml": 5103
     }
 ]

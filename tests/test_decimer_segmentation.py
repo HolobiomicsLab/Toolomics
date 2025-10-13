@@ -19,7 +19,7 @@ async def test_segmentation():
     
     print("🧪 Testing DECIMER Segmentation MCP Server on port 5150")
     print("📌 Make sure the server is running first:")
-    print("   ./mcp_docker/decimer/run.sh")
+    print("   ./mcp_host/decimer/run.sh")
     print()
     
     try:
@@ -212,7 +212,7 @@ async def test_segmentation():
             
     except Exception as e:
         print(f"❌ Failed to connect to MCP server: {e}")
-        print("Make sure the server is running with: ./mcp_docker/decimer/run.sh")
+        print("Make sure the server is running with: ./mcp_host/decimer/run.sh")
         return False
 
 

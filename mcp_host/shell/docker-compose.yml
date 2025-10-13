@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: mcp_host/shell/Dockerfile
+    ports:
+      - "${MCP_PORT}:${MCP_PORT}"
+    environment:
+      - MCP_PORT=${MCP_PORT}
+    volumes:
+      - ../../workspace:/workspace

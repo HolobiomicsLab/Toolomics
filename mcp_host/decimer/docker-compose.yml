@@ -1,0 +1,13 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: mcp_host/decimer/Dockerfile
+    ports:
+      - "${MCP_PORT}:${MCP_PORT}"
+    environment:
+      - MCP_PORT=${MCP_PORT}
+      - ENV=production
+    volumes:
+      - ../../workspace:/workspace
+      - ./models:/app/models
