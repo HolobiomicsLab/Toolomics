@@ -1,19 +1,26 @@
-FROM python:3.10
+FROM nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
 
-# Set the working directory
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copy shared.py from project root
+# Create and use venv
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 COPY shared.py /app/shared.py
+COPY requirements.txt /app/requirements.txt
 
-# Copy the shell MCP server code
-COPY mcp_host/shell /app
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY mcp_host/shell/server.py /app/server.py
 
-# Install Python dependencies
-RUN pip3 install -r /app/requirements.txt
+RUN chmod +x /app/server.py
 
-# Expose ports, from 5100 to 5200 as MCP might use all this range depending on number of tools deployed
+ENV PYTHONPATH="/app:$PYTHONPATH"
+
 EXPOSE 5100-5200
-
-# Command to run the application
-CMD ["python3", "server.py"]
+CMD ["python3", "/app/server.py"]
