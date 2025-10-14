@@ -8,15 +8,19 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Create workspace directory with proper permissions
+RUN mkdir -p /app/workspace && chmod 777 /app/workspace
+
 # Create and use venv
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY shared.py /app/shared.py
+COPY mcp_host/shell/server.py /app/server.py
+
 COPY requirements.txt /app/requirements.txt
 
 RUN pip install --no-cache-dir -r /app/requirements.txt
-COPY mcp_host/shell/server.py /app/server.py
 
 RUN chmod +x /app/server.py
 
