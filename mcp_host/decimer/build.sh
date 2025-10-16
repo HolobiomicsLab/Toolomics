@@ -19,8 +19,8 @@ echo "   - Segmentation: models/segmentation/mask_rcnn_molecule.h5 → /usr/loca
 echo "   - Transformer: models/transformer/DECIMER-V2/ → /root/.data/pystow/"
 
 # Check if models directory exists
-if [ ! -d "mcp_docker/decimer/models" ]; then
-    echo "❌ Error: models directory not found at mcp_docker/decimer/models/"
+if [ ! -d "mcp_host/decimer/models" ]; then
+    echo "❌ Error: models directory not found at mcp_host/decimer/models/"
     echo "   Please ensure you have downloaded the models first."
     echo "   Run this script from the project root directory."
     exit 1
@@ -28,8 +28,8 @@ fi
 
 # Check if each model directory exists
 for model_type in classifier segmentation transformer; do
-    if [ ! -d "mcp_docker/decimer/models/$model_type" ]; then
-        echo "❌ Error: missing model directory: mcp_docker/decimer/models/$model_type/"
+    if [ ! -d "mcp_host/decimer/models/$model_type" ]; then
+        echo "❌ Error: missing model directory: mcp_host/decimer/models/$model_type/"
         echo "   Please download all required models."
         exit 1
     fi
@@ -46,7 +46,7 @@ echo "📁 Project root: $PROJECT_ROOT"
 
 # Build the Docker image from the project root for proper context
 cd "$PROJECT_ROOT"
-docker build -t toolomics-decimer:latest -f mcp_docker/decimer/Dockerfile .
+docker build -t toolomics-decimer:latest -f mcp_host/decimer/Dockerfile .
 
 echo "✅ DECIMER MCP Docker container built successfully!"
 echo ""
@@ -54,7 +54,7 @@ echo "🎉 Build complete! Models are embedded in the Docker image."
 echo "   No runtime downloads required - models load instantly!"
 echo ""
 echo "🚀 To run the server:"
-echo "   ./mcp_docker/decimer/run.sh [port]"
+echo "   ./mcp_host/decimer/run.sh [port]"
 echo ""
 echo "Or manually:"
 echo "   docker run -d --name decimer-mcp -p 5150:5150 \\"

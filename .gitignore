@@ -542,10 +542,10 @@ Thumbs.db
 docker-compose.override.yml
 
 # DECIMER MCP
-mcp_docker/decimer/models/
+mcp_host/decimer/models/
 download_models.py
-mcp_docker/decimer/README.md
-mcp_docker/decimer/run.sh
+mcp_host/decimer/README.md
+mcp_host/decimer/run.sh
 DECIMER_MCP_SETUP.md
 DECIMER-Image-Transformer/
 DECIMER-Image-Classifier/

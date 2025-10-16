@@ -136,7 +136,7 @@ if __name__ == "__main__":
     
     print(f"🧪 Testing DECIMER Classifier MCP Server on port {port}")
     print("📌 Make sure the server is running first:")
-    print("   ./mcp_docker/decimer/run.sh")
+    print("   ./mcp_host/decimer/run.sh")
     print()
     
     asyncio.run(test_decimer_classifier(port))

@@ -41,8 +41,6 @@ def _get_txt_path(filename: str) -> Path:
     """Get the full path for a text file, ensuring it's in our workspace."""
     # Sanitize filename
     safe_name = "".join(c for c in filename if c.isalnum() or c in "._-/")
-    if not safe_name.endswith(".txt"):
-        safe_name += ".txt"
     return WORKSPACE_DIR / safe_name
 
 

@@ -12,12 +12,13 @@ import os
 import sys
 from fastmcp import FastMCP
 import shlex
+import subprocess
 from pathlib import Path
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))  # Add 'a/' to Python's search path
 
-from shared import CommandResult, run_bash_subprocess, return_as_dict
+from shared import CommandResult, return_as_dict
 
 description = """
 Shell Tools MCP Server provides tools for shell navigation and interaction.
@@ -30,6 +31,35 @@ mcp = FastMCP(
     instructions=description,
 )
 
+def run_bash_subprocess(
+    command: str,
+    timeout: int = 30,
+) -> CommandResult:
+    cwd = "workspace"
+    print(f"Running command: {command} with timeout: {timeout} seconds in current directory")
+    try:
+        result = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
+        )
+        return CommandResult(
+            status="success" if result.returncode == 0 else "error",
+            stdout=result.stdout,
+            stderr=result.stderr,
+            exit_code=result.returncode,
+        )
+    except subprocess.TimeoutExpired:
+        return CommandResult(
+            status="error",
+            stderr=f"Command timed out after {timeout} seconds",
+            exit_code=-1,
+        )
+    except Exception as e:
+        return CommandResult(
+            status="error",
+            stderr=str(e),
+            exit_code=-1,
+        )
+
 
 
 @mcp.tool
@@ -39,13 +69,13 @@ def execute_command(command: str) -> dict:
     Execute a shell command and return the output with better error handling and security.
     You should NEVER use this tool to execute Rscript, use the dedicated Rscript tool instead.
     execute_command does not support multiple positional arguments or combined positional and keyword arguments
-    
+
     Args:
         command (str): The shell command to execute
 
     Returns:
         dict : {CommandResult.__doc__}
-        
+
     Example:
         execute_command(command="ls -la /tmp")
     """
@@ -69,7 +99,7 @@ def execute_command(command: str) -> dict:
                 exit_code=-1,
             )
 
-    return run_bash_subprocess(command, timeout=600)
+    return run_bash_subprocess(command, timeout=36000)
 
 
 print("Starting Shell MCP server with streamable-http transport...")

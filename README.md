@@ -25,16 +25,7 @@ uv pip install -r requirements.txt
 ./start.sh
 ```
 
-### Deploy Tools on Docker
-
-```bash
-docker build -t toolomics .
-docker run -it -p 5100-5200:5100-5200 toolomics
-```
-
-By default we use port 5100 to 5200 for MCPs running **in docker**.
-
-### Deploy Tools on Host
+### Deploy Tools
 
 To deploy all tools, use the following command:
 
@@ -42,7 +33,7 @@ To deploy all tools, use the following command:
 python3.10 deploy.py --config <config path>
 ```
 
-By default we use port 5000 to 5100 for MCPs running **on host**.
+By default we use port 5000 to 5100 for MCPs
 
 For example : 
 
@@ -85,7 +76,7 @@ Each MCP server is assigned a port, which is recorded in the `config.json` file.
         "mcp_host/Rscript/server.py": 5001
     },
     {
-        "mcp_docker/files/csv/server.py": 5101
+        "mcp_host/files/csv/server.py": 5101
     }
 ]
 ```
@@ -123,9 +114,7 @@ You can easily add a new tool as an MCP server.
 ### Steps to Add a New MCP
 
 1. Create a `server.py` file with your MCP implementation, it should take the port number as first argument (eg: `server.py 5003`).
-2. Place the file in a subfolder of the `mcp_host` directory. For example, to add a metabolomics-related tool, create a subfolder like `mcp_host/metabolomics/your_tool_name`.
-
-**Put your `server.py` in mcp_docker if your tool need to run in docker for safety.**
+2. Place the file in a subfolder of the `mcp_host` directory. For example, to add a metabolomics-related tool, create a subfolder like `mcp_host/your_tool_name`.
 
 The `deploy.py` script will look for new `server.py` file, attribute a port for your script and add it to `config.json` (unless you manually did by modifying the config.json), finally it will run your script with the assigned port as first argument.
 
@@ -135,25 +124,140 @@ The `deploy.py` script will look for new `server.py` file, attribute a port for 
 The `fastmcp` library simplifies the creation of MCP servers. Here's a basic example:
 
 ```python
-from fastmcp import FastMCP
+#!/usr/bin/env python3
 
-mcp = FastMCP(name="Calculator")
+from fastmcp import FastMCP
+from pathlib import Path
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(project_root))  # Add 'a/' to Python's search path
+
+from shared import CommandResult, run_bash_subprocess, return_as_dict
+
+description = """
+a calculator that ...
+"""
+
+mcp = FastMCP(
+    name="calculator",
+    instructions=description,
+)
 
 @mcp.tool
+@return_as_dict
 def multiply(a: float, b: float) -> float:
     """Multiplies two numbers."""
     return a * b
 
-port = -1
-if len(sys.argv) > 1 and sys.argv[1].isdigit():
-    port = int(sys.argv[1])
-assert port > 0, "You must pass the port as an argument to the script."
-mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
+if __name__ == "__main__":
+    port = None
+    if "MCP_PORT" in os.environ:
+        port = int(os.environ["MCP_PORT"])
+    elif "FASTMCP_PORT" in os.environ:
+        port = int(os.environ["FASTMCP_PORT"])
+    elif len(sys.argv) == 2:
+        port = int(sys.argv[1])
+    else:
+        sys.exit(1)
+    mcp.run(transport="streamable-http", port=port, host="0.0.0.0")
 ```
 
 ### Automatic Port Assignment
 
 When you run the `deploy.py` script for the first time, it will automatically assign a port to your new MCP server and save the mapping in the `config.json` file.
+
+## Dockerizing an MCP Server
+
+For MCP servers that require isolated dependencies or need to run in a containerized environment (e.g., for ML models, system tools, or heavy dependencies), you can deploy them using Docker.
+
+### How It Works
+
+If a `docker-compose.yml` file exists in the same directory as your `server.py`, the deployment script will:
+- **Automatically deploy the server in Docker** instead of running it directly on the host
+- **Skip the standalone Python execution** to avoid duplicate deployments
+- **Pass the assigned port** to the Docker container via the `MCP_PORT` environment variable
+
+### Steps to Dockerize an MCP
+
+1. Create your `server.py` file that reads the port from environment variables:
+
+```python
+import os
+import sys
+from fastmcp import FastMCP
+
+mcp = FastMCP(name="MyDockerizedTool")
+
+@mcp.tool
+def my_tool():
+    """Your tool implementation"""
+    pass
+
+if __name__ == "__main__":
+    # Read port from environment variable (set by deploy.py) or command line
+    port = None
+    if "MCP_PORT" in os.environ:
+        port = int(os.environ["MCP_PORT"])
+    elif len(sys.argv) > 1:
+        port = int(sys.argv[1])
+    
+    assert port is not None, "Port must be provided"
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=port, path="/mcp")
+```
+
+2. Create a `Dockerfile` in the same directory:
+
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy shared.py from project root (context is set to project root in docker-compose.yml)
+COPY shared.py /app/shared.py
+
+# Copy the MCP server code from the subdirectory
+COPY mcp_host/my_tool /app
+
+# Install Python dependencies
+RUN pip install -r /app/requirements.txt
+
+CMD ["python", "server.py"]
+```
+
+**Note**: Since the build context is the project root, all COPY paths are relative to the project root.
+
+3. Create a `docker-compose.yml` in the same directory:
+
+```yaml
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: mcp_host/my_tool/Dockerfile
+    ports:
+      - "${MCP_PORT}:${MCP_PORT}"
+    environment:
+      - MCP_PORT=${MCP_PORT}
+    volumes:
+      - ../../workspace:/workspace
+```
+
+**Important**: The build context must be set to the project root (`../..`) to allow the Dockerfile to access `shared.py` and other project files.
+
+4. Place the folder in `mcp_host/` (e.g., `mcp_host/my_tool/`)
+
+The deployment script will automatically:
+- Detect the `docker-compose.yml`
+- Assign a port (5000-5099 range for mcp_host)
+- Set the `MCP_PORT` environment variable
+- Build and start the Docker container
+- Skip running `server.py` directly on the host
+
+### Benefits of Dockerization
+
+- **Dependency Isolation**: Heavy ML libraries, system tools, or conflicting dependencies won't affect other MCP servers
+- **Reproducibility**: Consistent environment across different machines
+- **Security**: Isolated execution environment
+- **Resource Management**: Better control over CPU, memory, and other resources
 
 ### Learn More
 
