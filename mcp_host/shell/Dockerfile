@@ -1,4 +1,6 @@
-FROM nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
+# Use build argument to select base image
+ARG BASE_IMAGE=ubuntu:24.04
+FROM ${BASE_IMAGE}
 
 RUN apt-get update && apt-get install -y \
     python3 \
