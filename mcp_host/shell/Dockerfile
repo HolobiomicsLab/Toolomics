@@ -13,18 +13,18 @@ WORKDIR /app
 # Create workspace directory with proper permissions
 RUN mkdir -p /app/workspace && chmod 777 /app/workspace
 
-# Create and use venv
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Install pip packages system-wide (no venv needed in container)
+# Use --break-system-packages flag for Ubuntu 24.04
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --break-system-packages -r /app/requirements.txt
 
 COPY shared.py /app/shared.py
 COPY mcp_host/shell/server.py /app/server.py
 
-COPY requirements.txt /app/requirements.txt
-
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
 RUN chmod +x /app/server.py
+
+# Ensure /app is accessible by non-root users
+RUN chmod -R 755 /app
 
 ENV PYTHONPATH="/app:$PYTHONPATH"
 
