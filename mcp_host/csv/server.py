@@ -291,31 +291,33 @@ def delete_csv_row(name: str, index: int) -> Dict[str, Any]:
 
 
 @mcp.tool
-def list_csv_datasets(path: str) -> Dict[str, Any]:
+def list_csv_datasets() -> Dict[str, Any]:
     """
-    List all available CSV datasets.
+    List all available CSV datasets recursively.
  
-     Args:
-        path: Name of the dataset
     Returns:
-        Dictionary with list of datasets
+        Dictionary with list of datasets (searches recursively in all subdirectories)
     """
     try:
         datasets = []
-        for csv_file in CSV_DIR.glob("*.csv"):
+        for csv_file in CSV_DIR.rglob("*.csv"):
             try:
                 df = pd.read_csv(csv_file)
+                # Get relative path from CSV_DIR for better display
+                relative_path = csv_file.relative_to(CSV_DIR)
                 datasets.append(
                     {
                         "name": csv_file.stem,
+                        "path": str(relative_path),
                         "shape": list(df.shape),
                         "columns": df.columns.tolist(),
                         "file_size": csv_file.stat().st_size,
                     }
                 )
             except Exception as e:
+                relative_path = csv_file.relative_to(CSV_DIR)
                 datasets.append(
-                    {"name": csv_file.stem, "error": f"Failed to read: {str(e)}"}
+                    {"name": csv_file.stem, "path": str(relative_path), "error": f"Failed to read: {str(e)}"}
                 )
 
         return {"datasets": datasets, "total_count": len(datasets), "status": "success"}
