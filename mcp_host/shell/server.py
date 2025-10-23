@@ -54,13 +54,18 @@ def run_bash_subprocess(
     # Execute from /app (which definitely exists) to prevent getcwd() errors
     full_command = f"cd {workspace_dir} && {command}"
     
+    # Set up environment with HOME directory to prevent Python path issues
+    env = os.environ.copy()
+    env['HOME'] = '/home/appuser'
+    
     try:
         result = subprocess.run(
             ["/bin/bash", "-c", full_command],
             capture_output=True,
             text=True,
             timeout=timeout,
-            cwd="/app"
+            cwd="/app",
+            env=env
         )
         return CommandResult(
             status="success" if result.returncode == 0 else "error",

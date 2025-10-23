@@ -10,6 +10,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Create home directory for the user that will run the container
+RUN mkdir -p /home/appuser && \
+    chown -R 1000:1000 /home/appuser && \
+    chmod -R 755 /home/appuser
+
 # Create workspace directory with proper permissions
 RUN mkdir -p /app/workspace && chmod 777 /app/workspace
 
@@ -27,6 +32,7 @@ RUN chmod +x /app/server.py
 RUN chmod -R 755 /app
 
 ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV HOME="/home/appuser"
 
 EXPOSE 5100-5200
 CMD ["python3", "/app/server.py"]
