@@ -51,7 +51,7 @@ def run_bash_subprocess(
 ) -> CommandResult:
     import os
     # MCP servers already run in the workspace directory, so use current directory
-    cwd = None  # Use current working directory (which is the workspace)
+    cwd = "/app/workspace"  # Use current working directory (which is the workspace)
     print(f"Running command: {command} with timeout: {timeout} seconds in current directory")
     try:
         result = subprocess.run(

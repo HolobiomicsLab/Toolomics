@@ -35,7 +35,7 @@ def run_bash_subprocess(
     command: str,
     timeout: int = 30,
 ) -> CommandResult:
-    cwd = "workspace"
+    cwd = "/app/workspace" 
     print(f"Running command: {command} with timeout: {timeout} seconds")
     
     # Ensure the working directory exists and is accessible
