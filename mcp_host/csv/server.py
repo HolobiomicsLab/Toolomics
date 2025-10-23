@@ -326,6 +326,47 @@ def list_csv_datasets() -> Dict[str, Any]:
 
 
 @mcp.tool
+def list_folders_with_csv() -> Dict[str, Any]:
+    """
+    List all folders that contain CSV files (recursively).
+    
+    Returns:
+        Dictionary with list of folders containing CSV files and their CSV count
+    """
+    try:
+        folders_with_csv = {}
+        
+        # Find all CSV files recursively
+        for csv_file in CSV_DIR.rglob("*.csv"):
+            folder = csv_file.parent
+            relative_folder = folder.relative_to(CSV_DIR)
+            folder_key = str(relative_folder) if str(relative_folder) != "." else "root"
+            
+            if folder_key not in folders_with_csv:
+                folders_with_csv[folder_key] = {
+                    "path": str(folder),
+                    "relative_path": folder_key,
+                    "csv_files": [],
+                    "csv_count": 0
+                }
+            
+            # Add CSV file info
+            folders_with_csv[folder_key]["csv_files"].append(csv_file.name)
+            folders_with_csv[folder_key]["csv_count"] += 1
+        
+        # Convert to sorted list
+        folders_list = sorted(folders_with_csv.values(), key=lambda x: x["relative_path"])
+        
+        return {
+            "folders": folders_list,
+            "total_folders": len(folders_list),
+            "status": "success"
+        }
+    except Exception as e:
+        return {"status": str(e)}
+
+
+@mcp.tool
 def delete_csv_dataset(name: str) -> Dict[str, Any]:
     """
     Delete a CSV dataset.
