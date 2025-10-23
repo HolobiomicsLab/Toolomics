@@ -35,37 +35,13 @@ def run_bash_subprocess(
     command: str,
     timeout: int = 30,
 ) -> CommandResult:
-    workspace_dir = "/app/workspace"
+    cwd = "workspace"
     print(f"Running command: {command} with timeout: {timeout} seconds")
     
     # Ensure the working directory exists and is accessible
-    if not os.path.exists(workspace_dir):
-        try:
-            os.makedirs(workspace_dir, mode=0o777, exist_ok=True)
-            print(f"Created working directory: {workspace_dir}")
-        except Exception as e:
-            return CommandResult(
-                status="error",
-                stderr=f"Failed to create working directory {workspace_dir}: {str(e)}",
-                exit_code=-1,
-            )
-    
-    # Use explicit bash invocation with -c to avoid shell initialization issues
-    # Execute from /app (which definitely exists) to prevent getcwd() errors
-    full_command = f"cd {workspace_dir} && {command}"
-    
-    # Set up environment with HOME directory to prevent Python path issues
-    env = os.environ.copy()
-    env['HOME'] = '/home/appuser'
-    
     try:
         result = subprocess.run(
-            ["/bin/bash", "-c", full_command],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd="/app",
-            env=env
+            command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
         )
         return CommandResult(
             status="success" if result.returncode == 0 else "error",

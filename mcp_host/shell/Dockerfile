@@ -1,38 +1,30 @@
-# Use build argument to select base image
 ARG BASE_IMAGE=ubuntu:24.04
 FROM ${BASE_IMAGE}
 
 RUN apt-get update && apt-get install -y \
     python3 \
+    r-base \
     python3-pip \
-    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python packages globally as root
+COPY requirements.txt /tmp/
+RUN pip3 install --break-system-packages --no-cache-dir -r /tmp/requirements.txt
+
+# Create non-root user
+RUN useradd -m -u 1001 appuser
+
+# Copy application files and set ownership
+COPY --chown=appuser:appuser shared.py /app/shared.py
+COPY --chown=appuser:appuser mcp_host/shell/server.py /app/server.py
+
+# Create workspace with proper ownership
+RUN mkdir -p /app/workspace && chown -R appuser:appuser /app
+
+USER appuser
 WORKDIR /app
 
-# Create home directory for the user that will run the container
-RUN mkdir -p /home/appuser && \
-    chown -R 1000:1000 /home/appuser && \
-    chmod -R 755 /home/appuser
-
-# Create workspace directory with proper permissions
-RUN mkdir -p /app/workspace && chmod 777 /app/workspace
-
-# Install pip packages system-wide (no venv needed in container)
-# Use --break-system-packages flag for Ubuntu 24.04
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir --break-system-packages -r /app/requirements.txt
-
-COPY shared.py /app/shared.py
-COPY mcp_host/shell/server.py /app/server.py
-
-RUN chmod +x /app/server.py
-
-# Ensure /app is accessible by non-root users
-RUN chmod -R 755 /app
-
 ENV PYTHONPATH="/app:$PYTHONPATH"
-ENV HOME="/home/appuser"
 
 EXPOSE 5100-5200
 CMD ["python3", "/app/server.py"]
