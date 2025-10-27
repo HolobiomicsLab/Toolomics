@@ -21,4 +21,4 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      - ../../workspace:/app/workspace
+      - ../../workspace:/app/workspace:consistent

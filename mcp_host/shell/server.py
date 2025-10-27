@@ -39,6 +39,11 @@ def run_bash_subprocess(
     # This is more reliable than os.getcwd() which can change during runtime
     import os
     cwd = "/app/workspace"
+    # Force directory refresh by listing it (triggers inode cache invalidation)
+    try:
+        os.listdir(cwd)
+    except Exception:
+        pass
     
     # Verify the directory exists and is accessible
     if not os.path.exists(cwd):
