@@ -56,41 +56,6 @@ def _save_dataframe(name: str, df: pd.DataFrame) -> None:
 
 
 @mcp.tool
-def set_working_path(subfolder: str) -> Dict[str, Any]:
-    """
-    Set the working directory path for CSV operations.
-    
-    Args:
-        subfolder: Name or path of the subfolder (relative to workspace root)
-    
-    Returns:
-        Dictionary with status and new working path
-    """
-    global CSV_DIR
-    try:
-        # Get the workspace root
-        workspace_root = get_workspace_path()
-        
-        # Create the new path (can be nested, e.g., "data/csv")
-        new_path = workspace_root / subfolder
-        
-        # Create the directory if it doesn't exist
-        new_path.mkdir(parents=True, exist_ok=True)
-        
-        # Update the global CSV_DIR
-        CSV_DIR = new_path
-        
-        return {
-            "previous_path": str(workspace_root),
-            "new_path": str(new_path),
-            "message": f"Working path set to '{new_path}'",
-            "status": "success",
-        }
-    except Exception as e:
-        return {"error": str(e), "status": "failed"}
-
-
-@mcp.tool
 def create_csv(
     name: str,
     columns: Optional[List[str]] = None,
@@ -167,7 +132,7 @@ def get_csv_data(
     name: str, limit: Optional[int] = None, offset: int = 0
 ) -> Dict[str, Any]:
     """
-    Get data from a CSV dataset.
+    Get data from a CSV dataset. Need exact path. eg: csv_folder/dataset.csv
 
     Args:
         name: Name of the dataset
