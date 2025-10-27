@@ -51,9 +51,26 @@ def run_bash_subprocess(
     timeout: int = 30,
 ) -> CommandResult:
     import os
-    # MCP servers already run in the workspace directory, so use current directory
-    cwd = "/app/workspace"  # Use current working directory (which is the workspace)
-    print(f"Running command: {command} with timeout: {timeout} seconds in current directory")
+    # Use get_workspace_path() to get the correct workspace directory
+    # This works for both Dockerized (returns mounted path) and non-Dockerized MCPs
+    cwd = str(get_workspace_path())
+    
+    # Verify the directory exists and is accessible
+    if not os.path.exists(cwd):
+        return CommandResult(
+            status="error",
+            stderr=f"Workspace directory does not exist: {cwd}",
+            exit_code=-1,
+        )
+    
+    if not os.access(cwd, os.R_OK | os.W_OK | os.X_OK):
+        return CommandResult(
+            status="error",
+            stderr=f"Workspace directory is not accessible: {cwd}",
+            exit_code=-1,
+        )
+    
+    print(f"Running command: {command} with timeout: {timeout} seconds in {cwd}")
     try:
         result = subprocess.run(
             command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
