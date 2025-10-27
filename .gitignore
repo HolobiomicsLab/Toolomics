@@ -559,4 +559,4 @@ tests/test_decimer_transformer.py
 tests/stress_test.sh
 tests/test_decimer_analyze_document.py
 check_mcp_health.py
-mcp_docker/decimer/MCP_DIAGNOSTIC_CHECKLIST.md
+mcp_docker/*
