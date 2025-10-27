@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-CSV Management MCP Server
+R script MCP Server
 
 Provides tools for creating, reading, and manipulating R script.
 """
@@ -82,7 +82,7 @@ def execute_r_code(r_code: str) -> Dict[str, Any]:
     try:
         # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
         script_name = f"rscript_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.R"
-        script_path = script_name
+        script_path = SCRIPT_DIR / script_name
         with open(script_path, "w") as f:
             f.write(r_code)
     except Exception as e:
@@ -118,7 +118,7 @@ def write_r_script(r_code: str, filename: str) -> str:
     try:
         # Copy the temp file to rstudio_data (host), which is /home/rstudio in the container
         # script_name = f"rscript_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.R"
-        script_path = filename
+        script_path = SCRIPT_DIR / filename
         with open(script_path, "w") as f:
             f.write(r_code)
         return "Script written successfully: " + str(script_path)
