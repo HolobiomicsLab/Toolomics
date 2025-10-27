@@ -38,11 +38,12 @@ def get_workspace_path() -> Path:
     """Get standardized workspace path with fallback.
     
     Returns:
-        Path: Current working directory (which should be the workspace when MCP servers run)
+        Path: Absolute path of the current working directory (which should be the workspace when MCP servers run)
     """
     # When MCP servers are deployed, they run with cwd=workspace_dir
     # So the current working directory IS the workspace
-    return Path(".")
+    # Return absolute path to ensure proper resolution in recursive operations
+    return Path(".").resolve()
 
 
 def run_bash_subprocess(
