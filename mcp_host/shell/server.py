@@ -18,7 +18,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))  # Add 'a/' to Python's search path
 
-from shared import CommandResult, return_as_dict
+from shared import CommandResult, return_as_dict, get_workspace_path
 
 description = """
 Shell Tools MCP Server provides tools for shell navigation and interaction.
@@ -35,10 +35,29 @@ def run_bash_subprocess(
     command: str,
     timeout: int = 30,
 ) -> CommandResult:
-    cwd = "/app/workspace" 
-    print(f"Running command: {command} with timeout: {timeout} seconds")
+    # Use the workspace path - in Docker, the workspace is mounted at /app/workspace
+    # Check if the directory exists before using it; fallback to current directory if not
+    import os
+    cwd = "/app/workspace"
     
-    # Ensure the working directory exists and is accessible
+    # Verify the directory exists, if not, try to create it or use current dir
+    if not os.path.exists(cwd):
+        print(f"Warning: Directory {cwd} does not exist, creating it")
+        try:
+            os.makedirs(cwd, exist_ok=True)
+        except Exception:
+            print(f"Could not create directory {cwd}, using current directory")
+            cwd = "."  # Use current directory as fallback
+        
+    print(f"Running command: {command} with timeout: {timeout} seconds in {cwd}")
+    
+    # Additional check: verify the directory is accessible
+    try:
+        os.chdir(cwd)  # Try to change to the directory to verify access
+    except Exception:
+        print(f"Warning: Cannot access directory {cwd}, using current directory")
+        cwd = "."
+    
     try:
         result = subprocess.run(
             command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
