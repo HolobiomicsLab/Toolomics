@@ -29,7 +29,7 @@ RUN mkdir -p /home/ubuntu/R/library && \
     chmod -R 777 /home/ubuntu/
 
 USER ubuntu
-WORKDIR /app
+WORKDIR /app/workspace
 
 ENV PYTHONPATH="/app:$PYTHONPATH"
 ENV R_LIBS_USER="/home/ubuntu/R/library"

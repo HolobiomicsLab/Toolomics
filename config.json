@@ -32,7 +32,7 @@
     {
         "path": "mcp_host/Rscript/docker-compose.yml",
         "port": 5100,
-        "enabled": false
+        "enabled": true
     },
     {
         "path": "mcp_host/shell/docker-compose.yml",
