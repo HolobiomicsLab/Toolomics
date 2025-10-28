@@ -132,7 +132,7 @@ def get_csv_data(
     name: str, limit: Optional[int] = None, offset: int = 0
 ) -> Dict[str, Any]:
     """
-    Get data from a CSV dataset.
+    Get data from a CSV dataset. Need exact path. eg: csv_folder/dataset.csv
 
     Args:
         name: Name of the dataset
@@ -258,30 +258,75 @@ def delete_csv_row(name: str, index: int) -> Dict[str, Any]:
 @mcp.tool
 def list_csv_datasets() -> Dict[str, Any]:
     """
-    List all available CSV datasets.
-
+    List all available CSV datasets recursively.
+ 
     Returns:
-        Dictionary with list of datasets
+        Dictionary with list of datasets (searches recursively in all subdirectories)
     """
     try:
         datasets = []
-        for csv_file in CSV_DIR.glob("*.csv"):
+        for csv_file in CSV_DIR.rglob("*.csv"):
             try:
                 df = pd.read_csv(csv_file)
+                # Get relative path from CSV_DIR for better display
+                relative_path = csv_file.relative_to(CSV_DIR)
                 datasets.append(
                     {
                         "name": csv_file.stem,
+                        "path": str(relative_path),
                         "shape": list(df.shape),
                         "columns": df.columns.tolist(),
                         "file_size": csv_file.stat().st_size,
                     }
                 )
             except Exception as e:
+                relative_path = csv_file.relative_to(CSV_DIR)
                 datasets.append(
-                    {"name": csv_file.stem, "error": f"Failed to read: {str(e)}"}
+                    {"name": csv_file.stem, "path": str(relative_path), "error": f"Failed to read: {str(e)}"}
                 )
 
         return {"datasets": datasets, "total_count": len(datasets), "status": "success"}
+    except Exception as e:
+        return {"status": str(e)}
+
+
+@mcp.tool
+def list_folders_with_csv() -> Dict[str, Any]:
+    """
+    List all folders that contain CSV files (recursively).
+    
+    Returns:
+        Dictionary with list of folders containing CSV files and their CSV count
+    """
+    try:
+        folders_with_csv = {}
+        
+        # Find all CSV files recursively
+        for csv_file in CSV_DIR.rglob("*.csv"):
+            folder = csv_file.parent
+            relative_folder = folder.relative_to(CSV_DIR)
+            folder_key = str(relative_folder) if str(relative_folder) != "." else "root"
+            
+            if folder_key not in folders_with_csv:
+                folders_with_csv[folder_key] = {
+                    "path": str(folder),
+                    "relative_path": folder_key,
+                    "csv_files": [],
+                    "csv_count": 0
+                }
+            
+            # Add CSV file info
+            folders_with_csv[folder_key]["csv_files"].append(csv_file.name)
+            folders_with_csv[folder_key]["csv_count"] += 1
+        
+        # Convert to sorted list
+        folders_list = sorted(folders_with_csv.values(), key=lambda x: x["relative_path"])
+        
+        return {
+            "folders": folders_list,
+            "total_folders": len(folders_list),
+            "status": "success"
+        }
     except Exception as e:
         return {"status": str(e)}
 

@@ -7,6 +7,7 @@ Tests the classify_chemical_structure MCP tool specifically
 
 import asyncio
 import json
+import sys
 from fastmcp import Client
 
 async def test_decimer_classifier(port: int = 5150):
@@ -29,7 +30,7 @@ async def test_decimer_classifier(port: int = 5150):
         
         if not classifier_tool:
             print("❌ classify_chemical_structure tool not found!")
-            return
+            return False
         
         print("✅ Found classify_chemical_structure tool")
         print(f"   Description: {classifier_tool.description}")
@@ -40,14 +41,15 @@ async def test_decimer_classifier(port: int = 5150):
         print("=" * 60)
         
         result = await client.call_tool("classify_chemical_structure", {
-            "image_path": "/app/workspace/classifier_test/caffeine.png"
+            "image_path": "workspace/caffeine.png"
         })
         
         tool_output = json.loads(result.content[0].text)
+        test1_pass = False
         if tool_output.get('status') == 'success':
             stdout_data = json.loads(tool_output['stdout'])
             print("✅ Classification successful!")
-            print(f"   Image: {stdout_data.get('image_path', 'N/A')}")
+            print(f"   Image: workspace/caffeine.png")
             print(f"   Is Chemical: {stdout_data.get('is_chemical', 'N/A')}")
             print(f"   Confidence Score: {stdout_data.get('confidence_score', 'N/A')}")
             print(f"   Message: {stdout_data.get('message', 'N/A')}")
@@ -57,8 +59,8 @@ async def test_decimer_classifier(port: int = 5150):
             actual_chemical = stdout_data.get('is_chemical', False)
             print(f"\n   Expected (True): {expected_chemical}")
             print(f"   Actual: {actual_chemical}")
-            print(f"   ✅ Test Result: {'PASS' if actual_chemical == expected_chemical else 'FAIL'}")
-            
+            test1_pass = actual_chemical == expected_chemical
+            print(f"   ✅ Test Result: {'PASS' if test1_pass else 'FAIL'}")
         else:
             print(f"❌ Error: {tool_output.get('stderr', 'Unknown error')}")
         
@@ -68,14 +70,15 @@ async def test_decimer_classifier(port: int = 5150):
         print("=" * 60)
         
         result = await client.call_tool("classify_chemical_structure", {
-            "image_path": "/app/workspace/classifier_test/chinese_character.jpg"
+            "image_path": "workspace/chinese_character.jpg"
         })
         
         tool_output = json.loads(result.content[0].text)
+        test2_pass = False
         if tool_output.get('status') == 'success':
             stdout_data = json.loads(tool_output['stdout'])
             print("✅ Classification successful!")
-            print(f"   Image: {stdout_data.get('image_path', 'N/A')}")
+            print(f"   Image: workspace/chinese_character.jpg")
             print(f"   Is Chemical: {stdout_data.get('is_chemical', 'N/A')}")
             print(f"   Confidence Score: {stdout_data.get('confidence_score', 'N/A')}")
             print(f"   Message: {stdout_data.get('message', 'N/A')}")
@@ -85,8 +88,8 @@ async def test_decimer_classifier(port: int = 5150):
             actual_chemical = stdout_data.get('is_chemical', True)
             print(f"\n   Expected (False): {expected_chemical}")
             print(f"   Actual: {actual_chemical}")
-            print(f"   ✅ Test Result: {'PASS' if actual_chemical == expected_chemical else 'FAIL'}")
-            
+            test2_pass = actual_chemical == expected_chemical
+            print(f"   ✅ Test Result: {'PASS' if test2_pass else 'FAIL'}")
         else:
             print(f"❌ Error: {tool_output.get('stderr', 'Unknown error')}")
         
@@ -100,15 +103,26 @@ async def test_decimer_classifier(port: int = 5150):
         })
         
         tool_output = json.loads(result.content[0].text)
+        test3_pass = False
         if tool_output.get('status') == 'error':
             print("✅ Error handling works correctly!")
             print(f"   Error message: {tool_output.get('stderr', 'N/A')}")
+            test3_pass = True
         else:
             print("⚠️ Expected error but got success - this might be unexpected")
         
         print("\n" + "=" * 60)
-        print("✅ DECIMER Classifier MCP Tests Complete!")
+        print("📊 TEST SUMMARY")
         print("=" * 60)
+        print(f"Test 1 (Chemical structure): {'✅ PASS' if test1_pass else '❌ FAIL'}")
+        print(f"Test 2 (Non-chemical structure): {'✅ PASS' if test2_pass else '❌ FAIL'}")
+        print(f"Test 3 (Error handling): {'✅ PASS' if test3_pass else '❌ FAIL'}")
+        
+        all_pass = test1_pass and test2_pass and test3_pass
+        print(f"\n{'🎉 ALL TESTS PASSED!' if all_pass else '⚠️ SOME TESTS FAILED!'}")
+        print("=" * 60)
+        
+        return all_pass
 
 
 def help():
@@ -120,8 +134,6 @@ def help():
 
 
 if __name__ == "__main__":
-    import sys
-    
     if len(sys.argv) > 1:
         if sys.argv[1] in ["-h", "--help"]:
             help()
@@ -139,4 +151,5 @@ if __name__ == "__main__":
     print("   ./mcp_host/decimer/run.sh")
     print()
     
-    asyncio.run(test_decimer_classifier(port))
+    success = asyncio.run(test_decimer_classifier(port))
+    sys.exit(0 if success else 1)

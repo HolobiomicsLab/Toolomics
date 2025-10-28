@@ -550,3 +550,12 @@ DECIMER_MCP_SETUP.md
 DECIMER-Image-Transformer/
 DECIMER-Image-Classifier/
 DECIMER-Image-Segmentation/
+mcp_docker/decimer/mcp_health_monitor.py
+mcp_docker/decimer/mcp_stress_test.py
+#tests/test_decimer_classifier.py
+#tests/test_decimer_segmentation.py
+#tests/test_decimer_transformer.py
+#tests/stress_test.sh
+#tests/test_decimer_analyze_document.py
+check_mcp_health.py
+mcp_docker/*

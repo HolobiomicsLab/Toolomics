@@ -3,18 +3,12 @@ services:
     build:
       context: ../..
       dockerfile: mcp_host/shell/Dockerfile
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+      args:
+        - BASE_IMAGE=ubuntu:24.04
     ports:
       - "${MCP_PORT}:${MCP_PORT}"
     environment:
       - MCP_PORT=${MCP_PORT}
-      - NVIDIA_VISIBLE_DEVICES=all
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      - ../../workspace:/app/workspace
+      - ../../workspace:/app/workspace:rw

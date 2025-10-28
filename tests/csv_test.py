@@ -22,9 +22,20 @@ async def test_csv_operations(port: int = 5007):
         print(f"📋 Available tools: {[tool.name for tool in tools]}")
         print()
         
-        # Test 1: Create a new dataset
+        # Test 1: Set working path to a subfolder
         print("=" * 50)
-        print("TEST 1: Creating new dataset")
+        print("TEST 1: Setting working path to subfolder")
+        print("=" * 50)
+        
+        result = await client.call_tool("set_working_path", {
+            "subfolder": "test_csv_data"
+        })
+        print(f"📂 Set working path result: {result.content[0].text}")
+        print()
+        
+        # Test 2: Create a new dataset in the new subfolder
+        print("=" * 50)
+        print("TEST 2: Creating new dataset in subfolder")
         print("=" * 50)
         
         result = await client.call_tool("create_csv", {
@@ -37,9 +48,9 @@ async def test_csv_operations(port: int = 5007):
             ]
         })
         
-        # Test 3: Add a new row
+        # Test 4: Add a new row
         print("=" * 50)
-        print("TEST 3: Adding new row")
+        print("TEST 4: Adding new row")
         print("=" * 50)
         
         result = await client.call_tool("add_csv_row", {
@@ -49,9 +60,9 @@ async def test_csv_operations(port: int = 5007):
         print(f"📊 Add row: {result.content[0].text}")
         print()
         
-        # Test 4: Get all data
+        # Test 5: Get all data
         print("=" * 50)
-        print("TEST 4: Getting all data")
+        print("TEST 5: Getting all data")
         print("=" * 50)
         
         result = await client.call_tool("get_csv_data", {"name": "employees"})
@@ -62,9 +73,9 @@ async def test_csv_operations(port: int = 5007):
                 print(f"  Row {i}: {row}")
         print()
         
-        # Test 5: Update a row
+        # Test 6: Update a row
         print("=" * 50)
-        print("TEST 5: Updating row")
+        print("TEST 6: Updating row")
         print("=" * 50)
         
         result = await client.call_tool("update_csv_row", {
@@ -75,9 +86,9 @@ async def test_csv_operations(port: int = 5007):
         print(f"📊 update result: {result.content[0].text}")
         print()
         
-        # Test 6: Query data
+        # Test 7: Query data
         print("=" * 50)
-        print("TEST 6: Querying data")
+        print("TEST 7: Querying data")
         print("=" * 50)
         
         result = await client.call_tool("query_csv", {
@@ -91,9 +102,9 @@ async def test_csv_operations(port: int = 5007):
                 print(f"  {row['name']}: ${row['salary']} in {row['department']}")
         print()
         
-        # Test 8: Create another dataset for demonstration
+        # Test 9: Create another dataset for demonstration
         print("=" * 50)
-        print("TEST 8: Creating second dataset")
+        print("TEST 9: Creating second dataset")
         print("=" * 50)
         
         result = await client.call_tool("create_csv", {
@@ -106,9 +117,9 @@ async def test_csv_operations(port: int = 5007):
             ]
         })
         
-        # Test 9: List all datasets
+        # Test 10: List all datasets
         print("=" * 50)
-        print("TEST 9: Listing all datasets")
+        print("TEST 10: Listing all datasets")
         print("=" * 50)
         
         result = await client.call_tool("list_csv_datasets", {})
@@ -119,9 +130,9 @@ async def test_csv_operations(port: int = 5007):
                 print(f"  {ds['name']}: {ds['shape']} - {ds.get('file_size', 0)} bytes")
         print()
         
-        # Test 10: Test pagination
+        # Test 11: Test pagination
         print("=" * 50)
-        print("TEST 10: Testing pagination")
+        print("TEST 11: Testing pagination")
         print("=" * 50)
         
         result = await client.call_tool("get_csv_data", {
@@ -136,9 +147,9 @@ async def test_csv_operations(port: int = 5007):
                 print(f"  {row['name']}")
         print()
         
-        # Test 11: Error handling
+        # Test 12: Error handling
         print("=" * 50)
-        print("TEST 11: Error handling")
+        print("TEST 12: Error handling")
         print("=" * 50)
         
         # Try invalid query
@@ -149,9 +160,9 @@ async def test_csv_operations(port: int = 5007):
         print(f"❌ Invalid query: {result.content[0].text}")
         print()
         
-        # Test 12: Delete operations
+        # Test 13: Delete operations
         print("=" * 50)
-        print("TEST 12: Delete operations")
+        print("TEST 13: Delete operations")
         print("=" * 50)
         
         # Delete a row

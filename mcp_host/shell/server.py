@@ -18,7 +18,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))  # Add 'a/' to Python's search path
 
-from shared import CommandResult, return_as_dict
+from shared import CommandResult, return_as_dict, get_workspace_path
 
 description = """
 Shell Tools MCP Server provides tools for shell navigation and interaction.
@@ -35,8 +35,33 @@ def run_bash_subprocess(
     command: str,
     timeout: int = 30,
 ) -> CommandResult:
-    cwd = "workspace"
-    print(f"Running command: {command} with timeout: {timeout} seconds in current directory")
+    # Use the fixed workspace path from the volume mount
+    # This is more reliable than os.getcwd() which can change during runtime
+    import os
+    cwd = "/app/workspace"
+    # Force directory refresh by listing it (triggers inode cache invalidation)
+    try:
+        os.listdir(cwd)
+    except Exception:
+        pass
+    
+    # Verify the directory exists and is accessible
+    if not os.path.exists(cwd):
+        return CommandResult(
+            status="error",
+            stderr=f"Workspace directory does not exist: {cwd}",
+            exit_code=-1,
+        )
+    
+    if not os.access(cwd, os.R_OK | os.W_OK | os.X_OK):
+        return CommandResult(
+            status="error",
+            stderr=f"Workspace directory is not accessible: {cwd}",
+            exit_code=-1,
+        )
+    
+    print(f"Running command: {command} with timeout: {timeout} seconds in {cwd}")
+    
     try:
         result = subprocess.run(
             command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd

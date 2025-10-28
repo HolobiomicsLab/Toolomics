@@ -1,30 +1,38 @@
-FROM nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
+ARG BASE_IMAGE=ubuntu:24.04
+FROM ${BASE_IMAGE}
 
 RUN apt-get update && apt-get install -y \
     python3 \
+    r-base \
     python3-pip \
-    python3-venv \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Install Python packages globally as root
+COPY requirements.txt /tmp/
+RUN pip3 install --break-system-packages --no-cache-dir -r /tmp/requirements.txt
 
-# Create workspace directory with proper permissions
-RUN mkdir -p /app/workspace && chmod 777 /app/workspace
+# Grant ubuntu passwordless sudo access
+RUN echo "ubuntu ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-# Create and use venv
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Copy application files and set ownership
+COPY --chown=ubuntu:ubuntu shared.py /app/shared.py
+COPY --chown=ubuntu:ubuntu mcp_host/shell/server.py /app/server.py
 
-COPY shared.py /app/shared.py
-COPY mcp_host/shell/server.py /app/server.py
+# Create workspace with proper ownership
+RUN mkdir -p /app/workspace && chown -R ubuntu:ubuntu /app
 
-COPY requirements.txt /app/requirements.txt
+# Create R library directory in user's home directory with proper permissions
 
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN mkdir -p /home/ubuntu/R/library && \
+    chown -R ubuntu:ubuntu /home/ubuntu/R && \
+    chmod -R 777 /home/ubuntu/
 
-RUN chmod +x /app/server.py
+USER ubuntu
+WORKDIR /app/workspace
 
 ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV R_LIBS_USER="/home/ubuntu/R/library"
 
 EXPOSE 5100-5200
 CMD ["python3", "/app/server.py"]

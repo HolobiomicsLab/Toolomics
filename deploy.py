@@ -289,6 +289,27 @@ class ServerDiscovery:
     """Handles discovery of MCP servers and Docker services"""
     
     @staticmethod
+    def has_gpu() -> bool:
+        """Detect if GPU (NVIDIA) is available on the system"""
+        try:
+            # Check if nvidia-smi command exists and can detect GPU
+            result = subprocess.run(
+                ['nvidia-smi'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=5
+            )
+            has_nvidia = result.returncode == 0
+            if has_nvidia:
+                logger.info("GPU detected: NVIDIA GPU available")
+            else:
+                logger.info("No GPU detected: Running in CPU-only mode")
+            return has_nvidia
+        except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+            logger.info(f"No GPU detected: {e}")
+            return False
+    
+    @staticmethod
     def find_server_files(mcp_dir: Path) -> List[Path]:
         """Find all server.py files in subdirectories, excluding those with docker-compose.yml in the same folder"""
         server_files = []
@@ -305,11 +326,47 @@ class ServerDiscovery:
     
     @staticmethod
     def find_docker_compose_files(mcp_dir: Path) -> List[Path]:
-        """Find all docker-compose.yml files in subdirectories"""
+        """
+        Find all docker-compose files in subdirectories.
+        Prefers .gpu.yml files when GPU is available, otherwise uses standard .yml files.
+        """
+        has_gpu = ServerDiscovery.has_gpu()
         compose_files = []
-        for compose_file in mcp_dir.rglob('docker-compose.yml'):
+        processed_dirs = set()
+        
+        # First pass: collect all docker-compose files by directory
+        compose_by_dir = {}
+        for compose_file in mcp_dir.rglob('docker-compose*.yml'):
             if compose_file.parent != mcp_dir:  # Must be in subdirectory
-                compose_files.append(compose_file)
+                parent = compose_file.parent
+                if parent not in compose_by_dir:
+                    compose_by_dir[parent] = []
+                compose_by_dir[parent].append(compose_file)
+        
+        # Second pass: select appropriate file based on GPU availability
+        for parent, files in compose_by_dir.items():
+            gpu_file = None
+            standard_file = None
+            
+            for f in files:
+                if f.name == 'docker-compose.gpu.yml':
+                    gpu_file = f
+                elif f.name == 'docker-compose.yml':
+                    standard_file = f
+            
+            # Select the appropriate file
+            if has_gpu and gpu_file:
+                logger.info(f"Using GPU-enabled compose file: {gpu_file}")
+                compose_files.append(gpu_file)
+            elif standard_file:
+                if has_gpu and not gpu_file:
+                    logger.info(f"GPU detected but no .gpu.yml found, using standard: {standard_file}")
+                else:
+                    logger.info(f"Using standard compose file: {standard_file}")
+                compose_files.append(standard_file)
+            else:
+                logger.warning(f"No suitable docker-compose file found in {parent}")
+        
         return compose_files
 
 class ConfigManager:
