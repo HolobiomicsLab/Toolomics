@@ -11,4 +11,4 @@ services:
       - MCP_PORT=${MCP_PORT}
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      - ../../workspace:/app/workspace:consistent
+      - ../../workspace:/app/workspace:rw
