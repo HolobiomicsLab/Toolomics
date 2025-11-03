@@ -590,11 +590,13 @@ class Browser:
         except Exception as e:
             print(f"Error getting downloadable links: {e}")
             return []
-    
+
     def download_file(self, url: str) -> tuple[bool, str]:
         """Download a file from URL to current directory.
+
         Args:
             url: The URL of file to download
+
         Returns:
             tuple[bool, str]: (success_status, message_or_filename)
                 - If success: (True, filename)
@@ -602,46 +604,39 @@ class Browser:
         """
         try:
             import requests
-            from urllib.parse import urlparse, unquote
+            from urllib.parse import urlparse
             import os
-            import re
-            import time
-
+    
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
                 return (False, f"Invalid URL: missing scheme or netloc in '{url}'")
 
             session = requests.Session()
             session.headers.update({
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "*/*",
                 "Accept-Language": "en-US,en;q=0.9",
-                "Connection": "keep-alive",
+                "Referer": f"{parsed.scheme}://{parsed.netloc}/",
             })
 
-            # HEAD request to get metadata without downloading
+            # Start streaming GET immediately
             try:
-                head_response = session.head(url, allow_redirects=True, timeout=10)
-                head_response.raise_for_status()
-                headers = head_response.headers
-                final_url = head_response.url
-            except Exception as e:
-                print(f"HEAD failed, will extract filename during GET: {e}")
-                headers = {}
-                final_url = url
+                response = session.get(url, stream=True, allow_redirects=True, timeout=60)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                return (False, f"Download failed: {type(e).__name__}: {e}")
 
-            # Extract filename from headers/URL
-            filename = self._extract_filename(headers, final_url, parsed)
+            # Extract filename from response (already connected, no extra request)
+            filename = self._extract_filename(response.headers, response.url, parsed)
+
             # Prepare file path
             if not os.path.exists(WORKSPACE_DIR):
                 os.makedirs(WORKSPACE_DIR)
 
             filepath = self._get_unique_filepath(WORKSPACE_DIR, filename)
-            # Stream download directly to file
-            try:
-                response = session.get(url, stream=True, allow_redirects=True, timeout=60)
-                response.raise_for_status()
 
+            # Stream to disk immediately
+            try:
                 with open(filepath, "wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
@@ -652,36 +647,37 @@ class Browser:
                 print(f"Downloaded: {filename} ({file_size:,} bytes)")
                 return (True, filename)
 
-            except requests.exceptions.RequestException as e:
+            except Exception as e:
                 if os.path.exists(filepath):
-                    os.remove(filepath)  # Clean up partial download
-                return (False, f"Download failed: {type(e).__name__}: {e}")
+                    os.remove(filepath)
+                return (False, f"Write failed: {type(e).__name__}: {e}")
 
         except Exception as e:
             return (False, f"Unexpected error: {type(e).__name__}: {e}")
+
 
     def _extract_filename(self, headers: dict, final_url: str, original_parsed) -> str:
         """Extract filename from headers or URL."""
         from urllib.parse import urlparse, unquote
         import re
         import time
-
+        
         # Try Content-Disposition header
         if cd := headers.get("content-disposition"):
             if match := re.search(r'filename[*]?=([^;]+)', cd):
                 filename = match.group(1).strip("\"'")
                 return self._clean_filename(unquote(filename))
-
+        
         # Try final URL after redirects
         if final_url:
             final_parsed = urlparse(final_url)
             if filename := os.path.basename(final_parsed.path):
                 return self._clean_filename(unquote(filename))
-
+        
         # Try original URL
         if filename := os.path.basename(original_parsed.path):
             return self._clean_filename(unquote(filename))
-
+        
         # Guess from Content-Type
         if content_type := headers.get("content-type", "").lower():
             ext_map = {
@@ -698,26 +694,26 @@ class Browser:
             for mime, ext in ext_map.items():
                 if mime in content_type:
                     return f"download_{int(time.time())}{ext}"
-
+        
         # Final fallback
         return f"download_{int(time.time())}"
-
-
+    
+    
     def _clean_filename(self, filename: str) -> str:
         """Remove invalid filesystem characters."""
         import re
         filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
         return filename.strip() or f"download_{int(time.time())}"
-
-
+    
+    
     def _get_unique_filepath(self, directory: str, filename: str) -> str:
         """Generate unique filepath to avoid overwrites."""
         import os
-
+        
         filepath = os.path.join(directory, filename)
         if not os.path.exists(filepath):
             return filepath
-
+        
         name, ext = os.path.splitext(filename)
         counter = 1
         while True:
