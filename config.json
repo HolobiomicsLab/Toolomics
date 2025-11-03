@@ -58,5 +58,10 @@
         "path": "mcp_host/graph_rag/server.py",
         "port": 5007,
         "enabled": false
+    },
+    {
+        "path": "mcp_host/image_analysis/server.py",
+        "port": 5008,
+        "enabled": true
     }
 ]
