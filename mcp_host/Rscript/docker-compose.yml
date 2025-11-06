@@ -1,14 +1,17 @@
 services:
   xcmsrocker:
     platform: linux/amd64 # Force platform compatibility (mac os and arm architecture ...)
-    image: yufree/xcmsrocker:latest
+    build:
+      context: ../..
+      dockerfile: mcp_host/Rscript/Dockerfile
     container_name: xcmsrocker
     environment:
-      - PASSWORD=xcmsrocker  # Set the password for RStudio Server
+      - MCP_PORT=${MCP_PORT}
+      - PASSWORD=xcmsrocker  # Set the password for RStudio Server (optional)
     ports:
-      - "8787:8787"         # Map host port 8787 to container port 8787
-    working_dir: /app
+      - "${MCP_PORT}:${MCP_PORT}"  # MCP server port
+      - "8787:8787"                # RStudio Server port (optional)
     volumes:
       - ./rstudio_data:/home/rstudio  # Persist RStudio data (optional)
-      - "../../workspace/:/app"
+      - ../../workspace:/app/workspace:rw  # Shared workspace
     restart: unless-stopped  # Auto-restart unless manually stopped
