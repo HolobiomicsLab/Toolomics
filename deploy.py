@@ -11,6 +11,7 @@ import json
 import subprocess 
 import signal
 import os
+import socket
 from pathlib import Path
 import select
 from dataclasses import dataclass
@@ -21,6 +22,47 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+def is_port_in_use(port: int, host: str = "0.0.0.0") -> bool:
+    """
+    Check if a port is currently in use.
+    
+    Args:
+        port: The port number to check
+        host: The host address (default: 0.0.0.0)
+    
+    Returns:
+        True if port is in use, False if available
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind((host, port))
+            return False
+        except OSError:
+            return True
+
+
+def find_available_port(start_port: int, end_port: int, used_ports: set = None) -> Optional[int]:
+    """
+    Find the next available port in a range.
+    
+    Args:
+        start_port: Starting port number
+        end_port: Ending port number (inclusive)
+        used_ports: Set of ports already assigned in config (optional)
+    
+    Returns:
+        Available port number or None if no ports available
+    """
+    if used_ports is None:
+        used_ports = set()
+    
+    for port in range(start_port, end_port + 1):
+        if port not in used_ports and not is_port_in_use(port):
+            return port
+    
+    return None
 
 DEFAULT_FOLDER = "mcp_host"
 WORKSPACE_FOLDER = "workspace"
@@ -389,7 +431,6 @@ class ConfigManager:
                 config_dict = {}
                 
                 for item in config_list:
-                    # Handle both old format (single key-value) and new format (with 'path', 'port', 'enabled')
                     if 'path' in item and 'port' in item:
                         # New format
                         path = item['path']
@@ -398,13 +439,7 @@ class ConfigManager:
                             'enabled': item.get('enabled', True)  # Default to enabled
                         }
                     else:
-                        # Old format - single key-value pair
-                        path = list(item.keys())[0]
-                        port = list(item.values())[0]
-                        config_dict[path] = {
-                            'port': port,
-                            'enabled': True  # Default to enabled for old configs
-                        }
+                        raise ValueError("Can't parse config.json file")
                 
                 return config_dict
         except (json.JSONDecodeError, KeyError, IndexError) as e:
@@ -462,7 +497,7 @@ class ConfigManager:
                     if next_host_port > host_port_max:
                         raise RuntimeError(f"No available ports in host range ({host_port_min}-{host_port_max}) for server {server_str}")
                 
-                config[server_str] = {'port': next_host_port, 'enabled': True}
+                config[server_str] = {'port': next_host_port, 'enabled': False}
                 used_ports.add(next_host_port)
                 logger.info(f"Assigned host port {next_host_port} to {server_str} (enabled by default)")
                 next_host_port += 1
@@ -481,7 +516,7 @@ class ConfigManager:
                         if next_host_port > host_port_max:
                             raise RuntimeError(f"No available ports in host range ({host_port_min}-{host_port_max}) for compose {compose_str}")
                         
-                    config[compose_str] = {'port': next_host_port, 'enabled': True}
+                    config[compose_str] = {'port': next_host_port, 'enabled': False}
                     used_ports.add(next_host_port)
                     logger.info(f"Assigned host port {next_host_port} to {compose_str} (enabled by default)")
                     next_host_port += 1
@@ -525,10 +560,10 @@ class MCPDeploymentManager:
         
         # Start Docker services
         if not skip_docker:
-            self._deploy_docker_services(compose_files, port_config)
+            self._deploy_docker_services(compose_files, port_config, host_port_min, host_port_max)
         
         # Start MCP servers
-        self._deploy_mcp_servers(server_files, port_config)
+        self._deploy_mcp_servers(server_files, port_config, host_port_min, host_port_max)
         
         # Monitor processes
         logger.info("All services started. Monitoring processes...")
@@ -536,7 +571,8 @@ class MCPDeploymentManager:
         logger.info("All MCP servers will create files directly in the workspace directory")
         self.process_manager.monitor_processes()
     
-    def _deploy_docker_services(self, compose_files: List[Path], port_config: Dict[str, dict]):
+    def _deploy_docker_services(self, compose_files: List[Path], port_config: Dict[str, dict], 
+                               host_port_min: int = HOST_PORT_MIN, host_port_max: int = HOST_PORT_MAX):
         """Deploy Docker Compose services with assigned ports (only if enabled)"""
         if not compose_files:
             logger.info("No Docker Compose files found")
@@ -545,6 +581,7 @@ class MCPDeploymentManager:
         logger.info(f"Found {len(compose_files)} Docker Compose files")
         started_count = 0
         disabled_count = 0
+        config_updated = False
         
         for compose_file in compose_files:
             try:
@@ -557,27 +594,54 @@ class MCPDeploymentManager:
                     continue
                 
                 port = config_entry.get('port')
+                
+                # Check if port is in use
+                if is_port_in_use(port):
+                    logger.warning(f"Port {port} is already in use for {compose_str}")
+                    
+                    # Get all currently used ports in config
+                    used_ports = set(info['port'] for info in port_config.values())
+                    
+                    # Find an available port
+                    new_port = find_available_port(host_port_min, host_port_max, used_ports)
+                    
+                    if new_port is None:
+                        logger.error(f"No available ports in range {host_port_min}-{host_port_max}")
+                        continue
+                    
+                    logger.info(f"Reassigning {compose_str} from port {port} to {new_port}")
+                    port_config[compose_str]['port'] = new_port
+                    port = new_port
+                    config_updated = True
+                
                 self.process_manager.start_docker_compose(compose_file, port)
                 started_count += 1
             except Exception as e:
-                logger.error(f"Failed to start Docker service {compose_file}: {e}")
+                logger.error(f"⚠️ Failed to start Docker service {compose_file}: {e}")
+        
+        # Save config if any ports were reassigned
+        if config_updated:
+            logger.info("Updating config.json with new port assignments")
+            self.config_manager.save_config(port_config)
         
         if started_count > 0:
             logger.info(f"Started {started_count} Docker services ({disabled_count} disabled)")
             logger.info("Waiting for Docker services to start...")
             time.sleep(3)
         elif disabled_count > 0:
-            logger.info(f"All {disabled_count} Docker services are disabled")
+            logger.info(f"⚠️ All {disabled_count} Docker services are disabled. Change config.json to enable.")
     
-    def _deploy_mcp_servers(self, server_files: List[Path], port_config: Dict[str, dict]):
+    def _deploy_mcp_servers(self, server_files: List[Path], port_config: Dict[str, dict],
+                          host_port_min: int = HOST_PORT_MIN, host_port_max: int = HOST_PORT_MAX):
         """Deploy MCP Python servers with assigned ports (only if enabled)"""
         if not server_files:
-            logger.info("No MCP server files found")
+            logger.info("⚠️ No MCP server files found")
             return
         
         logger.info(f"Found {len(server_files)} MCP servers")
         started_count = 0
         disabled_count = 0
+        config_updated = False
         
         for server_file in server_files:
             server_str = str(server_file)
@@ -590,12 +654,39 @@ class MCPDeploymentManager:
             
             port = config_entry.get('port')
             
+            # Check if port is in use
+            if is_port_in_use(port):
+                logger.warning(f"Port {port} is already in use for {server_str}")
+                
+                # Get all currently used ports in config
+                used_ports = set(info['port'] for info in port_config.values())
+                
+                # Find an available port
+                new_port = find_available_port(host_port_min, host_port_max, used_ports)
+                
+                if new_port is None:
+                    logger.error(f"No available ports in range {host_port_min}-{host_port_max}")
+                    continue
+                
+                logger.info(f"Reassigning {server_str} from port {port} to {new_port}")
+                port_config[server_str]['port'] = new_port
+                port = new_port
+                config_updated = True
+            
             try:
                 self.process_manager.start_python_server(server_file, port)
                 started_count += 1
             except Exception as e:
                 logger.error(f"Failed to start server {server_file}: {e}")
+        
+        # Save config if any ports were reassigned
+        if config_updated:
+            logger.info("Updating config.json with new port assignments")
+            self.config_manager.save_config(port_config)
+        
         logger.info(f"Started {started_count} MCP servers ({disabled_count} disabled)")
+        if started_count == 0:
+            raise Exception("⚠️ No MCP server enabled, change config.json and select MCP servers to enable.")
 
 def main():
     parser = argparse.ArgumentParser(description="Deploy MCP servers with centralized workspace file management")

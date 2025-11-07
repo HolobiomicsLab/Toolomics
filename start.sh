@@ -30,33 +30,14 @@ fi
 # Check for processes using ports
 echo "Checking for processes using ports $START_PORT-$END_PORT..."
 PROCESSES_FOUND=false
-PIDS_TO_KILL=()
 
 for ((port=$START_PORT; port<=$END_PORT; port++)); do
     PID=$(lsof -ti :$port 2>/dev/null)
     if [ -n "$PID" ]; then
         echo "Port $port is being used by process $PID"
         PROCESSES_FOUND=true
-        PIDS_TO_KILL+=($PID)
     fi
 done
-
-if [ "$PROCESSES_FOUND" = true ]; then
-    read -p "Do you want to kill these processes? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "Killing processes..."
-        for PID in "${PIDS_TO_KILL[@]}"; do
-            if kill -9 "$PID" 2>/dev/null; then
-                echo "Killed process $PID"
-            else
-                echo "Warning: Could not kill process $PID (may already be terminated)"
-            fi
-        done
-    else
-        echo "Processes not killed. Continuing..."
-    fi
-fi
 
 echo "Deploying MCP servers..."
 python3 deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" &
