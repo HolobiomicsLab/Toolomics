@@ -68,8 +68,8 @@ def run_bash_subprocess(
         )
         return CommandResult(
             status="success" if result.returncode == 0 else "error",
-            stdout=result.stdout,
-            stderr=result.stderr,
+            stdout=result.stdout[:32000],
+            stderr=result.stderr[:32000],
             exit_code=result.returncode,
         )
     except subprocess.TimeoutExpired:

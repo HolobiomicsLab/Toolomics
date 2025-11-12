@@ -3,9 +3,9 @@
 """
 PDF Tools MCP Server
 
-Provides comprehensive tools for PDF manipulation, reading, and analysis with
-agentic RAG functionality using page-by-page navigation, keyword search, text extraction,
-note-taking, and metadata handling.
+Provides comprehensive tools for PDF manipulation, reading, and analysis including
+agentic RAG functionality with page-by-page navigation, keyword search, text extraction,
+and metadata handling.
 
 Author:  Martin Legrand - HolobiomicsLab, CNRS
 """
@@ -23,12 +23,27 @@ project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(project_root))
 from shared import CommandResult, return_as_dict, get_workspace_path
 
-# PDF processing imports - only what we need
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
+print("Environment variables set")
+
+# PDF processing imports
 try:
+    print("fitz")
     import fitz  # PyMuPDF
+    print("transformers")
+    from sentence_transformers import SentenceTransformer
+    import numpy as np
+    print("sklearn")
+    from sklearn.metrics.pairwise import cosine_similarity
 except ImportError as e:
-    print(f"Warning: PyMuPDF not available: {e}")
-    print("Install with: pip install PyMuPDF")
+    print(f"Warning: Some PDF libraries not available: {e}")
+    print(
+        "Install with: pip install PyPDF2 PyMuPDF sentence-transformers scikit-learn nltk"
+    )
     raise e
 
 from fastmcp import FastMCP
@@ -36,7 +51,7 @@ from fastmcp import FastMCP
 description = """
 PDF Tools MCP Server provides comprehensive tools for PDF manipulation and analysis.
 Features include agentic RAG with page-by-page navigation, text extraction, keyword search,
-note-taking, and content analysis. All operations work with files in the
+metadata extraction, and content analysis. All operations work with files in the
 centralized workspace directory.
 """
 
@@ -47,10 +62,39 @@ mcp = FastMCP(
 
 PDF_DIR = get_workspace_path()
 
-# Global variables for navigation state and agent notes
+# Global variables for RAG functionality and navigation state
+_embedding_model = None
+_document_embeddings = {}
+_document_chunks = {}
 _document_pages = {}
 _navigation_state = {}
-_agent_notes = {}
+
+
+def get_embedding_model():
+    """Lazy load the embedding model"""
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception as e:
+            print(f"Failed to load embedding model: {e}")
+    return _embedding_model
+
+
+@dataclass
+class PDFInfo:
+    """Information about a PDF file"""
+
+    filename: str
+    num_pages: int
+    title: str
+    author: str
+    subject: str
+    creator: str
+    producer: str
+    creation_date: str
+    modification_date: str
+    file_size: int
 
 
 @dataclass
@@ -63,8 +107,6 @@ class NavigationState:
     session_id: str
     bookmarks: List[int]
     search_history: List[str]
-    visited_pages: List[int]
-
 
 
 @mcp.tool
@@ -156,9 +198,7 @@ def initialize_pdf_navigation(
             session_id=session_id,
             bookmarks=[],
             search_history=[],
-            visited_pages=[1],
         )
-        _agent_notes[session_id] = []
 
         return CommandResult(
             status="success",
@@ -210,16 +250,7 @@ def _navigate_to_page_helper(session_id: str, page_number: int) -> CommandResult
 
         # Update navigation state
         nav_state.current_page = page_number
-        if page_number not in nav_state.visited_pages:
-            nav_state.visited_pages.append(page_number)
-        
         page_content = _document_pages[doc_key][page_number]
-
-        # Get notes for this page
-        page_notes = [
-            note for note in _agent_notes.get(session_id, [])
-            if note.page_number == page_number
-        ]
 
         return CommandResult(
             status="success",
@@ -234,9 +265,7 @@ def _navigate_to_page_helper(session_id: str, page_number: int) -> CommandResult
                         "has_previous": page_number > 1,
                         "has_next": page_number < nav_state.total_pages,
                         "bookmarks": nav_state.bookmarks,
-                        "visited_pages": nav_state.visited_pages,
                     },
-                    "notes_on_page": len(page_notes),
                 }
             ),
         )
@@ -299,18 +328,6 @@ def get_current_page(session_id: str) -> Dict[str, Any]:
         current_page_num = nav_state.current_page
         page_content = _document_pages[doc_key][current_page_num]
 
-        # Get notes for this page
-        page_notes = [
-            {
-                "type": note.note_type,
-                "content": note.content,
-                "keywords": note.keywords,
-                "timestamp": note.timestamp,
-            }
-            for note in _agent_notes.get(session_id, [])
-            if note.page_number == current_page_num
-        ]
-
         return CommandResult(
             status="success",
             stdout=json.dumps(
@@ -324,9 +341,7 @@ def get_current_page(session_id: str) -> Dict[str, Any]:
                         "has_previous": current_page_num > 1,
                         "has_next": current_page_num < nav_state.total_pages,
                         "bookmarks": nav_state.bookmarks,
-                        "visited_pages": nav_state.visited_pages,
                     },
-                    "notes": page_notes,
                 }
             ),
         )
@@ -470,14 +485,14 @@ def add_bookmark(session_id: str, page_number: Optional[int] = None) -> Dict[str
 @mcp.tool
 @return_as_dict
 def search_in_current_session(
-    session_id: str, query: str, context_chars: int = 200
+    session_id: str, query: str, context_pages: int = 1
 ) -> Dict[str, Any]:
     """Search for text within the current PDF session and navigate to results
 
     Args:
         session_id: Session identifier for the navigation session
         query: Search query string
-        context_chars: Number of characters around matches to include in results
+        context_pages: Number of pages around matches to include in results
 
     Returns:
         Dict containing search results with page navigation information
@@ -521,8 +536,8 @@ def search_in_current_session(
                         break
 
                     # Get context around match
-                    context_start = max(0, pos - context_chars)
-                    context_end = min(len(page_text), pos + len(query) + context_chars)
+                    context_start = max(0, pos - 200)
+                    context_end = min(len(page_text), pos + len(query) + 200)
                     context = page_text[context_start:context_end].strip()
 
                     matches.append(
@@ -540,8 +555,6 @@ def search_in_current_session(
         if matches:
             first_match_page = matches[0]["page_number"]
             nav_state.current_page = first_match_page
-            if first_match_page not in nav_state.visited_pages:
-                nav_state.visited_pages.append(first_match_page)
 
         return CommandResult(
             status="success",
@@ -568,6 +581,134 @@ def search_in_current_session(
 
 @mcp.tool
 @return_as_dict
+def rag_query_current_session(
+    session_id: str, query: str, top_k: int = 3, search_scope: str = "all"
+) -> Dict[str, Any]:
+    """Perform RAG query within the current PDF session with semantic search
+
+    Args:
+        session_id: Session identifier for the navigation session
+        query: Query string for semantic search
+        top_k: Number of most relevant chunks to return
+        search_scope: "all" for entire document, "current" for current page, "bookmarks" for bookmarked pages
+
+    Returns:
+        Dict containing semantically relevant content chunks with navigation info
+    """
+
+
+    try:
+        if session_id not in _navigation_state:
+            return CommandResult(
+                status="error",
+                stderr=f"Navigation session '{session_id}' not found. Initialize navigation first.",
+                exit_code=1,
+            )
+
+        model = get_embedding_model()
+        if model is None:
+            return CommandResult(
+                status="error", stderr="Failed to load embedding model", exit_code=1
+            )
+
+        nav_state = _navigation_state[session_id]
+        doc_key = f"{nav_state.filename}_{session_id}"
+
+        if doc_key not in _document_pages:
+            return CommandResult(
+                status="error",
+                stderr=f"Document pages not found for session '{session_id}'",
+                exit_code=1,
+            )
+
+        # Determine search scope
+        pages_to_search = []
+        if search_scope == "current":
+            pages_to_search = [nav_state.current_page]
+        elif search_scope == "bookmarks":
+            pages_to_search = (
+                nav_state.bookmarks if nav_state.bookmarks else [nav_state.current_page]
+            )
+        else:  # "all"
+            pages_to_search = list(_document_pages[doc_key].keys())
+
+        # Create chunks from selected pages
+        chunks = []
+        chunk_size = 500
+
+        for page_num in pages_to_search:
+            page_text = _document_pages[doc_key][page_num]["text"]
+
+            # Split page into chunks
+            for i in range(0, len(page_text), chunk_size):
+                chunk_text = page_text[i : i + chunk_size]
+                if chunk_text.strip():
+                    chunks.append(
+                        {
+                            "text": chunk_text,
+                            "page_number": page_num,
+                            "chunk_start": i,
+                            "chunk_end": min(i + chunk_size, len(page_text)),
+                        }
+                    )
+
+        if not chunks:
+            return CommandResult(
+                status="error", stderr="No content found in search scope", exit_code=1
+            )
+
+        # Create embeddings for chunks
+        chunk_texts = [chunk["text"] for chunk in chunks]
+        chunk_embeddings = model.encode(chunk_texts)
+
+        # Create query embedding and find similarities
+        query_embedding = model.encode([query])
+        similarities = cosine_similarity(query_embedding, chunk_embeddings)[0]
+
+        # Get top-k results
+        top_indices = np.argsort(similarities)[-top_k:][::-1]
+
+        results = []
+        for idx in top_indices:
+            chunk = chunks[idx]
+            results.append(
+                {
+                    "page_number": chunk["page_number"],
+                    "similarity_score": float(similarities[idx]),
+                    "text": chunk["text"],
+                    "chunk_start": chunk["chunk_start"],
+                    "chunk_end": chunk["chunk_end"],
+                }
+            )
+
+        # Navigate to the most relevant page
+        if results:
+            most_relevant_page = results[0]["page_number"]
+            nav_state.current_page = most_relevant_page
+
+        return CommandResult(
+            status="success",
+            stdout=json.dumps(
+                {
+                    "session_id": session_id,
+                    "query": query,
+                    "search_scope": search_scope,
+                    "results": results,
+                    "total_chunks_searched": len(chunks),
+                    "current_page": nav_state.current_page,
+                    "navigated_to_most_relevant": len(results) > 0,
+                }
+            ),
+        )
+
+    except Exception as e:
+        return CommandResult(
+            status="error", stderr=f"Failed to perform RAG query: {str(e)}", exit_code=1
+        )
+
+
+@mcp.tool
+@return_as_dict
 def get_navigation_status(session_id: str) -> Dict[str, Any]:
     """Get current navigation status and session information
 
@@ -575,7 +716,7 @@ def get_navigation_status(session_id: str) -> Dict[str, Any]:
         session_id: Session identifier for the navigation session
 
     Returns:
-        Dict containing complete navigation status including notes summary
+        Dict containing complete navigation status
     """
     try:
         if session_id not in _navigation_state:
@@ -586,14 +727,6 @@ def get_navigation_status(session_id: str) -> Dict[str, Any]:
             )
 
         nav_state = _navigation_state[session_id]
-        
-        # Get notes summary
-        notes_count = len(_agent_notes.get(session_id, []))
-        notes_by_type = {}
-        for note in _agent_notes.get(session_id, []):
-            if note.note_type not in notes_by_type:
-                notes_by_type[note.note_type] = 0
-            notes_by_type[note.note_type] += 1
 
         return CommandResult(
             status="success",
@@ -605,18 +738,12 @@ def get_navigation_status(session_id: str) -> Dict[str, Any]:
                     "total_pages": nav_state.total_pages,
                     "bookmarks": nav_state.bookmarks,
                     "search_history": nav_state.search_history,
-                    "visited_pages": sorted(nav_state.visited_pages),
                     "navigation_info": {
                         "has_previous": nav_state.current_page > 1,
                         "has_next": nav_state.current_page < nav_state.total_pages,
                         "progress_percentage": round(
                             (nav_state.current_page / nav_state.total_pages) * 100, 1
                         ),
-                        "pages_visited": len(nav_state.visited_pages),
-                    },
-                    "notes_summary": {
-                        "total_notes": notes_count,
-                        "notes_by_type": notes_by_type,
                     },
                 }
             ),
@@ -656,8 +783,10 @@ def close_navigation_session(session_id: str) -> Dict[str, Any]:
         # Clean up resources
         if doc_key in _document_pages:
             del _document_pages[doc_key]
-        if session_id in _agent_notes:
-            del _agent_notes[session_id]
+        if doc_key in _document_embeddings:
+            del _document_embeddings[doc_key]
+        if doc_key in _document_chunks:
+            del _document_chunks[doc_key]
         del _navigation_state[session_id]
 
         return CommandResult(
@@ -683,6 +812,7 @@ def _extract_text_from_pdf_helper(
     filename: str, start_page: int = 1, end_page: Optional[int] = None
 ) -> CommandResult:
     """Helper function to extract text from PDF (not decorated as MCP tool)"""
+
 
     try:
         pdf_path = PDF_DIR / filename

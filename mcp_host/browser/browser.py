@@ -604,136 +604,125 @@ class Browser:
         """
         try:
             import requests
-            from urllib.parse import urlparse, unquote
+            from urllib.parse import urlparse
             import os
-            import re
-
-            # Validate URL is downloadable
+    
             parsed = urlparse(url)
             if not parsed.scheme or not parsed.netloc:
                 return (False, f"Invalid URL: missing scheme or netloc in '{url}'")
 
             session = requests.Session()
-            session.headers.update(
-                {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                    "Accept": "*/*",
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Accept-Encoding": "gzip, deflate, br",
-                    "Connection": "keep-alive",
-                    "Upgrade-Insecure-Requests": "1",
-                }
-            )
+            session.headers.update({
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "*/*",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Referer": f"{parsed.scheme}://{parsed.netloc}/",
+            })
 
+            # Start streaming GET immediately
             try:
-                head_response = session.head(url, allow_redirects=True, timeout=10)
-                final_url = head_response.url
-            except Exception as head_error:
-                print(f"HEAD request failed, proceeding with GET: {head_error}")
-                final_url = url
-
-            try:
-                response = session.get(url, stream=True, allow_redirects=True, timeout=30)
+                response = session.get(url, stream=True, allow_redirects=True, timeout=60)
                 response.raise_for_status()
-            except requests.exceptions.HTTPError as http_err:
-                return (False, f"HTTP error {response.status_code}: {http_err}")
-            except requests.exceptions.ConnectionError as conn_err:
-                return (False, f"Connection error: {conn_err}")
-            except requests.exceptions.Timeout as timeout_err:
-                return (False, f"Request timeout (30s): {timeout_err}")
-            except requests.exceptions.RequestException as req_err:
-                return (False, f"Request failed: {req_err}")
+            except requests.exceptions.RequestException as e:
+                return (False, f"Download failed: {type(e).__name__}: {e}")
 
-            filename = None
+            # Extract filename from response (already connected, no extra request)
+            filename = self._extract_filename(response.headers, response.url, parsed)
 
-            # 1. Try Content-Disposition header
-            if "content-disposition" in response.headers:
-                cd = response.headers["content-disposition"]
-                filename_match = re.search(r"filename[*]?=([^;]+)", cd)
-                if filename_match:
-                    filename = filename_match.group(1).strip("\"'")
-                    filename = unquote(filename)  # URL decode
-
-            # 2. Try final URL after redirects
-            if not filename:
-                final_parsed = urlparse(response.url)
-                filename = os.path.basename(final_parsed.path)
-                if filename:
-                    filename = unquote(filename)  # URL decode
-
-            # 3. Try original URL
-            if not filename:
-                filename = os.path.basename(parsed.path)
-                if filename:
-                    filename = unquote(filename)  # URL decode
-
-            # 4. Try to guess from Content-Type
-            if not filename:
-                content_type = response.headers.get("content-type", "").lower()
-                extension_map = {
-                    "application/pdf": ".pdf",
-                    "application/msword": ".doc",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-                    "application/vnd.ms-excel": ".xls",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
-                    "application/zip": ".zip",
-                    "text/csv": ".csv",
-                    "application/json": ".json",
-                    "text/plain": ".txt",
-                    "image/jpeg": ".jpg",
-                    "image/png": ".png",
-                    "image/gif": ".gif",
-                    "video/mp4": ".mp4",
-                    "audio/mpeg": ".mp3",
-                }
-
-                for mime_type, ext in extension_map.items():
-                    if mime_type in content_type:
-                        filename = f"downloaded_file_{int(time.time())}{ext}"
-                        break
-
-            # 5. Final fallback
-            if not filename or filename == "/":
-                filename = f"downloaded_file_{int(time.time())}"
-
-            # Clean filename - remove invalid characters
-            filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
-            filename = filename.strip()
-
-            # Save to /workspace directory for cross-container sharing
+            # Prepare file path
             if not os.path.exists(WORKSPACE_DIR):
                 os.makedirs(WORKSPACE_DIR)
-            
-            filepath = os.path.join(WORKSPACE_DIR, filename)
-            
-            # Ensure we don't overwrite existing files
-            original_filename = filename
-            counter = 1
-            while os.path.exists(filepath):
-                name, ext = os.path.splitext(original_filename)
-                filename = f"{name}_{counter}{ext}"
-                filepath = os.path.join(WORKSPACE_DIR, filename)
-                counter += 1
 
-            # Save to workspace directory
-            with open(filepath, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
+            filepath = self._get_unique_filepath(WORKSPACE_DIR, filename)
 
-            file_size = os.path.getsize(filepath)
-            print(f"Successfully downloaded: {filename} to {WORKSPACE_DIR} ({file_size} bytes)")
-            return (True, filename)
+            # Stream to disk immediately
+            try:
+                with open(filepath, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
 
-        except IOError as io_err:
-            return (False, f"File I/O error: {io_err}")
-        except OSError as os_err:
-            return (False, f"OS error during file save: {os_err}")
+                file_size = os.path.getsize(filepath)
+                filename = os.path.basename(filepath)
+                print(f"Downloaded: {filename} ({file_size:,} bytes)")
+                return (True, filename)
+
+            except Exception as e:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                return (False, f"Write failed: {type(e).__name__}: {e}")
+
         except Exception as e:
-            error_msg = f"Unexpected error downloading file: {type(e).__name__}: {str(e)}"
-            print(error_msg)
-            return (False, error_msg)
-            
+            return (False, f"Unexpected error: {type(e).__name__}: {e}")
+
+
+    def _extract_filename(self, headers: dict, final_url: str, original_parsed) -> str:
+        """Extract filename from headers or URL."""
+        from urllib.parse import urlparse, unquote
+        import re
+        import time
+        
+        # Try Content-Disposition header
+        if cd := headers.get("content-disposition"):
+            if match := re.search(r'filename[*]?=([^;]+)', cd):
+                filename = match.group(1).strip("\"'")
+                return self._clean_filename(unquote(filename))
+        
+        # Try final URL after redirects
+        if final_url:
+            final_parsed = urlparse(final_url)
+            if filename := os.path.basename(final_parsed.path):
+                return self._clean_filename(unquote(filename))
+        
+        # Try original URL
+        if filename := os.path.basename(original_parsed.path):
+            return self._clean_filename(unquote(filename))
+        
+        # Guess from Content-Type
+        if content_type := headers.get("content-type", "").lower():
+            ext_map = {
+                "application/pdf": ".pdf",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+                "application/zip": ".zip",
+                "text/csv": ".csv",
+                "application/json": ".json",
+                "image/jpeg": ".jpg",
+                "image/png": ".png",
+                "video/mp4": ".mp4",
+            }
+            for mime, ext in ext_map.items():
+                if mime in content_type:
+                    return f"download_{int(time.time())}{ext}"
+        
+        # Final fallback
+        return f"download_{int(time.time())}"
+    
+    
+    def _clean_filename(self, filename: str) -> str:
+        """Remove invalid filesystem characters."""
+        import re
+        filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
+        return filename.strip() or f"download_{int(time.time())}"
+    
+    
+    def _get_unique_filepath(self, directory: str, filename: str) -> str:
+        """Generate unique filepath to avoid overwrites."""
+        import os
+        
+        filepath = os.path.join(directory, filename)
+        if not os.path.exists(filepath):
+            return filepath
+        
+        name, ext = os.path.splitext(filename)
+        counter = 1
+        while True:
+            new_filename = f"{name}_{counter}{ext}"
+            filepath = os.path.join(directory, new_filename)
+            if not os.path.exists(filepath):
+                return filepath
+            counter += 1
+
     def download_ftp_file(self, ftp_url: str) -> str:
         """Download a file from FTP URL to projects directory.
         
