@@ -20,17 +20,26 @@ class CommandResult:
     stderr: str = ""
     exit_code: int = 0
 
-
 def return_as_dict(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
+        # Convert to dict
         if isinstance(result, CommandResult):
-            return asdict(result)
+            result_dict = asdict(result)
         elif hasattr(result, "__dataclass_fields__"):
-            return asdict(result)
-        return result
-
+            result_dict = asdict(result)
+        else:
+            return result
+        # Truncate stdout and stderr if present to avoid context saturation
+        max_length = 16192
+        if 'stdout' in result_dict:
+            result_dict['stdout'] = result_dict['stdout'][:max_length]
+        if 'stderr' in result_dict:
+            result_dict['stderr'] = result_dict['stderr'][:max_length]
+            
+        return result_dict
+    
     return wrapper
 
 
