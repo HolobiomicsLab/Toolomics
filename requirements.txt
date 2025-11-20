@@ -4,6 +4,7 @@ mcp>=1.13.0
 
 # Web automation and HTTP
 requests>=2.32.0
+webdriver-manager==4.0.2
 
 # Data validation and serialization
 pydantic>=2.11.0
