@@ -7,7 +7,7 @@
     {
         "path": "mcp_host/pdf/server.py",
         "port": 5001,
-        "enabled": true
+        "enabled": false
     },
     {
         "path": "mcp_host/html/server.py",
@@ -21,27 +21,27 @@
     },
     {
         "path": "mcp_host/browser/server.py",
-        "port": 5004,
+        "port": 5014,
         "enabled": true
     },
     {
         "path": "mcp_host/image_analysis/server.py",
-        "port": 5005,
+        "port": 5015,
         "enabled": true
     },
     {
         "path": "mcp_host/csv/server.py",
-        "port": 5006,
+        "port": 5016,
         "enabled": true
     },
     {
         "path": "mcp_host/txt_editor/server.py",
-        "port": 5007,
+        "port": 5017,
         "enabled": true
     },
     {
         "path": "mcp_host/python_editor/server.py",
-        "port": 5008,
+        "port": 5018,
         "enabled": true
     },
     {
@@ -51,7 +51,7 @@
     },
     {
         "path": "mcp_host/shell/docker-compose.yml",
-        "port": 5010,
+        "port": 5013,
         "enabled": true
     },
     {

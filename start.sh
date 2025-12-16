@@ -101,9 +101,11 @@ echo "=== Prerequisites Check Complete ==="
 echo ""
 
 # Validate arguments
-if [ $# -ne 2 ]; then
-    echo "Error: Expected 2 arguments (port range)"
-    echo "Usage: $0 <start_port> <end_port> (Recommand: 5000-5200)"
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+    echo "Error: Expected 2-3 arguments"
+    echo "Usage: $0 <start_port> <end_port> [workspace]"
+    echo "Example: $0 5000 5200"
+    echo "Example: $0 5000 5200 /path/to/workspace"
     exit 1
 fi
 
@@ -115,6 +117,7 @@ fi
 
 START_PORT=$1
 END_PORT=$2
+WORKSPACE=${3:-workspace/}
 
 # Validate port range
 if [ "$START_PORT" -gt "$END_PORT" ]; then
@@ -140,6 +143,6 @@ for ((port=$START_PORT; port<=$END_PORT; port++)); do
 done
 
 echo "Deploying MCP servers..."
-python3.11 deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" &
+python3.11 deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
 HOST_PID=$!
 wait $HOST_PID
