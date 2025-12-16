@@ -142,6 +142,12 @@ for ((port=$START_PORT; port<=$END_PORT; port++)); do
     fi
 done
 
+# Calculate instance ID from workspace path (same logic as deploy.py)
+# This gives us the config filename that will be used
+WORKSPACE_ABS=$(cd "$WORKSPACE" 2>/dev/null && pwd || echo "$WORKSPACE")
+INSTANCE_ID=$(python3.11 -c "import hashlib; import os; ws = os.path.abspath('$WORKSPACE'); print(hashlib.md5(ws.encode()).hexdigest()[:8])" 2>/dev/null || echo "unknown")
+INSTANCE_CONFIG="config_${INSTANCE_ID}.json"
+
 # Check if workspace is new (doesn't exist)
 if [ ! -d "$WORKSPACE" ]; then
     echo ""
@@ -150,24 +156,31 @@ if [ ! -d "$WORKSPACE" ]; then
     echo "This appears to be a new use case with a fresh workspace."
     echo ""
     echo "Resetting configuration to allow fresh MCP server setup..."
-    if [ -f "config.json" ]; then
-        rm config.json
-        echo "✓ Removed existing config.json"
-    fi
-    echo ""
-    echo "⚠️  IMPORTANT: After deployment completes, you MUST manually configure"
-    echo "    which MCP services to enable/disable in config.json:"
-    echo "    1. Edit config.json"
-    echo "    2. Change 'enabled': false to 'enabled': true for services you want"
-    echo "    Then re-run deploy.py with your preferred settings."
-    echo ""
     # Create the workspace directory
     mkdir -p "$WORKSPACE"
     echo "✓ Created workspace directory: $WORKSPACE"
     echo ""
 fi
 
+echo "Instance Configuration:"
+echo "  Instance ID: $INSTANCE_ID"
+echo "  Config File: $INSTANCE_CONFIG"
+echo "  Workspace: $WORKSPACE"
+echo ""
+
 echo "Deploying MCP servers..."
 python3.11 deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
 HOST_PID=$!
 wait $HOST_PID
+
+# After deployment, show the config file location
+echo ""
+echo "=== DEPLOYMENT COMPLETE ==="
+echo "✓ Instance deployed successfully"
+echo ""
+echo "⚠️  IMPORTANT: Your instance-specific config file is: $INSTANCE_CONFIG"
+echo "    Edit this file to enable/disable MCP services:"
+echo "    1. Edit $INSTANCE_CONFIG"
+echo "    2. Change 'enabled': false to 'enabled': true for services you want"
+echo "    3. Restart the deployment to apply changes"
+echo ""

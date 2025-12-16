@@ -577,6 +577,12 @@ class MCPDeploymentManager:
         # Generate unique instance ID from workspace path for Docker service isolation
         self.instance_id = generate_instance_id(workspace_dir)
         
+        # Use instance-specific config file to support multiple concurrent deployments
+        # Convert "config.json" to "config_${INSTANCE_ID}.json"
+        if config_path == "config.json":
+            config_path = f"config_{self.instance_id}.json"
+            logger.info(f"Using instance-specific config: {config_path}")
+        
         self.process_manager = ProcessManager(self.workspace_dir, self.instance_id)
         self.config_manager = ConfigManager(config_path)
         
