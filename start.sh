@@ -142,6 +142,31 @@ for ((port=$START_PORT; port<=$END_PORT; port++)); do
     fi
 done
 
+# Check if workspace is new (doesn't exist)
+if [ ! -d "$WORKSPACE" ]; then
+    echo ""
+    echo "=== NEW WORKSPACE DETECTED ==="
+    echo "Workspace directory '$WORKSPACE' does not exist."
+    echo "This appears to be a new use case with a fresh workspace."
+    echo ""
+    echo "Resetting configuration to allow fresh MCP server setup..."
+    if [ -f "config.json" ]; then
+        rm config.json
+        echo "✓ Removed existing config.json"
+    fi
+    echo ""
+    echo "⚠️  IMPORTANT: After deployment completes, you MUST manually configure"
+    echo "    which MCP services to enable/disable in config.json:"
+    echo "    1. Edit config.json"
+    echo "    2. Change 'enabled': false to 'enabled': true for services you want"
+    echo "    Then re-run deploy.py with your preferred settings."
+    echo ""
+    # Create the workspace directory
+    mkdir -p "$WORKSPACE"
+    echo "✓ Created workspace directory: $WORKSPACE"
+    echo ""
+fi
+
 echo "Deploying MCP servers..."
 python3.11 deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
 HOST_PID=$!

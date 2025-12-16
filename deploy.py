@@ -164,10 +164,14 @@ class ProcessManager:
     def start_docker_compose(self, compose_file: Path, port: Optional[int] = None) -> ProcessInfo:
         """Start docker-compose service with optional port configuration"""
         platform = sys.platform
+        # Use instance ID as docker-compose project name for isolation
+        project_name = f"toolomics_{self.instance_id}"
         if platform == "linux":
-            cmd = ['docker', 'compose', '-f', str(compose_file), 'up', '-d']
+            cmd = ['docker', 'compose', '-p', project_name, '-f', str(compose_file), 'up', '-d']
         else:
-            cmd = ['docker-compose', '-f', str(compose_file), 'up', '-d']
+            cmd = ['docker-compose', '-p', project_name, '-f', str(compose_file), 'up', '-d']
+        
+        logger.info(f"Using Docker project name: {project_name}")
         
         # Set up environment with port if provided
         env = os.environ.copy()
