@@ -101,9 +101,11 @@ echo "=== Prerequisites Check Complete ==="
 echo ""
 
 # Validate arguments
-if [ $# -ne 2 ]; then
-    echo "Error: Expected 2 arguments (port range)"
-    echo "Usage: $0 <start_port> <end_port> (Recommand: 5000-5200)"
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+    echo "Error: Expected 2-3 arguments"
+    echo "Usage: $0 <start_port> <end_port> [workspace]"
+    echo "Example: $0 5000 5200"
+    echo "Example: $0 5000 5200 /path/to/workspace"
     exit 1
 fi
 
@@ -115,6 +117,7 @@ fi
 
 START_PORT=$1
 END_PORT=$2
+WORKSPACE=${3:-workspace/}
 
 # Validate port range
 if [ "$START_PORT" -gt "$END_PORT" ]; then
@@ -139,7 +142,45 @@ for ((port=$START_PORT; port<=$END_PORT; port++)); do
     fi
 done
 
+# Calculate instance ID from workspace path (same logic as deploy.py)
+# This gives us the config filename that will be used
+WORKSPACE_ABS=$(cd "$WORKSPACE" 2>/dev/null && pwd || echo "$WORKSPACE")
+INSTANCE_ID=$(python3.11 -c "import hashlib; import os; ws = os.path.abspath('$WORKSPACE'); print(hashlib.md5(ws.encode()).hexdigest()[:8])" 2>/dev/null || echo "unknown")
+INSTANCE_CONFIG="config_${INSTANCE_ID}.json"
+
+# Check if workspace is new (doesn't exist)
+if [ ! -d "$WORKSPACE" ]; then
+    echo ""
+    echo "=== NEW WORKSPACE DETECTED ==="
+    echo "Workspace directory '$WORKSPACE' does not exist."
+    echo "This appears to be a new use case with a fresh workspace."
+    echo ""
+    echo "Resetting configuration to allow fresh MCP server setup..."
+    # Create the workspace directory
+    mkdir -p "$WORKSPACE"
+    echo "✓ Created workspace directory: $WORKSPACE"
+    echo ""
+fi
+
+echo "Instance Configuration:"
+echo "  Instance ID: $INSTANCE_ID"
+echo "  Config File: $INSTANCE_CONFIG"
+echo "  Workspace: $WORKSPACE"
+echo ""
+
 echo "Deploying MCP servers..."
-python3.11 deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" &
+python3.11 deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
 HOST_PID=$!
 wait $HOST_PID
+
+# After deployment, show the config file location
+echo ""
+echo "=== DEPLOYMENT COMPLETE ==="
+echo "✓ Instance deployed successfully"
+echo ""
+echo "⚠️  IMPORTANT: Your instance-specific config file is: $INSTANCE_CONFIG"
+echo "    Edit this file to enable/disable MCP services:"
+echo "    1. Edit $INSTANCE_CONFIG"
+echo "    2. Change 'enabled': false to 'enabled': true for services you want"
+echo "    3. Restart the deployment to apply changes"
+echo ""

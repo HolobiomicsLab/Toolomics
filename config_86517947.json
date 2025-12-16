@@ -7,7 +7,7 @@
     {
         "path": "mcp_host/pdf/server.py",
         "port": 5001,
-        "enabled": true
+        "enabled": false
     },
     {
         "path": "mcp_host/html/server.py",
@@ -22,11 +22,11 @@
     {
         "path": "mcp_host/browser/server.py",
         "port": 5004,
-        "enabled": true
+        "enabled": false
     },
     {
         "path": "mcp_host/image_analysis/server.py",
-        "port": 5005,
+        "port": 5013,
         "enabled": true
     },
     {
@@ -57,7 +57,7 @@
     {
         "path": "mcp_host/browser/searxng/docker-compose.yml",
         "port": 5011,
-        "enabled": true
+        "enabled": false
     },
     {
         "path": "mcp_host/decimer/docker-compose.yml",

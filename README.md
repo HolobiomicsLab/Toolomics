@@ -59,6 +59,49 @@ You can specify a custom workspace directory:
 python3.10 deploy.py --workspace /path/to/custom/workspace
 ```
 
+## Multi-Instance Deployment
+
+Toolomics supports running **multiple independent instances simultaneously**, each with its own workspace and Docker service isolation.
+
+### How It Works
+
+Each instance is automatically assigned a unique **instance ID** (8-character hash) derived from the workspace path. This ID is used to:
+- **Isolate Docker containers, volumes, and auxiliary ports** per instance
+- **Create instance-specific config files** (`config_${INSTANCE_ID}.json`) to prevent configuration conflicts
+
+This means each instance has its own configuration and doesn't interfere with others.
+
+**Example: Deploy two instances concurrently**
+
+```bash
+# Terminal 1: Instance for user Martin
+python3.10 deploy.py --config config.json --workspace workspace_martin --host_port_min 5000 --host_port_max 5100
+
+# Terminal 2: Instance for user John (simultaneous)
+python3.10 deploy.py --config config.json --workspace workspace_john --host_port_min 5100 --host_port_max 5200 &
+```
+
+### Automatic Resource Isolation
+
+Each instance automatically gets isolated resources:
+
+| Resource | Isolation Method |
+|----------|------------------|
+| **Workspace** | Separate directory (`workspace_martin/`, `workspace_john/`) |
+| **Docker Containers** | Suffixed with instance ID (`xcmsrocker_a3f2b1c9`, `xcmsrocker_f7e2d4a1`) |
+| **Data Volumes** | Instance-specific names (`rstudio_data_a3f2b1c9`, `redis-data_f7e2d4a1`) |
+| **MCP Server Ports** | Different port ranges (5000-5100 vs 5100-5200) |
+| **Auxiliary Ports** | Dynamic allocation (8787→9537, 8080→9037, etc.) |
+
+### Benefits
+
+- **Multi-user support**: Run separate instances for different users/projects
+- **Data isolation**: Files don't cross between instances
+- **Parallel processing**: Multiple analyses can run simultaneously
+- **Clean separation**: Easy to backup or manage individual instances
+
+For detailed information, see the [Multi-Instance Deployment Guide](MULTI_INSTANCE_DEPLOYMENT.md).
+
 ## Using MCP with Your Client
 
 To interact with the tools using a client (e.g., for your AI agent), you can use the `fastmcp` library.

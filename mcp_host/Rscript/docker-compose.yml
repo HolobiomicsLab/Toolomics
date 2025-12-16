@@ -4,14 +4,15 @@ services:
     build:
       context: ../..
       dockerfile: mcp_host/Rscript/Dockerfile
-    container_name: xcmsrocker
+    container_name: xcmsrocker_${INSTANCE_ID}
     environment:
       - MCP_PORT=${MCP_PORT}
+      - INSTANCE_ID=${INSTANCE_ID}
       - PASSWORD=xcmsrocker  # Set the password for RStudio Server (optional)
     ports:
       - "${MCP_PORT}:${MCP_PORT}"  # MCP server port
-      - "8787:8787"                # RStudio Server port (optional)
+      - "${RSTUDIO_PORT}:8787"     # RStudio Server port (instance-specific)
     volumes:
-      - ./rstudio_data:/home/rstudio  # Persist RStudio data (optional)
+      - ./rstudio_data_${INSTANCE_ID}:/home/rstudio  # Persist RStudio data (instance-specific)
       - ../../workspace:/app/workspace:rw  # Shared workspace
     restart: unless-stopped  # Auto-restart unless manually stopped

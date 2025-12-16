@@ -12,6 +12,7 @@ import subprocess
 import signal
 import os
 import socket
+import hashlib
 from pathlib import Path
 import select
 from dataclasses import dataclass
@@ -71,6 +72,28 @@ WORKSPACE_FOLDER = "workspace"
 HOST_PORT_MIN = 5000
 HOST_PORT_MAX = 5099
 
+
+def generate_instance_id(workspace_path: str) -> str:
+    """
+    Generate a unique instance ID from workspace path.
+    Uses first 8 characters of MD5 hash of workspace path.
+    
+    Args:
+        workspace_path: Path to the workspace directory
+    
+    Returns:
+        Unique instance ID (8 characters)
+    
+    Example:
+        "workspace_martin" -> "a3f2b1c9"
+        "workspace_john" -> "f7e2d4a1"
+    """
+    workspace_abs = Path(workspace_path).resolve()
+    hash_obj = hashlib.md5(str(workspace_abs).encode())
+    instance_id = hash_obj.hexdigest()[:8]
+    logger.info(f"Generated instance_id '{instance_id}' for workspace '{workspace_abs}'")
+    return instance_id
+
 @dataclass
 class ProcessInfo:
     """Immutable process information"""
@@ -88,12 +111,13 @@ class ProcessInfo:
 class ProcessManager:
     """Manages MCP server processes with proper lifecycle"""
     
-    def __init__(self, workspace_dir: Path):
+    def __init__(self, workspace_dir: Path, instance_id: str = "default"):
         self.processes: List[ProcessInfo] = []
         self.shutdown_event = threading.Event()
         self.failure_event = threading.Event()  # Set when a critical process fails
         self.workspace_dir = workspace_dir
         self.failed_processes: List[ProcessInfo] = []  # Track failed processes
+        self.instance_id = instance_id  # Unique instance identifier for Docker services
     
     def start_python_server(self, server_path: Path, port: int) -> ProcessInfo:
         """Start a Python MCP server in the workspace directory"""
@@ -140,10 +164,14 @@ class ProcessManager:
     def start_docker_compose(self, compose_file: Path, port: Optional[int] = None) -> ProcessInfo:
         """Start docker-compose service with optional port configuration"""
         platform = sys.platform
+        # Use instance ID as docker-compose project name for isolation
+        project_name = f"toolomics_{self.instance_id}"
         if platform == "linux":
-            cmd = ['docker', 'compose', '-f', str(compose_file), 'up', '-d']
+            cmd = ['docker', 'compose', '-p', project_name, '-f', str(compose_file), 'up', '-d']
         else:
-            cmd = ['docker-compose', '-f', str(compose_file), 'up', '-d']
+            cmd = ['docker-compose', '-p', project_name, '-f', str(compose_file), 'up', '-d']
+        
+        logger.info(f"Using Docker project name: {project_name}")
         
         # Set up environment with port if provided
         env = os.environ.copy()
@@ -151,6 +179,21 @@ class ProcessManager:
             env['MCP_PORT'] = str(port)
             env['FASTMCP_PORT'] = str(port)
             logger.info(f"Setting MCP_PORT={port} for docker-compose: {compose_file}")
+        
+        # Set instance-specific environment variables for Docker services
+        env['INSTANCE_ID'] = self.instance_id
+        logger.info(f"Setting INSTANCE_ID={self.instance_id} for docker-compose: {compose_file}")
+        
+        # Set auxiliary ports for services that need them
+        # RStudio Server port (default 8787, offset by 1000+ instance hash to avoid conflicts)
+        rstudio_port = 9000 + (int(self.instance_id, 16) % 1000)
+        env['RSTUDIO_PORT'] = str(rstudio_port)
+        
+        # SearxNG port (default 8080, offset by 1000+ instance hash to avoid conflicts)
+        searxng_port = 9500 + (int(self.instance_id, 16) % 1000)
+        env['SEARXNG_PORT'] = str(searxng_port)
+        
+        logger.info(f"Setting auxiliary ports - RSTUDIO_PORT={rstudio_port}, SEARXNG_PORT={searxng_port}")
             
         proc = subprocess.Popen(
             cmd,
@@ -530,7 +573,17 @@ class MCPDeploymentManager:
     def __init__(self, mcp_dir: str, workspace_dir: str, config_path: str):
         self.mcp_dir = Path(mcp_dir)
         self.workspace_dir = Path(workspace_dir)
-        self.process_manager = ProcessManager(self.workspace_dir)
+        
+        # Generate unique instance ID from workspace path for Docker service isolation
+        self.instance_id = generate_instance_id(workspace_dir)
+        
+        # Use instance-specific config file to support multiple concurrent deployments
+        # Convert "config.json" to "config_${INSTANCE_ID}.json"
+        if config_path == "config.json":
+            config_path = f"config_{self.instance_id}.json"
+            logger.info(f"Using instance-specific config: {config_path}")
+        
+        self.process_manager = ProcessManager(self.workspace_dir, self.instance_id)
         self.config_manager = ConfigManager(config_path)
         
         # Set up signal handlers

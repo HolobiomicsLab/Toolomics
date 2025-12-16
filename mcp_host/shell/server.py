@@ -64,7 +64,7 @@ def run_bash_subprocess(
     
     try:
         result = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd,  stdin=subprocess.DEVNUL
+            command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
         )
         return CommandResult(
             status="success" if result.returncode == 0 else "error",
