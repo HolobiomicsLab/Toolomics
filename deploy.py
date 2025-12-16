@@ -184,6 +184,11 @@ class ProcessManager:
         env['INSTANCE_ID'] = self.instance_id
         logger.info(f"Setting INSTANCE_ID={self.instance_id} for docker-compose: {compose_file}")
         
+        # Set workspace path for docker-compose volume mounts (relative to project root)
+        workspace_path = str(self.workspace_dir)
+        env['WORKSPACE_PATH'] = workspace_path
+        logger.info(f"Setting WORKSPACE_PATH={workspace_path} for docker-compose: {compose_file}")
+        
         # Set auxiliary ports for services that need them
         # RStudio Server port (default 8787, offset by 1000+ instance hash to avoid conflicts)
         rstudio_port = 9000 + (int(self.instance_id, 16) % 1000)
