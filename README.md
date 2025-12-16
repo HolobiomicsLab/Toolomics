@@ -65,7 +65,11 @@ Toolomics supports running **multiple independent instances simultaneously**, ea
 
 ### How It Works
 
-Each instance is automatically assigned a unique **instance ID** (8-character hash) derived from the workspace path. This ID is used to isolate Docker containers, volumes, and auxiliary ports.
+Each instance is automatically assigned a unique **instance ID** (8-character hash) derived from the workspace path. This ID is used to:
+- **Isolate Docker containers, volumes, and auxiliary ports** per instance
+- **Create instance-specific config files** (`config_${INSTANCE_ID}.json`) to prevent configuration conflicts
+
+This means each instance has its own configuration and doesn't interfere with others.
 
 **Example: Deploy two instances concurrently**
 
