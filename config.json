@@ -1,67 +1,67 @@
 [
     {
         "path": "mcp_host/mcp_search/server.py",
-        "port": 5000,
+        "port": 5200,
         "enabled": false
     },
     {
         "path": "mcp_host/pdf/server.py",
-        "port": 5001,
+        "port": 5201,
         "enabled": true
     },
     {
         "path": "mcp_host/html/server.py",
-        "port": 5002,
+        "port": 5202,
         "enabled": false
     },
     {
         "path": "mcp_host/graph_rag/server.py",
-        "port": 5003,
+        "port": 5203,
         "enabled": false
     },
     {
         "path": "mcp_host/browser/server.py",
-        "port": 5004,
+        "port": 5204,
         "enabled": false
     },
     {
         "path": "mcp_host/image_analysis/server.py",
-        "port": 5005,
+        "port": 5205,
         "enabled": true
     },
     {
         "path": "mcp_host/csv/server.py",
-        "port": 5006,
+        "port": 5206,
         "enabled": true
     },
     {
         "path": "mcp_host/txt_editor/server.py",
-        "port": 5007,
-        "enabled": true
+        "port": 5207,
+        "enabled": false
     },
     {
         "path": "mcp_host/python_editor/server.py",
-        "port": 5008,
+        "port": 5208,
         "enabled": true
     },
     {
         "path": "mcp_host/Rscript/docker-compose.yml",
-        "port": 5009,
+        "port": 5209,
         "enabled": false
     },
     {
         "path": "mcp_host/shell/docker-compose.yml",
-        "port": 5010,
+        "port": 5210,
         "enabled": true
     },
     {
         "path": "mcp_host/browser/searxng/docker-compose.yml",
-        "port": 5011,
+        "port": 5211,
         "enabled": false
     },
     {
         "path": "mcp_host/decimer/docker-compose.yml",
-        "port": 5012,
+        "port": 5212,
         "enabled": false
     }
 ]
