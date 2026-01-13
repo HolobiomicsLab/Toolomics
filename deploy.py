@@ -194,8 +194,9 @@ class ProcessManager:
         rstudio_port = 9000 + (int(self.instance_id, 16) % 1000)
         env['RSTUDIO_PORT'] = str(rstudio_port)
         
-        # SearxNG port (default 8080, offset by 1000+ instance hash to avoid conflicts)
-        searxng_port = 9500 + (int(self.instance_id, 16) % 1000)
+        # SearxNG port - fixed at 8080 for browser MCP server compatibility
+        # Browser MCP server expects SearXNG at localhost:8080
+        searxng_port = 8080
         env['SEARXNG_PORT'] = str(searxng_port)
         
         logger.info(f"Setting auxiliary ports - RSTUDIO_PORT={rstudio_port}, SEARXNG_PORT={searxng_port}")
