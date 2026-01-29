@@ -1,5 +1,5 @@
 # Core MCP and FastMCP dependencies
-fastmcp>=2.12.0
+fastmcp>=2.12.0,<3.0.0
 mcp>=1.13.0
 
 # Web automation and HTTP
@@ -14,15 +14,24 @@ pydantic-settings>=2.10.0
 python-dotenv>=1.1.0
 psutil>=6.1.0
 
+numpy>=1.21.6,<1.28.0
 pandas==2.3.1
+scipy>=1.11.4,<2.0.0
+
+cryptography>=46.0.0
+
+# Other dependencies
 markdownify==1.1.0
 helium==5.1.1
 
-# pdf
+# PDF processing
 PyMuPDF==1.26.5
 PyPDF2==3.0.1
+
+# ML/AI dependencies
 sentence-transformers==5.0.0
 transformers==4.53.1
 scikit-learn==1.7.0
 
+# OpenAI
 openai

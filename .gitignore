@@ -559,3 +559,5 @@ mcp_docker/decimer/mcp_stress_test.py
 #tests/test_decimer_analyze_document.py
 check_mcp_health.py
 mcp_docker/*
+mcp_host/deepseek_ocr/*
+test_deepseek_ocr.py

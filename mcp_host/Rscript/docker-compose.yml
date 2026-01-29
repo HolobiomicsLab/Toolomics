@@ -14,5 +14,5 @@ services:
       - "${RSTUDIO_PORT}:8787"     # RStudio Server port (instance-specific)
     volumes:
       - ./rstudio_data_${INSTANCE_ID}:/home/rstudio  # Persist RStudio data (instance-specific)
-      - ../../workspace:/app/workspace:rw  # Shared workspace
+      - ../../${WORKSPACE_PATH}:/app/workspace:rw  # Shared workspace
     restart: unless-stopped  # Auto-restart unless manually stopped

@@ -3,42 +3,30 @@
 
 *A suite of tools from the Holobiomics Lab for Agents, organized as a set of MCP servers.*
 
-## Installation
-
-To install the required dependencies, you can use either pip or the faster UV package manager:
-
-### Using pip (traditional)
-```bash
-python3.10 -m pip install -r requirements.txt
-```
-
-### Using UV (recommended, faster)
-```bash
-uv pip install -r requirements.txt
-```
-
-## Deploying Tools
+## Install & deploy tools
 
 ### Deploy all tools automatically
 
 ```bash
-./start.sh
+./start.sh <min port> <max port> <workspace name>
 ```
 
-### Deploy Tools
+### Deploy using python script
 
-To deploy all tools, use the following command:
+***Not recommanded, start.sh will handle python, requirements and workpsace installation automatically.***
 
+First, install the required dependencies, you can use either pip or the faster UV package manager:
+
+**1. Install dependencies:**
 ```bash
-python3.10 deploy.py --config <config path>
+python3.10 -m pip install -r requirements.txt
+# or using UV
+uv pip install -r requirements.txt
 ```
 
-By default we use port 5000 to 5100 for MCPs
-
-For example : 
-
+**2. Run script:**
 ```bash
-python3.10 deploy.py --config config.json 
+python3.10 deploy.py --config config.json --workspace <workspace name> --host_port_min <min port> --host_port_max <max port>
 ```
 
 ## Centralized File Management
@@ -50,14 +38,6 @@ All MCP servers execute in a centralized **workspace directory** (default: `work
 - **Any MCP** creates files → `workspace/output_file.json`
 
 This centralized approach ensures that AI agents can easily find and work with files across different MCP tools without needing to track file locations.
-
-### Workspace Directory
-
-You can specify a custom workspace directory:
-
-```bash
-python3.10 deploy.py --workspace /path/to/custom/workspace
-```
 
 ## Multi-Instance Deployment
 
@@ -75,10 +55,10 @@ This means each instance has its own configuration and doesn't interfere with ot
 
 ```bash
 # Terminal 1: Instance for user Martin
-python3.10 deploy.py --config config.json --workspace workspace_martin --host_port_min 5000 --host_port_max 5100
+start.sh 5000 5100 workspace_martin
 
 # Terminal 2: Instance for user John (simultaneous)
-python3.10 deploy.py --config config.json --workspace workspace_john --host_port_min 5100 --host_port_max 5200 &
+start.sh 5100 5200 workspace_john
 ```
 
 ### Automatic Resource Isolation
@@ -92,15 +72,6 @@ Each instance automatically gets isolated resources:
 | **Data Volumes** | Instance-specific names (`rstudio_data_a3f2b1c9`, `redis-data_f7e2d4a1`) |
 | **MCP Server Ports** | Different port ranges (5000-5100 vs 5100-5200) |
 | **Auxiliary Ports** | Dynamic allocation (8787→9537, 8080→9037, etc.) |
-
-### Benefits
-
-- **Multi-user support**: Run separate instances for different users/projects
-- **Data isolation**: Files don't cross between instances
-- **Parallel processing**: Multiple analyses can run simultaneously
-- **Clean separation**: Easy to backup or manage individual instances
-
-For detailed information, see the [Multi-Instance Deployment Guide](MULTI_INSTANCE_DEPLOYMENT.md).
 
 ## Using MCP with Your Client
 
@@ -206,7 +177,7 @@ if __name__ == "__main__":
 
 ### Automatic Port Assignment
 
-When you run the `deploy.py` script for the first time, it will automatically assign a port to your new MCP server and save the mapping in the `config.json` file.
+When you run the `start.sh` or `deploy.py` script for the first time, it will automatically assign a port to your new MCP server and save the mapping in the `config.json` file.
 
 ## Dockerizing an MCP Server
 
@@ -294,13 +265,6 @@ The deployment script will automatically:
 - Set the `MCP_PORT` environment variable
 - Build and start the Docker container
 - Skip running `server.py` directly on the host
-
-### Benefits of Dockerization
-
-- **Dependency Isolation**: Heavy ML libraries, system tools, or conflicting dependencies won't affect other MCP servers
-- **Reproducibility**: Consistent environment across different machines
-- **Security**: Isolated execution environment
-- **Resource Management**: Better control over CPU, memory, and other resources
 
 ### Learn More
 
