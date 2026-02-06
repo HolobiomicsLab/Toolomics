@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 import threading
 import logging
+import fcntl  # For file locking on Unix/Mac
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -468,37 +469,89 @@ class ConfigManager:
         
     def load_config(self) -> Dict[str, dict]:
         """
-        Load port configuration with enabled flag.
+        Load port configuration with enabled flag with file locking.
         Returns dict mapping path to {"port": int, "enabled": bool}
         """
         if not self.config_path.exists():
+            logger.warning(f"Config file {self.config_path} does not exist.")
+            return {}
+        
+        # Check if file is empty
+        if self.config_path.stat().st_size == 0:
+            logger.warning(f"Config file {self.config_path} is empty.")
+            return {}
+        
+        # Check if file is corrupted by reading first character
+        try:
+            with open(self.config_path, 'rb') as f:
+                first_byte = f.read(1)
+                if first_byte and first_byte != b'[':
+                    logger.error(f"Config file {self.config_path} is corrupted (starts with {first_byte!r} instead of b'[')") 
+                    logger.warning(f"Deleting corrupted config file to regenerate fresh")
+                    self.config_path.unlink()
+                    return {}
+        except Exception as e:
+            logger.error(f"Error checking config file: {e}")
             return {}
             
         try:
-            with open(self.config_path, 'r') as f:
-                config_list = json.load(f)
-                config_dict = {}
+            with open(self.config_path, 'r', encoding='utf-8') as f:
+                # Acquire shared lock for reading
+                try:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                except Exception as lock_e:
+                    logger.warning(f"Could not acquire file lock: {lock_e}")
                 
-                for item in config_list:
-                    if 'path' in item and 'port' in item:
-                        # New format
-                        path = item['path']
-                        config_dict[path] = {
-                            'port': item['port'],
-                            'enabled': item.get('enabled', True)  # Default to enabled
-                        }
-                    else:
-                        raise ValueError("Can't parse config.json file")
-                
-                return config_dict
+                try:
+                    content = f.read().strip()
+                    if not content:
+                        logger.warning(f"Config file {self.config_path} contains only whitespace.")
+                        return {}
+                    
+                    # Debug logging
+                    logger.debug(f"Config file size: {len(content)} chars, first 50: {content[:50]}")
+                    
+                    config_list = json.loads(content)
+                    config_dict = {}
+                    
+                    for item in config_list:
+                        if 'path' in item and 'port' in item:
+                            # New format
+                            path = item['path']
+                            config_dict[path] = {
+                                'port': item['port'],
+                                'enabled': item.get('enabled', True)  # Default to enabled
+                            }
+                        else:
+                            raise ValueError("Can't parse config.json file")
+                    
+                    logger.debug(f"Successfully loaded {len(config_dict)} items from config")
+                    return config_dict
+                finally:
+                    # Release lock
+                    try:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    except:
+                        pass
+                        
         except (json.JSONDecodeError, KeyError, IndexError) as e:
-            logger.error(f"Error loading config: {e}")
+            logger.error(f"Error loading config from {self.config_path}: {e}")
+            # Try to read the file again to see what's actually there
+            try:
+                file_size = self.config_path.stat().st_size
+                with open(self.config_path, 'rb') as f:
+                    raw_bytes = f.read(100)
+                    logger.error(f"File size: {file_size}, first 100 bytes: {raw_bytes}")
+            except Exception as debug_e:
+                logger.error(f"Could not read file for debugging: {debug_e}")
+            logger.warning(f"Returning empty config due to parse error. File will be regenerated.")
             return {}
     
     def save_config(self, config: Dict[str, dict]) -> None:
         """
         Save port configuration with enabled flag.
         Config dict maps path to {"port": int, "enabled": bool}
+        Uses atomic write to prevent race conditions.
         """
         # Convert dict to list format with new structure
         config_list = [
@@ -510,8 +563,29 @@ class ConfigManager:
             for path, info in config.items()
         ]
         
-        with open(self.config_path, 'w') as f:
-            json.dump(config_list, f, indent=4)
+        # Write to temporary file first, then rename atomically
+        import tempfile
+        temp_fd, temp_path = tempfile.mkstemp(
+            dir=self.config_path.parent,
+            prefix='.tmp_config_',
+            suffix='.json',
+            text=True
+        )
+        
+        try:
+            with os.fdopen(temp_fd, 'w') as f:
+                json.dump(config_list, f, indent=4)
+            
+            # Atomic rename (on POSIX systems)
+            os.replace(temp_path, self.config_path)
+            logger.debug(f"Config saved atomically to {self.config_path}")
+        except Exception as e:
+            # Clean up temp file on error
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+            raise e
     
     def assign_ports(self, server_files: List[Path], compose_files: List[Path] = None,
                      starting_port: int = HOST_PORT_MIN,
@@ -556,8 +630,7 @@ class ConfigManager:
             for compose_file in compose_files:
                 compose_str = str(compose_file)
                 if compose_str not in config:
-                    # Check if there's a server.py in the same directory
-                    # Docker-compose with server.py in mcp_host - use host range
+                    # Find next available port in host range
                     while (next_host_port in used_ports or 
                            next_host_port < host_port_min or 
                            next_host_port > host_port_max):

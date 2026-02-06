@@ -33,12 +33,17 @@ mcp = FastMCP(
 
 def run_bash_subprocess(
     command: str,
-    timeout: int = 30,
+    timeout: int = 300,
+    max_output_size: int = 32000
 ) -> CommandResult:
-    # Use the fixed workspace path from the volume mount
-    # This is more reliable than os.getcwd() which can change during runtime
+    """
+    Run command with streaming output to prevent buffer deadlock.
+    """
     import os
+    import time
+    
     cwd = "/app/workspace"
+    
     # Force directory refresh by listing it (triggers inode cache invalidation)
     try:
         os.listdir(cwd)
@@ -61,17 +66,90 @@ def run_bash_subprocess(
         )
     
     print(f"Running command: {command} with timeout: {timeout} seconds in {cwd}")
+    start_time = time.time()
     
     try:
-        result = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout, shell=True, cwd=cwd
+        # ✅ FIX: Use Popen for streaming instead of run() to prevent buffer deadlock
+        proc = subprocess.Popen(
+            command,
+            shell=True,
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL,  # ✅ FIX: Prevent interactive hangs
+            text=True,
+            bufsize=1  # Line buffered
         )
+        
+        # Collect output with streaming to prevent deadlock
+        stdout_lines = []
+        stderr_lines = []
+        stdout_size = 0
+        stderr_size = 0
+        
+        # Non-blocking read with timeout
+        while proc.poll() is None:
+            # Check timeout
+            elapsed = time.time() - start_time
+            if elapsed > timeout:
+                print(f"Command timeout after {elapsed:.2f}s: {command}")
+                proc.kill()
+                proc.wait(timeout=5)
+                return CommandResult(
+                    status="error",
+                    stderr=f"Command timed out after {timeout} seconds",
+                    exit_code=-1
+                )
+            
+            # Read available output (non-blocking)
+            try:
+                if proc.stdout:
+                    line = proc.stdout.readline()
+                    if line and stdout_size < max_output_size:
+                        stdout_lines.append(line)
+                        stdout_size += len(line)
+            except:
+                pass
+            
+            try:
+                if proc.stderr:
+                    line = proc.stderr.readline()
+                    if line and stderr_size < max_output_size:
+                        stderr_lines.append(line)
+                        stderr_size += len(line)
+            except:
+                pass
+            
+            time.sleep(0.01)  # Small delay to prevent busy-wait
+        
+        # Get remaining output
+        try:
+            stdout_remaining, stderr_remaining = proc.communicate(timeout=1)
+            if stdout_remaining and stdout_size < max_output_size:
+                remaining_space = max_output_size - stdout_size
+                stdout_lines.append(stdout_remaining[:remaining_space])
+            if stderr_remaining and stderr_size < max_output_size:
+                remaining_space = max_output_size - stderr_size
+                stderr_lines.append(stderr_remaining[:remaining_space])
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        
+        duration = time.time() - start_time
+        exit_code = proc.returncode
+        
+        stdout_text = ''.join(stdout_lines)[:max_output_size]
+        stderr_text = ''.join(stderr_lines)[:max_output_size]
+        
+        print(f"Command completed in {duration:.2f}s with exit code {exit_code}")
+        
         return CommandResult(
-            status="success" if result.returncode == 0 else "error",
-            stdout=result.stdout[:32000],
-            stderr=result.stderr[:32000],
-            exit_code=result.returncode,
+            status="success" if exit_code == 0 else "error",
+            stdout=stdout_text,
+            stderr=stderr_text,
+            exit_code=exit_code,
         )
+        
     except subprocess.TimeoutExpired:
         return CommandResult(
             status="error",
@@ -89,25 +167,38 @@ def run_bash_subprocess(
 
 @mcp.tool
 @return_as_dict
-def execute_command(command: str) -> dict:
+def execute_command(command: str, timeout: int = 300) -> dict:
     """
     Execute a shell command and return the output with better error handling and security.
-    You should NEVER use this tool to execute Rscript, use the dedicated Rscript tool instead.
-    execute_command does not support multiple positional arguments or combined positional and keyword arguments
 
     Args:
         command (str): The shell command to execute
+        timeout (int): Command timeout in seconds (default: 300 = 5 minutes, max: 7200 = 2 hours)
 
     Returns:
         dict : {CommandResult.__doc__}
 
-    Example:
-        execute_command(command="ls -la /tmp")
+    Examples:
+        execute_command(command="ls -la /tmp") # command= is very important
+        execute_command(command="long_process.sh", timeout=3600)  # 1 hour timeout for long tasks
     """
 
-    print(f"Executing command: {command}")
+    # ✅ FIX: Enforce maximum timeout of 2 hours (7200 seconds)
+    if timeout > 7200:
+        print(f"Warning: Timeout {timeout}s exceeds maximum 7200s (2 hours), capping to 7200s")
+        timeout = 7200
+    
+    print(f"Executing command: {command} (timeout: {timeout}s)")
 
     dangerous_patterns = [
+        "sudo"
+        "htop"
+        "top"
+        "vim"
+        "nano"
+        "gedit"
+        "emacs"
+        "nvim"
     ]
     try:
         command_words = shlex.split(command.lower())
@@ -124,7 +215,7 @@ def execute_command(command: str) -> dict:
                 exit_code=-1,
             )
 
-    return run_bash_subprocess(command, timeout=36000)
+    return run_bash_subprocess(command, timeout=timeout)
 
 
 print("Starting Shell MCP server with streamable-http transport...")
