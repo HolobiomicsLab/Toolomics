@@ -9,5 +9,5 @@ services:
       - MCP_PORT=${MCP_PORT}
       - ENV=production
     volumes:
-      - ../../workspace:/workspace
+      - ../../${WORKSPACE_PATH}:/workspace:rw
       - ./models:/app/models

@@ -44,9 +44,29 @@ def run_bash_subprocess(
     
     cwd = "/app/workspace"
     
-    # Force directory refresh by listing it (triggers inode cache invalidation)
+    # Force directory cache refresh for Docker bind mounts
+    # The dentry cache can hold stale directory listings - we need aggressive invalidation
     try:
-        os.listdir(cwd)
+        # Method 1: Open directory with O_DIRECTORY to force inode refresh
+        dir_fd = os.open(cwd, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fstat(dir_fd)  # Force stat refresh
+            os.fsync(dir_fd)  # Sync any pending operations
+        except OSError:
+            pass  # fsync may fail on read-only directory fd, that's OK
+        finally:
+            os.close(dir_fd)
+        
+        # Method 2: Touch the directory to invalidate caches
+        os.utime(cwd, None)
+    except (OSError, PermissionError):
+        pass
+    
+    # Method 3: Use scandir which opens a fresh directory stream
+    try:
+        with os.scandir(cwd) as entries:
+            # Force iteration to actually read the directory
+            _ = [e.name for e in entries]
     except Exception:
         pass
     
@@ -69,26 +89,42 @@ def run_bash_subprocess(
     start_time = time.time()
     
     try:
-        # ✅ FIX: Use Popen for streaming instead of run() to prevent buffer deadlock
+        import select
+        
         proc = subprocess.Popen(
             command,
             shell=True,
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            stdin=subprocess.DEVNULL,  # ✅ FIX: Prevent interactive hangs
-            text=True,
-            bufsize=1  # Line buffered
+            stdin=subprocess.DEVNULL,
+            # Use bytes mode for proper non-blocking I/O with select()
+            text=False
         )
         
-        # Collect output with streaming to prevent deadlock
-        stdout_lines = []
-        stderr_lines = []
+        stdout_chunks = []
+        stderr_chunks = []
         stdout_size = 0
         stderr_size = 0
         
-        # Non-blocking read with timeout
-        while proc.poll() is None:
+        # Get file descriptors for direct os.read() calls
+        stdout_fd = proc.stdout.fileno() if proc.stdout else None
+        stderr_fd = proc.stderr.fileno() if proc.stderr else None
+        
+        # Set non-blocking mode on file descriptors
+        import fcntl
+        if stdout_fd is not None:
+            flags = fcntl.fcntl(stdout_fd, fcntl.F_GETFL)
+            fcntl.fcntl(stdout_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        if stderr_fd is not None:
+            flags = fcntl.fcntl(stderr_fd, fcntl.F_GETFL)
+            fcntl.fcntl(stderr_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        
+        # Track if streams are still open
+        stdout_open = stdout_fd is not None
+        stderr_open = stderr_fd is not None
+        
+        while stdout_open or stderr_open:
             # Check timeout
             elapsed = time.time() - start_time
             if elapsed > timeout:
@@ -101,36 +137,59 @@ def run_bash_subprocess(
                     exit_code=-1
                 )
             
-            # Read available output (non-blocking)
-            try:
-                if proc.stdout:
-                    line = proc.stdout.readline()
-                    if line and stdout_size < max_output_size:
-                        stdout_lines.append(line)
-                        stdout_size += len(line)
-            except:
-                pass
+            # Build list of open streams for select
+            readable = []
+            if stdout_open:
+                readable.append(proc.stdout)
+            if stderr_open:
+                readable.append(proc.stderr)
             
+            if not readable:
+                break
+                
             try:
-                if proc.stderr:
-                    line = proc.stderr.readline()
-                    if line and stderr_size < max_output_size:
-                        stderr_lines.append(line)
-                        stderr_size += len(line)
-            except:
-                pass
+                ready_to_read, _, _ = select.select(readable, [], [], 0.1)
+            except (ValueError, OSError):
+                # Pipes closed
+                break
             
-            time.sleep(0.01)  # Small delay to prevent busy-wait
+            # Read from ready streams using os.read() for truly non-blocking I/O
+            for stream in ready_to_read:
+                try:
+                    fd = stream.fileno()
+                    chunk = os.read(fd, 4096)
+                    if chunk:
+                        if stream == proc.stdout and stdout_size < max_output_size:
+                            stdout_chunks.append(chunk)
+                            stdout_size += len(chunk)
+                        elif stream == proc.stderr and stderr_size < max_output_size:
+                            stderr_chunks.append(chunk)
+                            stderr_size += len(chunk)
+                    else:
+                        # Empty read means EOF
+                        if stream == proc.stdout:
+                            stdout_open = False
+                        elif stream == proc.stderr:
+                            stderr_open = False
+                except BlockingIOError:
+                    # No data available right now, continue
+                    pass
+                except (IOError, OSError) as e:
+                    # Stream closed or error
+                    if stream == proc.stdout:
+                        stdout_open = False
+                    elif stream == proc.stderr:
+                        stderr_open = False
+            
+            # Also check if process finished (helps detect EOF sooner)
+            if proc.poll() is not None:
+                # Process done, do one more iteration to drain any remaining data
+                # After that, the next iteration will find empty reads and exit
+                pass
         
-        # Get remaining output
+        # Wait for process to complete if not already
         try:
-            stdout_remaining, stderr_remaining = proc.communicate(timeout=1)
-            if stdout_remaining and stdout_size < max_output_size:
-                remaining_space = max_output_size - stdout_size
-                stdout_lines.append(stdout_remaining[:remaining_space])
-            if stderr_remaining and stderr_size < max_output_size:
-                remaining_space = max_output_size - stderr_size
-                stderr_lines.append(stderr_remaining[:remaining_space])
+            proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
@@ -138,10 +197,12 @@ def run_bash_subprocess(
         duration = time.time() - start_time
         exit_code = proc.returncode
         
-        stdout_text = ''.join(stdout_lines)[:max_output_size]
-        stderr_text = ''.join(stderr_lines)[:max_output_size]
+        # Decode bytes to text
+        stdout_text = b''.join(stdout_chunks)[:max_output_size].decode('utf-8', errors='replace')
+        stderr_text = b''.join(stderr_chunks)[:max_output_size].decode('utf-8', errors='replace')
         
         print(f"Command completed in {duration:.2f}s with exit code {exit_code}")
+        print(f"Stdout length: {len(stdout_text)}, Stderr length: {len(stderr_text)}")
         
         return CommandResult(
             status="success" if exit_code == 0 else "error",
@@ -157,6 +218,9 @@ def run_bash_subprocess(
             exit_code=-1,
         )
     except Exception as e:
+        import traceback
+        print(f"Exception in run_bash_subprocess: {e}")
+        traceback.print_exc()
         return CommandResult(
             status="error",
             stderr=str(e),
