@@ -133,14 +133,66 @@ fi
 # Check for processes using ports
 echo "Checking for processes using ports $START_PORT-$END_PORT..."
 PROCESSES_FOUND=false
+PYTHON_PROCESSES_FOUND=false
+declare -a BLOCKING_PIDS
+declare -a BLOCKING_PORTS
+declare -a BLOCKING_COMMANDS
+declare -a PYTHON_PIDS
+declare -a PYTHON_PORTS
+declare -a PYTHON_COMMANDS
 
 for ((port=$START_PORT; port<=$END_PORT; port++)); do
     PID=$(lsof -ti :$port 2>/dev/null)
     if [ -n "$PID" ]; then
-        echo "Port $port is being used by process $PID"
+        # Get the full command path using ps
+        FULL_CMD=$(ps -p "$PID" -o command= 2>/dev/null)
+        echo "Port $port is being used by (PID: $PID):"
+        echo "    $FULL_CMD"
         PROCESSES_FOUND=true
+        BLOCKING_PIDS+=("$PID")
+        BLOCKING_PORTS+=("$port")
+        BLOCKING_COMMANDS+=("$FULL_CMD")
+        
+        # Check if it's a Python process
+        if [[ "$FULL_CMD" == *python* ]]; then
+            PYTHON_PROCESSES_FOUND=true
+            PYTHON_PIDS+=("$PID")
+            PYTHON_PORTS+=("$port")
+            PYTHON_COMMANDS+=("$FULL_CMD")
+        fi
     fi
 done
+
+# If Python processes found, ask user if they want to kill them
+if [ "$PYTHON_PROCESSES_FOUND" = true ]; then
+    echo ""
+    echo "The following Python processes are blocking the required ports:"
+    for i in "${!PYTHON_PIDS[@]}"; do
+        echo "  - Port ${PYTHON_PORTS[$i]} (PID: ${PYTHON_PIDS[$i]}):"
+        echo "      ${PYTHON_COMMANDS[$i]}"
+    done
+    echo ""
+    read -p "Would you like to kill these Python processes? (y/n): " kill_processes
+    if [[ "$kill_processes" =~ ^[Yy]$ ]]; then
+        for pid in "${PYTHON_PIDS[@]}"; do
+            echo "Killing process $pid..."
+            kill -9 "$pid" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo "  ✓ Process $pid killed successfully"
+            else
+                echo "  ✗ Failed to kill process $pid (may require sudo)"
+            fi
+        done
+        echo ""
+    else
+        echo "Python processes not killed. Some ports may be unavailable."
+        echo ""
+    fi
+elif [ "$PROCESSES_FOUND" = true ]; then
+    echo ""
+    echo "Note: Non-Python processes are using ports but will not be killed automatically."
+    echo ""
+fi
 
 # Calculate instance ID from workspace path (same logic as deploy.py)
 # This gives us the config filename that will be used
