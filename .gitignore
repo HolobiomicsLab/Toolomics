@@ -1,4 +1,6 @@
 workspace/
+config_*.json
+workspace_*/
 emma_paper/
 final_outputs/
 *.wav
