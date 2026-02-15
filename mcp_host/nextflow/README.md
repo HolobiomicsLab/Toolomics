@@ -1,20 +1,10 @@
 # Nextflow MCP Server
 
-⚠️ **STATUS: Under Development** - Only the first two tools have been tested (`create_methylseq_samplesheet` and `run_local_methylation_pipeline`)
+**Under Development** - Only the first two tools have been tested (`create_methylseq_samplesheet` and `run_local_methylation_pipeline`)
 
 ## Overview
 
 The Nextflow MCP Server is a Model Context Protocol (MCP) server that provides a suite of tools for managing and executing the nf-core/methylseq pipeline both locally and on the Seqera Platform. It simplifies DNA methylation analysis workflows through an MCP interface, enabling easy integration with AI assistants and other MCP clients.
-
-## Key Features
-
-- **Local Pipeline Execution**: Run nf-core/methylseq directly on your machine with full parameter control
-- **Seqera Platform Integration**: Launch and monitor workflows on Seqera Platform's cloud infrastructure
-- **Samplesheet Generation**: Automatically create valid samplesheets from FASTQ files
-- **Cloud Storage Support**: Upload files to AWS S3 and Google Cloud Storage
-- **Pipeline Monitoring**: Track workflow progress, retrieve metrics, and manage runs
-- **Workflow Management**: Execute raw Nextflow commands, manage cache, and handle Singularity containers
-- **Results Analysis**: Parse MultiQC reports and summarize pipeline output
 
 ## Available Tools
 
@@ -116,39 +106,17 @@ The Nextflow MCP Server is a Model Context Protocol (MCP) server that provides a
     - List cached Singularity/Apptainer container images
     - View image sizes and paths
 
-## Installation
 
-### Requirements
+## Requirements
 - Python 3.9+
 - Nextflow
 - Singularity or Apptainer (for containerized execution)
 - Docker (for local containerized runs)
 
-### Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-Key packages:
-- `fastmcp>=1.0.0` - MCP server framework
-- `requests>=2.31.0` - HTTP requests
-- `aiohttp>=3.9.0` - Async HTTP
-
 ### Optional Dependencies
 - `boto3` - For S3 uploads and auto-upload functionality
 - `google-cloud-storage` - For Google Cloud Storage uploads
 
-## Docker Deployment
-
-### Build
-```bash
-docker build -t nextflow-mcp-server:latest .
-```
-
-### Run with Docker Compose
-```bash
-docker-compose up -d
-```
 
 ## Configuration
 
@@ -156,78 +124,9 @@ The server looks for environment variables:
 - `WORKSPACE_PATH` - Workspace directory (default: `/app/workspace`)
 - Seqera Platform credentials for cloud execution
 
-## Usage Examples
-
-### 1. Generate a Samplesheet
-```python
-result = create_methylseq_samplesheet(
-    pattern="data/*.fastq.gz",
-    output_csv="samplesheet.csv",
-    paired_end=True
-)
-```
-
-### 2. Run Pipeline Locally
-```python
-result = run_local_methylation_pipeline(
-    samplesheet="samplesheet.csv",
-    genome="GRCh38",
-    aligner="bismark",
-    outdir="results/methylseq"
-)
-```
-
-### 3. Run on Seqera Platform
-```python
-result = run_methylseq_on_seqera(
-    samplesheet_path="samplesheet.csv",
-    workspace_id=12345,
-    compute_env_id="compute-env-abc",
-    work_dir="s3://my-bucket/work",
-    auto_upload=True
-)
-```
-
-## Logging
-
-All pipeline executions are logged to:
-- Workspace logs directory: `{WORKSPACE_PATH}/logs/`
-- Server logs: stdout/stderr (when running in console mode)
-
 ## Known Issues & Limitations
 
 - ⚠️ Only the first two tools have been fully tested
 - Long-running pipelines may experience connection timeouts (see TODO.md)
 - Seqera Platform functionality requires valid API credentials
 - S3/GCS uploads require appropriate cloud credentials and SDK installation
-
-## Project Structure
-
-```
-nextflow/
-├── server.py                 # Main MCP server implementation
-├── requirements.txt          # Python dependencies
-├── docker-compose.yml        # Docker Compose configuration
-├── Dockerfile               # Docker image definition
-├── README.md                # This file
-├── TODO.md                  # Development notes and known issues
-├── config/                  # Configuration and old implementations
-├── old_stuff/               # Previous versions and documentation
-└── pipelines/
-    └── methylseq/           # nf-core/methylseq pipeline
-```
-
-## Development Notes
-
-See `TODO.md` for:
-- Known bugs and fixes (e.g., async decorator issue)
-- Planned improvements
-- Integration notes with Mimosa AI
-
-## License
-
-Inherited from parent projects (Toolomics/Mimosa)
-
-## Contributing
-
-This is an internal development tool. Contact the maintainer for contributions.
