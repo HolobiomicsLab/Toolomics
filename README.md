@@ -23,7 +23,7 @@
 
 > ***Toolomics*** exposes computational tools as discoverable MCP services, manages isolated multi-instance workspaces, and lets agents share files across scientific workflows.
 
-Toolomics is the companion MCP server management project described alongside Mimosa in [`main_arxiv.tex`](main_arxiv.tex). In this repository, that means:
+In this repository, Toolomics:
 - discovering MCP services from `server.py` and `docker-compose.yml` definitions under `mcp_host/`
 - assigning ports and recording them in instance-specific `config_<instance_id>.json` files
 - isolating workspaces, Docker projects, volumes, and auxiliary services per deployment instance
