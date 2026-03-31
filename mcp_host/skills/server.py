@@ -307,6 +307,146 @@ def list_skill_references(skill_name: str) -> Dict[str, Any]:
         }
 
 @mcp.tool
+def create_new_skill(skill_name: str, knowledge_markdown: str) -> Dict[str, Any]:
+    """
+    Create a new custom skill with the provided knowledge documentation.
+    
+    This tool creates a new skill directory with a SKILL.md file containing the provided
+    markdown content. The skill will then be available through list_all_skills() and
+    show_skill() after creation.
+    
+    Args:
+        skill_name (str): The name of the new skill. Should be lowercase, alphanumeric,
+                         and can contain hyphens or underscores. Examples: "my-custom-tool",
+                         "custom_analysis", "newpackage"
+        knowledge_markdown (str): The markdown content for the skill documentation.
+                                 Should include sections like Overview, Installation,
+                                 Quick Start, Core Capabilities, etc. Can include YAML
+                                 frontmatter with metadata (name, description, license).
+    
+    Returns:
+        Dict[str, Any]: Dictionary containing:
+            - status: "success" or "error"
+            - skill_name: The created skill name
+            - skill_path: Path to the created skill directory
+            - message: Additional information or error details
+    
+    Examples:
+        >>> create_new_skill(
+        ...     skill_name="my-custom-tool",
+        ...     knowledge_markdown='''---
+        ... name: my-custom-tool
+        ... description: A custom tool for specialized analysis
+        ... ---
+        ... 
+        ... # My Custom Tool
+        ... 
+        ... ## Overview
+        ... This is a custom tool for specialized analysis workflows.
+        ... 
+        ... ## Installation
+        ... ```bash
+        ... pip install my-custom-tool
+        ... ```
+        ... 
+        ... ## Quick Start
+        ... ```python
+        ... from my_custom_tool import analyze
+        ... result = analyze(data)
+        ... ```
+        ... '''
+        ... )
+        {
+            "status": "success",
+            "skill_name": "my-custom-tool",
+            "message": "Skill 'my-custom-tool' created successfully"
+        }
+    
+    Notes:
+        - Skill names must be unique - existing skills cannot be overwritten
+        - The skill will be immediately available after creation
+        - Consider including standard sections: Overview, Installation, Quick Start,
+          Core Capabilities, Common Workflows, Troubleshooting, Additional Resources
+    """
+    import re
+    
+    try:
+        # Validate skill name
+        if not skill_name:
+            return {
+                "status": "error",
+                "skill_name": skill_name,
+                "message": "Skill name cannot be empty"
+            }
+        
+        # Check for valid characters (lowercase alphanumeric, hyphens, underscores)
+        if not re.match(r'^[a-z0-9][a-z0-9_-]*$', skill_name):
+            return {
+                "status": "error",
+                "skill_name": skill_name,
+                "message": "Skill name must be lowercase, start with alphanumeric, and contain only letters, numbers, hyphens, or underscores"
+            }
+        
+        # Check if skill already exists
+        skill_path = SKILLS_DIR / skill_name
+        if skill_path.exists():
+            return {
+                "status": "error",
+                "skill_name": skill_name,
+                "skill_path": str(skill_path),
+                "message": f"Skill '{skill_name}' already exists. Choose a different name."
+            }
+        
+        # Validate knowledge_markdown is not empty
+        if not knowledge_markdown or not knowledge_markdown.strip():
+            return {
+                "status": "error",
+                "skill_name": skill_name,
+                "message": "Knowledge markdown content cannot be empty"
+            }
+        
+        # Ensure SKILLS_DIR exists
+        if not SKILLS_DIR.exists():
+            SKILLS_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Create skill directory
+        skill_path.mkdir(parents=True, exist_ok=True)
+        
+        # Create SKILL.md file
+        skill_file = skill_path / "SKILL.md"
+        with open(skill_file, 'w', encoding='utf-8') as f:
+            f.write(knowledge_markdown)
+        
+        return {
+            "status": "success",
+            "skill_name": skill_name,
+            "message": f"Skill '{skill_name}' created successfully. Use show_skill('{skill_name}') to view it."
+        }
+        
+    except PermissionError:
+        return {
+            "status": "error",
+            "skill_name": skill_name,
+            "message": f"Permission denied when creating skill directory. Check write permissions."
+        }
+    except Exception as e:
+        # Clean up partial creation if needed
+        try:
+            if skill_path.exists():
+                import shutil
+                shutil.rmtree(skill_path)
+        except:
+            pass
+        
+        return {
+            "status": "error",
+            "skill_name": skill_name,
+            "skill_path": "",
+            "message": f"Failed to create skill: {str(e)}"
+        }
+
+
+@mcp.tool
 def show_skill_reference(skill_name: str, reference_name: str) -> Dict[str, Any]:
     """
     Show detailed reference documentation for a specific topic within a skill.
