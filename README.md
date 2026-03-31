@@ -1,7 +1,7 @@
 <h1 align="center">Toolomics</h1>
 
 <p align="center">
-    <em>A suite of MCP-based Tools from the HolobiomicsLab. Used by AI-Agents such as ***Mimosa-AI***</em>
+    <em>A suite of MCP-based Tools from the HolobiomicsLab. Used by AI-Agents such as <i>Mimosa-AI</i></em>
 </p>
 
 <p align="center">
