@@ -194,6 +194,19 @@ echo "Deploying MCP servers..."
 $PYTHON deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
 HOST_PID=$!
 wait $HOST_PID
+DEPLOY_EXIT_CODE=$?
+
+echo ""
+if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
+    echo "=== DEPLOYMENT FAILED ==="
+    echo "deploy.py exited with status $DEPLOY_EXIT_CODE"
+    echo ""
+    echo "Instance-specific config file: $INSTANCE_CONFIG"
+    echo "If this was a first run, enable the MCP services you want in that file"
+    echo "and rerun this command."
+    echo ""
+    exit $DEPLOY_EXIT_CODE
+fi
 
 # After deployment, show the config file location
 echo ""

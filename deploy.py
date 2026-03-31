@@ -510,7 +510,7 @@ class ConfigManager:
                                 'enabled': item.get('enabled', True)  # Default to enabled
                             }
                         else:
-                            raise ValueError("Can't parse config.json file")
+                            raise ValueError(f"Can't parse config file: {self.config_path}")
                     
                     logger.info(f"Successfully loaded {len(config_dict)} items from config (enabled: {sum(1 for v in config_dict.values() if v.get('enabled'))})")
                     return config_dict
@@ -620,7 +620,10 @@ class ConfigManager:
                 
                 config[server_str] = {'port': next_host_port, 'enabled': False}
                 used_ports.add(next_host_port)
-                logger.info(f"Assigned host port {next_host_port} to {server_str} (disabled - edit config to enable)")
+                logger.info(
+                    f"Assigned host port {next_host_port} to {server_str} "
+                    f"(disabled - edit {self.config_path} to enable)"
+                )
                 next_host_port += 1
         
         # Assign ports to docker-compose files
@@ -638,7 +641,10 @@ class ConfigManager:
                         
                     config[compose_str] = {'port': next_host_port, 'enabled': False}
                     used_ports.add(next_host_port)
-                    logger.info(f"Assigned host port {next_host_port} to {compose_str} (disabled - edit config to enable)")
+                    logger.info(
+                        f"Assigned host port {next_host_port} to {compose_str} "
+                        f"(disabled - edit {self.config_path} to enable)"
+                    )
                     next_host_port += 1
         
         self.save_config(config)
@@ -751,7 +757,7 @@ class MCPDeploymentManager:
         
         # Save config if any ports were reassigned
         if config_updated:
-            logger.info("Updating config.json with new port assignments")
+            logger.info(f"Updating {self.config_manager.config_path} with new port assignments")
             self.config_manager.save_config(port_config)
         
         if started_count > 0:
@@ -759,7 +765,10 @@ class MCPDeploymentManager:
             logger.info("Waiting for Docker services to start...")
             time.sleep(3)
         elif disabled_count > 0:
-            logger.info(f"⚠️ All {disabled_count} Docker services are disabled. Change config.json to enable.")
+            logger.info(
+                f"⚠️ All {disabled_count} Docker services are disabled. "
+                f"Change {self.config_manager.config_path} to enable them."
+            )
     
     def _deploy_mcp_servers(self, server_files: List[Path], port_config: Dict[str, dict],
                           host_port_min: int = HOST_PORT_MIN, host_port_max: int = HOST_PORT_MAX):
@@ -811,12 +820,15 @@ class MCPDeploymentManager:
         
         # Save config if any ports were reassigned
         if config_updated:
-            logger.info("Updating config.json with new port assignments")
+            logger.info(f"Updating {self.config_manager.config_path} with new port assignments")
             self.config_manager.save_config(port_config)
         
         logger.info(f"Started {started_count} MCP servers ({disabled_count} disabled)")
         if started_count == 0:
-            raise Exception("⚠️ No MCP server enabled, change config.json and select MCP servers to enable.")
+            raise Exception(
+                f"⚠️ No MCP server enabled. Change {self.config_manager.config_path} "
+                "and select MCP servers to enable."
+            )
 
 def main():
     parser = argparse.ArgumentParser(description="Deploy MCP servers with centralized workspace file management")
