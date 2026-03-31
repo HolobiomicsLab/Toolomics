@@ -1,10 +1,3 @@
-<div align="center">
-<br>
-
-<img src="./docs/images/logo_toolomics.png" width="22%" style="border-radius: 8px;" alt="Toolomics Logo">
-
-</div>
-
 <h1 align="center">Toolomics</h1>
 
 <p align="center">
