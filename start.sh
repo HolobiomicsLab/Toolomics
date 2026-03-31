@@ -1,59 +1,29 @@
 #!/bin/bash
 
-# Function to check if python3.11 is installed
-check_python311() {
-    if ! command -v python3.11 &> /dev/null; then
-        echo "Python 3.11 is not installed on your system."
-        read -p "Would you like to install Python 3.11? (y/n): " install_python
-        if [[ "$install_python" =~ ^[Yy]$ ]]; then
-            echo "Installing Python 3.11..."
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                # macOS
-                if command -v brew &> /dev/null; then
-                    brew install python@3.11
-                else
-                    echo "Error: Homebrew not found. Please install Homebrew first or install Python 3.11 manually."
-                    exit 1
-                fi
-            elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                # Linux
-                if command -v apt-get &> /dev/null; then
-                    sudo apt-get update
-                    sudo apt-get install -y python3.11 python3.11-venv python3.11-dev
-                elif command -v yum &> /dev/null; then
-                    sudo yum install -y python3.11
-                else
-                    echo "Error: Unsupported package manager. Please install Python 3.11 manually."
-                    exit 1
-                fi
-            else
-                echo "Error: Unsupported operating system. Please install Python 3.11 manually."
-                exit 1
-            fi
-            
-            if ! command -v python3.11 &> /dev/null; then
-                echo "Error: Python 3.11 installation failed."
-                exit 1
-            fi
-            echo "Python 3.11 installed successfully!"
-        else
-            echo "Error: Python 3.11 is required to run this script."
-            exit 1
-        fi
+# Use PYTHON_PATH environment variable if set, otherwise default to python3
+PYTHON=${PYTHON_PATH:-python3}
+
+# Function to check if Python is available
+check_python() {
+    if ! command -v "$PYTHON" &> /dev/null; then
+        echo "Error: Python not found at '$PYTHON'"
+        echo "Please set the PYTHON_PATH environment variable to your Python executable."
+        echo "Example: export PYTHON_PATH=/usr/bin/python3.11"
+        exit 1
     else
-        echo "Python 3.11 found: $(python3.11 --version)"
+        echo "Python found: $($PYTHON --version) at $(which $PYTHON)"
     fi
 }
 
-# Function to check if pip is installed for python3.11
+# Function to check if pip is installed
 check_pip() {
-    if ! python3.11 -m pip --version &> /dev/null; then
-        echo "pip is not installed for Python 3.11."
+    if ! $PYTHON -m pip --version &> /dev/null; then
+        echo "pip is not installed for $PYTHON."
         read -p "Would you like to install pip? (y/n): " install_pip
         if [[ "$install_pip" =~ ^[Yy]$ ]]; then
             echo "Installing pip..."
-            python3.11 -m ensurepip --upgrade
-            if ! python3.11 -m pip --version &> /dev/null; then
+            $PYTHON -m ensurepip --upgrade
+            if ! $PYTHON -m pip --version &> /dev/null; then
                 echo "Error: pip installation failed."
                 exit 1
             fi
@@ -63,7 +33,7 @@ check_pip() {
             exit 1
         fi
     else
-        echo "pip found: $(python3.11 -m pip --version)"
+        echo "pip found: $($PYTHON -m pip --version)"
     fi
 }
 
@@ -74,7 +44,7 @@ install_requirements() {
         read -p "Would you like to install dependencies from requirements.txt? (y/n): " install_deps
         if [[ "$install_deps" =~ ^[Yy]$ ]]; then
             echo "Installing dependencies..."
-            python3.11 -m pip install -r requirements.txt
+            $PYTHON -m pip install -r requirements.txt
             if [ $? -eq 0 ]; then
                 echo "Dependencies installed successfully!"
             else
@@ -94,7 +64,7 @@ install_requirements() {
 
 # Check and install prerequisites
 echo "=== Checking Prerequisites ==="
-check_python311
+check_python
 check_pip
 install_requirements
 echo "=== Prerequisites Check Complete ==="
@@ -133,19 +103,71 @@ fi
 # Check for processes using ports
 echo "Checking for processes using ports $START_PORT-$END_PORT..."
 PROCESSES_FOUND=false
+PYTHON_PROCESSES_FOUND=false
+declare -a BLOCKING_PIDS
+declare -a BLOCKING_PORTS
+declare -a BLOCKING_COMMANDS
+declare -a PYTHON_PIDS
+declare -a PYTHON_PORTS
+declare -a PYTHON_COMMANDS
 
 for ((port=$START_PORT; port<=$END_PORT; port++)); do
     PID=$(lsof -ti :$port 2>/dev/null)
     if [ -n "$PID" ]; then
-        echo "Port $port is being used by process $PID"
+        # Get the full command path using ps
+        FULL_CMD=$(ps -p "$PID" -o command= 2>/dev/null)
+        echo "Port $port is being used by (PID: $PID):"
+        echo "    $FULL_CMD"
         PROCESSES_FOUND=true
+        BLOCKING_PIDS+=("$PID")
+        BLOCKING_PORTS+=("$port")
+        BLOCKING_COMMANDS+=("$FULL_CMD")
+        
+        # Check if it's a Python process
+        if [[ "$FULL_CMD" == *python* ]]; then
+            PYTHON_PROCESSES_FOUND=true
+            PYTHON_PIDS+=("$PID")
+            PYTHON_PORTS+=("$port")
+            PYTHON_COMMANDS+=("$FULL_CMD")
+        fi
     fi
 done
+
+# If Python processes found, ask user if they want to kill them
+if [ "$PYTHON_PROCESSES_FOUND" = true ]; then
+    echo ""
+    echo "The following Python processes are blocking the required ports:"
+    for i in "${!PYTHON_PIDS[@]}"; do
+        echo "  - Port ${PYTHON_PORTS[$i]} (PID: ${PYTHON_PIDS[$i]}):"
+        echo "      ${PYTHON_COMMANDS[$i]}"
+    done
+    echo ""
+    read -p "Would you like to kill these Python processes? (y/n): " kill_processes
+    if [[ "$kill_processes" =~ ^[Yy]$ ]]; then
+        for pid in "${PYTHON_PIDS[@]}"; do
+            echo "Killing process $pid..."
+            kill -9 "$pid" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo "  ✓ Process $pid killed successfully"
+            else
+                echo "  ✗ Failed to kill process $pid (may require sudo)"
+            fi
+        done
+        echo ""
+    else
+        echo "Python processes not killed. Some ports may be unavailable."
+        echo ""
+    fi
+elif [ "$PROCESSES_FOUND" = true ]; then
+    echo ""
+    echo "Note: Non-Python processes are using ports but will not be killed automatically."
+    echo ""
+fi
 
 # Calculate instance ID from workspace path (same logic as deploy.py)
 # This gives us the config filename that will be used
 WORKSPACE_ABS=$(cd "$WORKSPACE" 2>/dev/null && pwd || echo "$WORKSPACE")
-INSTANCE_ID=$(python3.11 -c "import hashlib; import os; ws = os.path.abspath('$WORKSPACE'); print(hashlib.md5(ws.encode()).hexdigest()[:8])" 2>/dev/null || echo "unknown")
+INSTANCE_ID=$($PYTHON -c "import hashlib; import os; ws = os.path.abspath('$WORKSPACE'); print(hashlib.md5(ws.encode()).hexdigest()[:8])" 2>/dev/null || echo "unknown")
 INSTANCE_CONFIG="config_${INSTANCE_ID}.json"
 
 # Check if workspace is new (doesn't exist)
@@ -169,7 +191,7 @@ echo "  Workspace: $WORKSPACE"
 echo ""
 
 echo "Deploying MCP servers..."
-python3.11 deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
+$PYTHON deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
 HOST_PID=$!
 wait $HOST_PID
 

@@ -1,7 +1,39 @@
+<div align="center">
+<br>
 
-# Toolomics
+<img src="./docs/images/logo_toolomics.png" width="22%" style="border-radius: 8px;" alt="Toolomics Logo">
 
-*A suite of tools from the Holobiomics Lab for Agents, organized as a set of MCP servers.*
+</div>
+
+<h1 align="center">Toolomics</h1>
+
+<p align="center">
+    <em>A suite of MCP-based Tools from the HolobiomicsLab. Used by AI-Agents such as ***Mimosa-AI***</em>
+</p>
+
+<p align="center">
+    <img src="https://img.shields.io/github/license/HolobiomicsLab/Toolomics?style=flat-square&logo=opensourceinitiative&logoColor=white&color=4caf82" alt="license">
+    <img src="https://img.shields.io/github/last-commit/HolobiomicsLab/Toolomics?style=flat-square&logo=git&logoColor=white&color=4caf82" alt="last-commit">
+    <img src="https://img.shields.io/github/languages/count/HolobiomicsLab/Toolomics?style=flat-square&color=4caf82" alt="repo-language-count">
+</p>
+
+<p align="center">
+    <a href="https://github.com/HolobiomicsLab/Toolomics/stargazers">
+        <img src="https://img.shields.io/github/stars/HolobiomicsLab/Toolomics?style=social" alt="GitHub Stars">
+    </a>
+    <a href="https://opensource.org/licenses/Apache-2.0">
+        <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License: Apache 2.0">
+    </a>
+</p>
+
+---
+
+> ***Toolomics*** — deploys containerized tools, manages isolated instances, and enables file sharing across AI agents for bioinformatics, metabolomics, molecular docking, and beyond.
+
+**Use cases:**
+- Deploy MCP servers for browser automation, PDF processing, and data extraction
+- Run isolated, multi-instance agent workspaces with automatic resource management
+- Orchestrate containerized bioinformatics pipelines (XCMS, RStudio, Redis) with zero config
 
 ## Install & deploy tools
 

@@ -480,22 +480,9 @@ class ConfigManager:
         if self.config_path.stat().st_size == 0:
             logger.warning(f"Config file {self.config_path} is empty.")
             return {}
-        
-        # Check if file is corrupted by reading first character
-        try:
-            with open(self.config_path, 'rb') as f:
-                first_byte = f.read(1)
-                if first_byte and first_byte != b'[':
-                    logger.error(f"Config file {self.config_path} is corrupted (starts with {first_byte!r} instead of b'[')") 
-                    logger.warning(f"Deleting corrupted config file to regenerate fresh")
-                    self.config_path.unlink()
-                    return {}
-        except Exception as e:
-            logger.error(f"Error checking config file: {e}")
-            return {}
             
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
+            with open(self.config_path, 'r', encoding='utf-8-sig') as f:  # utf-8-sig handles BOM
                 # Acquire shared lock for reading
                 try:
                     fcntl.flock(f.fileno(), fcntl.LOCK_SH)
@@ -525,7 +512,7 @@ class ConfigManager:
                         else:
                             raise ValueError("Can't parse config.json file")
                     
-                    logger.debug(f"Successfully loaded {len(config_dict)} items from config")
+                    logger.info(f"Successfully loaded {len(config_dict)} items from config (enabled: {sum(1 for v in config_dict.values() if v.get('enabled'))})")
                     return config_dict
                 finally:
                     # Release lock
@@ -534,17 +521,28 @@ class ConfigManager:
                     except:
                         pass
                         
-        except (json.JSONDecodeError, KeyError, IndexError) as e:
+        except (json.JSONDecodeError, KeyError, IndexError, ValueError) as e:
             logger.error(f"Error loading config from {self.config_path}: {e}")
             # Try to read the file again to see what's actually there
             try:
                 file_size = self.config_path.stat().st_size
                 with open(self.config_path, 'rb') as f:
                     raw_bytes = f.read(100)
-                    logger.error(f"File size: {file_size}, first 100 bytes: {raw_bytes}")
+                    logger.error(f"File size: {file_size}, first 100 bytes: {raw_bytes!r}")
             except Exception as debug_e:
                 logger.error(f"Could not read file for debugging: {debug_e}")
-            logger.warning(f"Returning empty config due to parse error. File will be regenerated.")
+            
+            # Backup the corrupted file instead of silently regenerating
+            backup_path = self.config_path.with_suffix('.json.backup')
+            try:
+                import shutil
+                shutil.copy2(self.config_path, backup_path)
+                logger.warning(f"Backed up corrupted config to: {backup_path}")
+            except Exception as backup_e:
+                logger.warning(f"Could not backup config: {backup_e}")
+            
+            logger.warning(f"Config file appears corrupted. Will regenerate fresh config.")
+            logger.warning(f"If you had enabled services, please re-enable them after checking {backup_path}")
             return {}
     
     def save_config(self, config: Dict[str, dict]) -> None:
@@ -622,7 +620,7 @@ class ConfigManager:
                 
                 config[server_str] = {'port': next_host_port, 'enabled': False}
                 used_ports.add(next_host_port)
-                logger.info(f"Assigned host port {next_host_port} to {server_str} (enabled by default)")
+                logger.info(f"Assigned host port {next_host_port} to {server_str} (disabled - edit config to enable)")
                 next_host_port += 1
         
         # Assign ports to docker-compose files
@@ -640,7 +638,7 @@ class ConfigManager:
                         
                     config[compose_str] = {'port': next_host_port, 'enabled': False}
                     used_ports.add(next_host_port)
-                    logger.info(f"Assigned host port {next_host_port} to {compose_str} (enabled by default)")
+                    logger.info(f"Assigned host port {next_host_port} to {compose_str} (disabled - edit config to enable)")
                     next_host_port += 1
         
         self.save_config(config)
