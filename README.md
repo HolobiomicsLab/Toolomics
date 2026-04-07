@@ -1,7 +1,7 @@
 <h1 align="center">Toolomics</h1>
 
 <p align="center">
-    <em>A suite of MCP-based Tools from the HolobiomicsLab. Used by AI-Agents such as <i>Mimosa-AI</i></em>
+    <em>Companion platform for MCP server management and workspace-isolated scientific tool execution for Mimosa and other MCP-compatible agents.</em>
 </p>
 
 <p align="center">
@@ -21,14 +21,15 @@
 
 ---
 
-> ***Toolomics*** — deploys containerized tools, manages isolated instances, and enables file sharing across AI agents for bioinformatics, metabolomics, molecular docking, and beyond.
+> ***Toolomics*** exposes computational tools as discoverable MCP services, manages isolated multi-instance workspaces, and lets agents share files across scientific workflows.
 
-**Use cases:**
-- Deploy MCP servers for browser automation, PDF processing, and data extraction
-- Run isolated, multi-instance agent workspaces with automatic resource management
-- Orchestrate containerized bioinformatics pipelines (XCMS, RStudio, Redis) with zero config
+In this repository, Toolomics:
+- discovering MCP services from `server.py` and `docker-compose.yml` definitions under `mcp_host/`
+- assigning ports and recording them in instance-specific `config_<instance_id>.json` files
+- isolating workspaces, Docker projects, volumes, and auxiliary services per deployment instance
+- making files created by one MCP server immediately available to other MCP servers through a shared workspace
 
-## Install & deploy tools
+## Quick Start
 
 ### Deploy all automatically with default setup for Mimosa-AI
 
@@ -48,37 +49,57 @@ This would create a workspace `workspace/` and start all Toolomics MCPs servers 
 ./start.sh <min port> <max port> <workspace name>
 ```
 
-### Deploy using python script
+Example:
 
-***Not recommanded, start.sh will handle python, requirements and workpsace installation automatically.***
+```bash
+./start.sh 5000 5099 workspace_mimosa
+```
 
-First, install the required dependencies, you can use either pip or the faster UV package manager:
+On first run, Toolomics will:
+1. check Python and `pip`
+2. optionally install `requirements.txt`
+3. create or reuse the requested workspace
+4. derive an instance ID from the workspace path
+5. create or update `config_<instance_id>.json` with discovered services and assigned ports
 
-**1. Install dependencies:**
+Newly discovered services are added with `"enabled": false` by default. Enable the MCP servers you want in the generated config file, then rerun `./start.sh`.
+
+### Manual Deployment
+
+If you prefer to run the deployment script directly:
+
+**1. Install dependencies**
 ```bash
 python3.10 -m pip install -r requirements.txt
-# or using UV
+# or
 uv pip install -r requirements.txt
 ```
 
-**2. Run script:**
+**2. Run the deployment manager**
 ```bash
-python3.10 deploy.py --config config.json --workspace <workspace name> --host_port_min <min port> --host_port_max <max port>
+python3.10 deploy.py --config config.json --mcp-dir mcp_host --workspace <workspace name> --host_port_min <min port> --host_port_max <max port>
 ```
 
-## Centralized File Management
+Passing `--config config.json` is supported, but `deploy.py` will automatically expand it to an instance-specific file such as `config_86517947.json` based on the workspace path.
 
-All MCP servers execute in a centralized **workspace directory** (default: `workspace/`). This means:
+## Centralized Workspace
 
-- **Browser MCP** downloads files → `workspace/downloaded_file.pdf`
-- **PDF MCP** processes files → `workspace/extracted_text.txt`
-- **Any MCP** creates files → `workspace/output_file.json`
+All MCP servers execute against a centralized workspace directory (default: `workspace/`). This means:
+
+- Browser MCP downloads files to the workspace
+- PDF MCP processes files already present in the workspace
+- Other MCP servers can consume the same files without copying them between tool-specific directories
+
+Example paths:
+- `workspace/downloaded_file.pdf`
+- `workspace/extracted_text.txt`
+- `workspace/output_file.json`
 
 This centralized approach ensures that AI agents can easily find and work with files across different MCP tools without needing to track file locations.
 
 ## Multi-Instance Deployment
 
-Toolomics supports running **multiple independent instances simultaneously**, each with its own workspace and Docker service isolation.
+Toolomics supports running multiple independent instances simultaneously, each with its own workspace and Docker service isolation.
 
 ### How It Works
 
@@ -88,14 +109,14 @@ Each instance is automatically assigned a unique **instance ID** (8-character ha
 
 This means each instance has its own configuration and doesn't interfere with others.
 
-**Example: Deploy two instances concurrently**
+**Example: deploy two instances concurrently**
 
 ```bash
 # Terminal 1: Instance for user Martin
-start.sh 5000 5100 workspace_martin
+./start.sh 5000 5099 workspace_martin
 
 # Terminal 2: Instance for user John (simultaneous)
-start.sh 5100 5200 workspace_john
+./start.sh 5100 5199 workspace_john
 ```
 
 ### Automatic Resource Isolation
@@ -107,30 +128,48 @@ Each instance automatically gets isolated resources:
 | **Workspace** | Separate directory (`workspace_martin/`, `workspace_john/`) |
 | **Docker Containers** | Suffixed with instance ID (`xcmsrocker_a3f2b1c9`, `xcmsrocker_f7e2d4a1`) |
 | **Data Volumes** | Instance-specific names (`rstudio_data_a3f2b1c9`, `redis-data_f7e2d4a1`) |
-| **MCP Server Ports** | Different port ranges (5000-5100 vs 5100-5200) |
+| **MCP Server Ports** | Different port ranges (5000-5099 vs 5100-5199) |
 | **Auxiliary Ports** | Dynamic allocation (8787→9537, 8080→9037, etc.) |
 
-## Using MCP with Your Client
+This multi-tenant, workspace-isolated design is the same property referenced in the manuscript when Toolomics is described as the companion discovery and execution layer for Mimosa.
 
-To interact with the tools using a client (e.g., for your AI agent), you can use the `fastmcp` library.
+## Discovering And Using MCP Services
+
+To interact with the tools using a client such as Mimosa or another MCP-compatible agent, you can use the generated config file directly or scan a predefined local port range.
 
 ### Finding the MCP Port
 
-Each MCP server is assigned a port, which is recorded in the `config.json` file. For example:
+Each MCP server is assigned a port, which is recorded in the instance-specific config file. For example:
 
 ```json
 [
-    {
-        "mcp_host/browser/server.py": 5002
-    },
-    {
-        "mcp_host/Rscript/server.py": 5001
-    },
-    {
-        "mcp_host/files/csv/server.py": 5101
-    }
+  {
+    "path": "mcp_host/pdf/server.py",
+    "port": 5002,
+    "enabled": true
+  },
+  {
+    "path": "mcp_host/image_analysis/server.py",
+    "port": 5006,
+    "enabled": true
+  },
+  {
+    "path": "mcp_host/shell/docker-compose.yml",
+    "port": 5012,
+    "enabled": true
+  }
 ]
 ```
+
+### Scanning A Predefined Port Range
+
+Toolomics includes a helper script that scans `localhost:5000-5200` and enumerates active MCP tools:
+
+```bash
+python3 discover_mcp.py
+```
+
+This mirrors the local port-range discovery pattern described in the manuscript for Mimosa's tool discovery layer.
 
 ### Example Client Code
 
@@ -158,17 +197,16 @@ async def main():
         # Other MCP tools can access it from the same location
 ```
 
-## Adding a New MCP
+## Adding A New MCP
 
 You can easily add a new tool as an MCP server.
 
 ### Steps to Add a New MCP
 
-1. Create a `server.py` file with your MCP implementation, it should take the port number as first argument (eg: `server.py 5003`).
-2. Place the file in a subfolder of the `mcp_host` directory. For example, to add a metabolomics-related tool, create a subfolder like `mcp_host/your_tool_name`.
-
-The `deploy.py` script will look for new `server.py` file, attribute a port for your script and add it to `config.json` (unless you manually did by modifying the config.json), finally it will run your script with the assigned port as first argument.
-
+1. Create a `server.py` file with your MCP implementation. It should accept the assigned port as either an environment variable or the first command-line argument.
+2. Place the file in a subfolder of `mcp_host/`, for example `mcp_host/your_tool_name/server.py`.
+3. Run `./start.sh` or `deploy.py` to let Toolomics discover the service and assign it a port.
+4. Set `"enabled": true` for the new service in the generated `config_<instance_id>.json`, then rerun deployment.
 
 ### Example MCP Implementation
 
@@ -177,16 +215,17 @@ The `fastmcp` library simplifies the creation of MCP servers. Here's a basic exa
 ```python
 #!/usr/bin/env python3
 
-from fastmcp import FastMCP
+import os
+import sys
 from pathlib import Path
+from fastmcp import FastMCP
+
 project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.append(str(project_root))  # Add 'a/' to Python's search path
+sys.path.append(str(project_root))
 
 from shared import CommandResult, run_bash_subprocess, return_as_dict
 
-description = """
-a calculator that ...
-"""
+description = "A calculator MCP."
 
 mcp = FastMCP(
     name="calculator",
@@ -212,13 +251,9 @@ if __name__ == "__main__":
     mcp.run(transport="streamable-http", port=port, host="0.0.0.0")
 ```
 
-### Automatic Port Assignment
-
-When you run the `start.sh` or `deploy.py` script for the first time, it will automatically assign a port to your new MCP server and save the mapping in the `config.json` file.
-
 ## Dockerizing an MCP Server
 
-For MCP servers that require isolated dependencies or need to run in a containerized environment (e.g., for ML models, system tools, or heavy dependencies), you can deploy them using Docker.
+For MCP servers that require isolated dependencies or need to run in a containerized environment, you can deploy them with Docker. This is one of the main ways Toolomics keeps tool dependencies isolated across concurrent scientific workflows.
 
 ### How It Works
 
@@ -226,6 +261,7 @@ If a `docker-compose.yml` file exists in the same directory as your `server.py`,
 - **Automatically deploy the server in Docker** instead of running it directly on the host
 - **Skip the standalone Python execution** to avoid duplicate deployments
 - **Pass the assigned port** to the Docker container via the `MCP_PORT` environment variable
+- **Pass instance isolation metadata** such as `INSTANCE_ID` and `WORKSPACE_PATH` to the container
 
 ### Steps to Dockerize an MCP
 
@@ -288,8 +324,9 @@ services:
       - "${MCP_PORT}:${MCP_PORT}"
     environment:
       - MCP_PORT=${MCP_PORT}
+      - INSTANCE_ID=${INSTANCE_ID}
     volumes:
-      - ../../workspace:/workspace
+      - ../../${WORKSPACE_PATH}:/app/workspace:rw
 ```
 
 **Important**: The build context must be set to the project root (`../..`) to allow the Dockerfile to access `shared.py` and other project files.
@@ -298,8 +335,9 @@ services:
 
 The deployment script will automatically:
 - Detect the `docker-compose.yml`
-- Assign a port (5000-5099 range for mcp_host)
+- Assign a port in the selected host range
 - Set the `MCP_PORT` environment variable
+- Set `INSTANCE_ID` and `WORKSPACE_PATH`
 - Build and start the Docker container
 - Skip running `server.py` directly on the host
 

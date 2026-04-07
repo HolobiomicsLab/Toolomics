@@ -7,7 +7,7 @@ from pathlib import Path
 from fastmcp import Client
 
 async def discover_mcp_servers():
-    """Discover MCP servers on ports 5000-5050 and list their tools."""
+    """Discover MCP servers on ports 5000-5200 and list their tools."""
     print("🔍 Discovering MCP servers on ports 5000-5200...")
 
     for port in range(5000, 5201):
