@@ -31,7 +31,19 @@ In this repository, Toolomics:
 
 ## Quick Start
 
-Run Toolomics against a workspace and a port range:
+### Deploy all automatically with default setup for Mimosa-AI
+
+The simplest way is to simply run:
+
+```bash
+./start.sh
+```
+
+This would create a workspace `workspace/` and start all Toolomics MCPs servers enabled using port in the range `5000-5200`.
+
+**Some MCPs server running in docker can take several minutes to start on first run.** 
+
+### Deploy all tools automatically with custom port range and workspace
 
 ```bash
 ./start.sh <min port> <max port> <workspace name>
