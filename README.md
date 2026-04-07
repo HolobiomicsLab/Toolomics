@@ -306,3 +306,7 @@ The deployment script will automatically:
 ### Learn More
 
 For detailed documentation on `fastmcp`, visit the [fastmcp GitHub repository](https://github.com/jlowin/fastmcp).
+
+## License
+
+Toolomics is distributed under the Apache License 2.0. See [LICENSE](LICENSE), [NOTICE.txt](NOTICE.txt), [`docs/licensing-notes.md`](docs/licensing-notes.md), and [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) for the repository licensing and contribution terms.
