@@ -3,6 +3,13 @@
 # Use PYTHON_PATH environment variable if set, otherwise default to python3
 PYTHON=${PYTHON_PATH:-python3}
 
+# Detect no-argument mode: use defaults and skip all interactive prompts
+if [ $# -eq 0 ]; then
+    NO_INPUT=true
+else
+    NO_INPUT=false
+fi
+
 # Function to check if Python is available
 check_python() {
     if ! command -v "$PYTHON" &> /dev/null; then
@@ -19,8 +26,7 @@ check_python() {
 check_pip() {
     if ! $PYTHON -m pip --version &> /dev/null; then
         echo "pip is not installed for $PYTHON."
-        read -p "Would you like to install pip? (y/n): " install_pip
-        if [[ "$install_pip" =~ ^[Yy]$ ]]; then
+        if [ "$NO_INPUT" = true ]; then
             echo "Installing pip..."
             $PYTHON -m ensurepip --upgrade
             if ! $PYTHON -m pip --version &> /dev/null; then
@@ -29,8 +35,19 @@ check_pip() {
             fi
             echo "pip installed successfully!"
         else
-            echo "Error: pip is required to install dependencies."
-            exit 1
+            read -p "Would you like to install pip? (y/n): " install_pip
+            if [[ "$install_pip" =~ ^[Yy]$ ]]; then
+                echo "Installing pip..."
+                $PYTHON -m ensurepip --upgrade
+                if ! $PYTHON -m pip --version &> /dev/null; then
+                    echo "Error: pip installation failed."
+                    exit 1
+                fi
+                echo "pip installed successfully!"
+            else
+                echo "Error: pip is required to install dependencies."
+                exit 1
+            fi
         fi
     else
         echo "pip found: $($PYTHON -m pip --version)"
@@ -41,21 +58,31 @@ check_pip() {
 install_requirements() {
     if [ -f "requirements.txt" ]; then
         echo "Found requirements.txt"
-        read -p "Would you like to install dependencies from requirements.txt? (y/n): " install_deps
-        if [[ "$install_deps" =~ ^[Yy]$ ]]; then
+        if [ "$NO_INPUT" = true ]; then
             echo "Installing dependencies..."
             $PYTHON -m pip install -r requirements.txt
             if [ $? -eq 0 ]; then
                 echo "Dependencies installed successfully!"
             else
-                echo "Warning: Some dependencies may have failed to install."
-                read -p "Do you want to continue anyway? (y/n): " continue_anyway
-                if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
-                    exit 1
-                fi
+                echo "Warning: Some dependencies may have failed to install. Continuing anyway."
             fi
         else
-            echo "Skipping dependency installation."
+            read -p "Would you like to install dependencies from requirements.txt? (y/n): " install_deps
+            if [[ "$install_deps" =~ ^[Yy]$ ]]; then
+                echo "Installing dependencies..."
+                $PYTHON -m pip install -r requirements.txt
+                if [ $? -eq 0 ]; then
+                    echo "Dependencies installed successfully!"
+                else
+                    echo "Warning: Some dependencies may have failed to install."
+                    read -p "Do you want to continue anyway? (y/n): " continue_anyway
+                    if [[ ! "$continue_anyway" =~ ^[Yy]$ ]]; then
+                        exit 1
+                    fi
+                fi
+            else
+                echo "Skipping dependency installation."
+            fi
         fi
     else
         echo "No requirements.txt found in current directory."
@@ -70,34 +97,41 @@ install_requirements
 echo "=== Prerequisites Check Complete ==="
 echo ""
 
-# Validate arguments
-if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-    echo "Error: Expected 2-3 arguments"
-    echo "Usage: $0 <start_port> <end_port> [workspace]"
-    echo "Example: $0 5000 5200"
-    echo "Example: $0 5000 5200 /path/to/workspace"
-    exit 1
-fi
+# Set defaults when no arguments provided
+if [ "$NO_INPUT" = true ]; then
+    START_PORT=5000
+    END_PORT=5200
+    WORKSPACE=workspace
+else
+    # Validate arguments
+    if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+        echo "Error: Expected 2-3 arguments"
+        echo "Usage: $0 <start_port> <end_port> [workspace]"
+        echo "Example: $0 5000 5200"
+        echo "Example: $0 5000 5200 /path/to/workspace"
+        exit 1
+    fi
 
-# Check if arguments are valid integers
-if ! [[ "$1" =~ ^[0-9]+$ ]] || ! [[ "$2" =~ ^[0-9]+$ ]]; then
-    echo "Error: Arguments must be valid port numbers"
-    exit 1
-fi
+    # Check if arguments are valid integers
+    if ! [[ "$1" =~ ^[0-9]+$ ]] || ! [[ "$2" =~ ^[0-9]+$ ]]; then
+        echo "Error: Arguments must be valid port numbers"
+        exit 1
+    fi
 
-START_PORT=$1
-END_PORT=$2
-WORKSPACE=${3:-workspace/}
+    START_PORT=$1
+    END_PORT=$2
+    WORKSPACE=${3:-workspace/}
 
-# Validate port range
-if [ "$START_PORT" -gt "$END_PORT" ]; then
-    echo "Error: Start port must be less than or equal to end port"
-    exit 1
-fi
+    # Validate port range
+    if [ "$START_PORT" -gt "$END_PORT" ]; then
+        echo "Error: Start port must be less than or equal to end port"
+        exit 1
+    fi
 
-if [ "$START_PORT" -lt 1 ] || [ "$END_PORT" -gt 65535 ]; then
-    echo "Error: Ports must be in range 1-65535"
-    exit 1
+    if [ "$START_PORT" -lt 1 ] || [ "$END_PORT" -gt 65535 ]; then
+        echo "Error: Ports must be in range 1-65535"
+        exit 1
+    fi
 fi
 
 # Check for processes using ports
@@ -133,29 +167,35 @@ for ((port=$START_PORT; port<=$END_PORT; port++)); do
     fi
 done
 
-# If Python processes found, ask user if they want to kill them
+# If Python processes found, ask user if they want to kill them (skipped in no-input mode)
 if [ "$PYTHON_PROCESSES_FOUND" = true ]; then
     echo ""
-    echo "The following Python processes are blocking the required ports:"
+    echo "The following processes are on the required ports range:"
     for i in "${!PYTHON_PIDS[@]}"; do
         echo "  - Port ${PYTHON_PORTS[$i]} (PID: ${PYTHON_PIDS[$i]}):"
         echo "      ${PYTHON_COMMANDS[$i]}"
     done
     echo ""
-    read -p "Would you like to kill these Python processes? (y/n): " kill_processes
-    if [[ "$kill_processes" =~ ^[Yy]$ ]]; then
-        for pid in "${PYTHON_PIDS[@]}"; do
-            echo "Killing process $pid..."
-            kill -9 "$pid" 2>/dev/null
-            if [ $? -eq 0 ]; then
-                echo "  ✓ Process $pid killed successfully"
-            else
-                echo "  ✗ Failed to kill process $pid (may require sudo)"
-            fi
-        done
-        echo ""
+    echo "ℹ️  To restart a Toolomics MCP server (e.g. after modifying it), kill its Python process listed above and re-run this script."
+    if [ "$NO_INPUT" = false ]; then
+        read -p "Would you like to kill these Python processes? (y/n): " kill_processes
+        if [[ "$kill_processes" =~ ^[Yy]$ ]]; then
+            for pid in "${PYTHON_PIDS[@]}"; do
+                echo "Killing process $pid..."
+                kill -9 "$pid" 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    echo "  ✓ Process $pid killed successfully"
+                else
+                    echo "  ✗ Failed to kill process $pid (may require sudo)"
+                fi
+            done
+            echo ""
+        else
+            echo "Python processes not killed. Some ports may be unavailable."
+            echo ""
+        fi
     else
-        echo "Python processes not killed. Some ports may be unavailable."
+        echo "Skipping port cleanup (no-argument mode)."
         echo ""
     fi
 elif [ "$PROCESSES_FOUND" = true ]; then
