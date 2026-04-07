@@ -231,7 +231,11 @@ echo "  Workspace: $WORKSPACE"
 echo ""
 
 echo "Deploying MCP servers..."
-$PYTHON deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
+if [ "$NO_INPUT" = true ]; then
+    $PYTHON deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE --enable-all &
+else
+    $PYTHON deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE &
+fi
 HOST_PID=$!
 wait $HOST_PID
 

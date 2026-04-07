@@ -588,10 +588,12 @@ class ConfigManager:
     def assign_ports(self, server_files: List[Path], compose_files: List[Path] = None,
                      starting_port: int = HOST_PORT_MIN,
                      host_port_min: int = HOST_PORT_MIN,
-                     host_port_max: int = HOST_PORT_MAX) -> Dict[str, dict]:
+                     host_port_max: int = HOST_PORT_MAX,
+                     enable_new: bool = False) -> Dict[str, dict]:
         """
         Assign ports to server files and docker-compose files with proper range management.
-        Preserves enabled status for existing servers, new servers are enabled by default.
+        Preserves enabled status for existing servers, new servers are disabled by default
+        unless enable_new=True is passed (e.g. via --enable-all flag).
         Returns dict mapping path to {"port": int, "enabled": bool}
         """
         config = self.load_config()
@@ -618,9 +620,10 @@ class ConfigManager:
                     if next_host_port > host_port_max:
                         raise RuntimeError(f"No available ports in host range ({host_port_min}-{host_port_max}) for server {server_str}")
                 
-                config[server_str] = {'port': next_host_port, 'enabled': False}
+                config[server_str] = {'port': next_host_port, 'enabled': enable_new}
                 used_ports.add(next_host_port)
-                logger.info(f"Assigned host port {next_host_port} to {server_str} (disabled - edit config to enable)")
+                status = "enabled" if enable_new else "disabled - edit config to enable"
+                logger.info(f"Assigned host port {next_host_port} to {server_str} ({status})")
                 next_host_port += 1
         
         # Assign ports to docker-compose files
@@ -636,9 +639,10 @@ class ConfigManager:
                         if next_host_port > host_port_max:
                             raise RuntimeError(f"No available ports in host range ({host_port_min}-{host_port_max}) for compose {compose_str}")
                         
-                    config[compose_str] = {'port': next_host_port, 'enabled': False}
+                    config[compose_str] = {'port': next_host_port, 'enabled': enable_new}
                     used_ports.add(next_host_port)
-                    logger.info(f"Assigned host port {next_host_port} to {compose_str} (disabled - edit config to enable)")
+                    status = "enabled" if enable_new else "disabled - edit config to enable"
+                    logger.info(f"Assigned host port {next_host_port} to {compose_str} ({status})")
                     next_host_port += 1
         
         self.save_config(config)
@@ -675,7 +679,8 @@ class MCPDeploymentManager:
     
     def deploy(self, skip_docker: bool = False, starting_port: int = HOST_PORT_MIN,
                                                 host_port_min: int = HOST_PORT_MIN,
-                                                host_port_max: int = HOST_PORT_MAX):
+                                                host_port_max: int = HOST_PORT_MAX,
+                                                enable_all: bool = False):
         """Deploy all MCP servers and Docker services"""
         if not self.mcp_dir.exists():
             raise FileNotFoundError(f"MCP directory {self.mcp_dir} does not exist")
@@ -686,7 +691,7 @@ class MCPDeploymentManager:
         
         # Assign ports to all services
         logger.info("Assigning ports to all services...")
-        port_config = self.config_manager.assign_ports(server_files, compose_files, starting_port, host_port_min, host_port_max)
+        port_config = self.config_manager.assign_ports(server_files, compose_files, starting_port, host_port_min, host_port_max, enable_new=enable_all)
         
         # Start Docker services
         if not skip_docker:
@@ -827,6 +832,7 @@ def main():
     parser.add_argument("--host_port_min", type=int, default=HOST_PORT_MIN, help="Minimum port for port assignment range.")
     parser.add_argument("--host_port_max", type=int, default=HOST_PORT_MAX, help="Maximum port for port assignment range.")
     parser.add_argument("--no-docker", action="store_true", help="Skip Docker services")
+    parser.add_argument("--enable-all", action="store_true", help="Enable all newly discovered MCP servers immediately (skip manual config editing)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     
     args = parser.parse_args()
@@ -844,7 +850,8 @@ def main():
             skip_docker=args.no_docker,
             starting_port=args.starting_port,
             host_port_min=args.host_port_min,
-            host_port_max=args.host_port_max
+            host_port_max=args.host_port_max,
+            enable_all=args.enable_all
         )
         
     except Exception as e:
