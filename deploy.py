@@ -165,8 +165,13 @@ class ProcessManager:
     def start_docker_compose(self, compose_file: Path, port: Optional[int] = None) -> ProcessInfo:
         """Start docker-compose service with optional port configuration"""
         platform = sys.platform
-        # Use instance ID as docker-compose project name for isolation
-        project_name = f"toolomics_{self.instance_id}"
+        # Project name must be unique per compose file: workspace-hash isolates
+        # *this workspace* from other workspaces, and the parent-directory slug
+        # isolates *this MCP* from sibling MCPs whose compose files declare the
+        # same service name (e.g. `app`). Sharing a project across MCPs collapses
+        # them onto the same image tag and container name.
+        service_slug = compose_file.parent.name.lower().replace('.', '_')
+        project_name = f"toolomics_{self.instance_id}_{service_slug}"
         if platform == "linux":
             cmd = ['docker', 'compose', '-p', project_name, '-f', str(compose_file), 'up', '-d']
         else:
