@@ -397,14 +397,13 @@ async def execute_command(command: str, timeout: int = 300) -> dict:
     print(f"Executing command: {command} (timeout: {timeout}s)")
 
     dangerous_patterns = [
-        "sudo"
-        "htop"
-        "top"
-        "vim"
-        "nano"
-        "gedit"
-        "emacs"
-        "nvim"
+        "htop",
+        "top",
+        "vim",
+        "nano",
+        "gedit",
+        "emacs",
+        "nvim",
     ]
     try:
         command_words = shlex.split(command.lower())
@@ -413,7 +412,7 @@ async def execute_command(command: str, timeout: int = 300) -> dict:
 
     # Check for dangerous command patterns
     for pattern in dangerous_patterns:
-        if all(word in command_words for word in pattern):
+        if pattern in command_words:
             return CommandResult(
                 status="error",
                 stdout="Command blocked for security reasons",
