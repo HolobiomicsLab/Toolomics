@@ -70,7 +70,7 @@ DEFAULT_FOLDER = "mcp_host"
 WORKSPACE_FOLDER = "workspace"
         
 # Define default port ranges, overwritten by arguments
-HOST_PORT_MIN = 5000
+HOST_PORT_MIN = 5001
 HOST_PORT_MAX = 5099
 
 

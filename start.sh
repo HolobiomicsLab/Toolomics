@@ -99,7 +99,7 @@ echo ""
 
 # Set defaults when no arguments provided
 if [ "$NO_INPUT" = true ]; then
-    START_PORT=5000
+    START_PORT=5001
     END_PORT=5200
     WORKSPACE=workspace
 else
