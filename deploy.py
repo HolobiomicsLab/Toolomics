@@ -387,7 +387,14 @@ class ServerDiscovery:
     
     @staticmethod
     def has_gpu() -> bool:
-        """Detect if GPU (NVIDIA) is available on the system"""
+        """Detect if GPU (NVIDIA) is available on the system AND usable by the Docker daemon.
+
+        nvidia-smi only checks the host. The docker CLI may point at a daemon that
+        cannot honor GPU device requests (e.g. the Docker Desktop VM engine via the
+        desktop-linux context), which then fails with
+        'could not select device driver "nvidia" with capabilities: [[gpu]]'.
+        Verify both sides before selecting a GPU-enabled compose file.
+        """
         try:
             # Check if nvidia-smi command exists and can detect GPU
             result = subprocess.run(
@@ -396,14 +403,46 @@ class ServerDiscovery:
                 stderr=subprocess.PIPE,
                 timeout=5
             )
-            has_nvidia = result.returncode == 0
-            if has_nvidia:
-                logger.info("GPU detected: NVIDIA GPU available")
-            else:
+            if result.returncode != 0:
                 logger.info("No GPU detected: Running in CPU-only mode")
-            return has_nvidia
+                return False
         except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
             logger.info(f"No GPU detected: {e}")
+            return False
+
+        logger.info("GPU detected: NVIDIA GPU available")
+
+        # Host has a GPU, but the daemon selected by the active docker context
+        # must also support it: require an nvidia runtime or nvidia.com/gpu CDI devices.
+        try:
+            result = subprocess.run(
+                ['docker', 'info'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=15,
+                text=True
+            )
+            if result.returncode != 0:
+                logger.warning(f"Could not query docker daemon ('docker info' failed), falling back to CPU compose files: {result.stderr.strip()}")
+                return False
+            info = result.stdout
+            has_nvidia_runtime = any(
+                line.strip().startswith('Runtimes:') and 'nvidia' in line.split()
+                for line in info.splitlines()
+            )
+            has_nvidia_cdi = 'nvidia.com/gpu' in info
+            if has_nvidia_runtime or has_nvidia_cdi:
+                logger.info("Docker daemon supports GPU (nvidia runtime or nvidia.com/gpu CDI devices found)")
+                return True
+            logger.warning(
+                "Docker daemon has no nvidia runtime or nvidia.com/gpu CDI devices. "
+                "The active docker context may point at an engine without GPU support "
+                "(e.g. Docker Desktop). Run 'docker context use default' to fix this. "
+                "Falling back to CPU compose files."
+            )
+            return False
+        except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+            logger.warning(f"Could not verify docker daemon GPU support ({e}), falling back to CPU compose files")
             return False
     
     @staticmethod
