@@ -7,7 +7,7 @@ services:
       dockerfile: mcp_host/shell/Dockerfile
       args:
         - BASE_IMAGE=nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
-    restart: unless-stopped  # Auto-restart on crash unless manually stopped
+    restart: unless-stopped  # Auto-restart unless manually stopped
     deploy:
       resources:
         reservations:

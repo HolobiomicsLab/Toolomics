@@ -276,8 +276,11 @@ class ProcessManager:
                         break
 
                     if self._needs_restart(process_info, failed):
-                        self._schedule_restart(process_info.file_path, process_info.port,
-                                               process_info.process_type)
+                        queued = self._schedule_restart(process_info.file_path, process_info.port,
+                                                        process_info.process_type)
+                        # A crash being recovered by restart is not an unrecovered failure
+                        if queued and process_info in self.failed_processes:
+                            self.failed_processes.remove(process_info)
 
             self._launch_due_restarts()
             time.sleep(check_interval)
@@ -289,7 +292,7 @@ class ProcessManager:
             sys.exit(1)
 
         if self.abandoned_servers:
-            self._display_abandoned_summary()
+            self.display_abandoned_summary()
             sys.exit(1)
 
     def _needs_restart(self, process_info: ProcessInfo, failed: bool) -> bool:
@@ -300,13 +303,14 @@ class ProcessManager:
             return True
         return failed
 
-    def _schedule_restart(self, file_path: str, port: Optional[int], process_type: str):
+    def _schedule_restart(self, file_path: str, port: Optional[int], process_type: str) -> bool:
         """
         Queue a delayed restart for a crashed server.
 
         Applies exponential backoff (doubling from RESTART_BASE_DELAY_S, capped at
         RESTART_MAX_DELAY_S) and abandons the server once it has been restarted
         RESTART_MAX_ATTEMPTS times within the RESTART_WINDOW_S sliding window.
+        Returns True when a restart was queued, False when the server was abandoned.
         """
         now = time.time()
         recent = [t for t in self.restart_history.get(file_path, []) if now - t < RESTART_WINDOW_S]
@@ -314,7 +318,7 @@ class ProcessManager:
         if len(recent) >= RESTART_MAX_ATTEMPTS:
             self.abandoned_servers.append(file_path)
             self._report_abandonment(file_path)
-            return
+            return False
 
         recent.append(now)
         self.restart_history[file_path] = recent
@@ -322,6 +326,7 @@ class ProcessManager:
         self.pending_restarts.append(PendingRestart(file_path, port, process_type, now + delay))
         logger.warning(f"Server {file_path} exited unexpectedly. "
                        f"Restart {len(recent)}/{RESTART_MAX_ATTEMPTS} in {delay:.0f}s.")
+        return True
 
     def _launch_due_restarts(self):
         """Relaunch every queued server whose backoff delay has elapsed"""
@@ -365,7 +370,7 @@ class ProcessManager:
         logger.error("Fix the server code, then rerun start.sh to bring it back.")
         logger.error("=" * 80)
 
-    def _display_abandoned_summary(self):
+    def display_abandoned_summary(self):
         """Display servers abandoned after exceeding the restart cap"""
         logger.error("=" * 80)
         logger.error("SERVERS ABANDONED AFTER REPEATED CRASHES")
@@ -839,7 +844,7 @@ class MCPDeploymentManager:
         logger.info(f"Received signal {signum}, shutting down...")
         self.process_manager.shutdown()
         if self.process_manager.abandoned_servers:
-            self.process_manager._display_abandoned_summary()
+            self.process_manager.display_abandoned_summary()
             sys.exit(1)
         sys.exit(0)
     

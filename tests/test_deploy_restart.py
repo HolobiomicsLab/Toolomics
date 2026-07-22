@@ -127,6 +127,19 @@ def test_abandonment_is_reported_immediately():
         deploy.RESTART_MAX_ATTEMPTS = saved
 
 
+def test_docker_restart_invokes_compose_relaunch():
+    manager = make_manager()
+    launched = []
+    manager.start_docker_compose = lambda path, port: launched.append((path, port))
+
+    manager.pending_restarts.append(
+        PendingRestart("mcp/foo/docker-compose.yml", 5005, 'docker', restart_at=time.time() - 1))
+    manager._launch_due_restarts()
+
+    assert launched == [(Path("mcp/foo/docker-compose.yml"), 5005)]
+    assert manager.pending_restarts == []
+
+
 def test_busy_port_defers_python_restart():
     manager = make_manager()
     launched = []
@@ -171,6 +184,9 @@ def test_crash_loop_is_restarted_then_abandoned():
         assert exit_code == 1, f"expected exit 1 after abandonment, got {exit_code}"
         assert manager.abandoned_servers == [str(server_file)]
         assert len(manager.restart_history[str(server_file)]) == 2
+        # Recovered crashes are dropped from failed_processes; only the final
+        # unrecovered crash (the one that triggered abandonment) remains
+        assert len(manager.failed_processes) == 1
     finally:
         (deploy.RESTART_MAX_ATTEMPTS, deploy.RESTART_BASE_DELAY_S,
          deploy.RESTART_MAX_DELAY_S) = saved
