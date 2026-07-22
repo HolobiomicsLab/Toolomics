@@ -73,6 +73,12 @@ WORKSPACE_FOLDER = "workspace"
 HOST_PORT_MIN = 5000
 HOST_PORT_MAX = 5099
 
+# Crash-restart policy for supervised servers
+RESTART_MAX_ATTEMPTS = 5      # Restarts allowed per server within the window
+RESTART_WINDOW_S = 300        # Sliding window for the restart cap (seconds)
+RESTART_BASE_DELAY_S = 2.0    # Backoff delay before the first restart (seconds)
+RESTART_MAX_DELAY_S = 60.0    # Backoff delay ceiling (seconds)
+
 
 def generate_instance_id(workspace_path: str) -> str:
     """
@@ -109,9 +115,17 @@ class ProcessInfo:
         if self.process_type not in ['python', 'docker']:
             raise ValueError(f"Invalid process type: {self.process_type}")
 
+@dataclass
+class PendingRestart:
+    """A crashed server queued for relaunch once its backoff delay expires"""
+    file_path: str
+    port: Optional[int]
+    process_type: str
+    restart_at: float
+
 class ProcessManager:
     """Manages MCP server processes with proper lifecycle"""
-    
+
     def __init__(self, workspace_dir: Path, instance_id: str = "default"):
         self.processes: List[ProcessInfo] = []
         self.shutdown_event = threading.Event()
@@ -119,6 +133,9 @@ class ProcessManager:
         self.workspace_dir = workspace_dir
         self.failed_processes: List[ProcessInfo] = []  # Track failed processes
         self.instance_id = instance_id  # Unique instance identifier for Docker services
+        self.pending_restarts: List[PendingRestart] = []  # Crashed servers awaiting relaunch
+        self.restart_history: Dict[str, List[float]] = {}  # Restart timestamps per server path
+        self.abandoned_servers: List[str] = []  # Servers given up on after repeated crashes
     
     def start_python_server(self, server_path: Path, port: int) -> ProcessInfo:
         """Start a Python MCP server in the workspace directory"""
@@ -229,30 +246,111 @@ class ProcessManager:
         return process_info
     
     def monitor_processes(self, check_interval: float = 0.1):
-        """Monitor all processes with non-blocking I/O"""
-        while self.processes and not self.shutdown_event.is_set() and not self.failure_event.is_set():
+        """
+        Monitor all processes with non-blocking I/O, restarting crashed servers.
+
+        Python MCP servers are long-running: any exit is treated as a crash and
+        the server is relaunched after an exponential backoff (RESTART_BASE_DELAY_S
+        doubling up to RESTART_MAX_DELAY_S). Docker 'up -d' bootstraps normally
+        exit 0 and are only re-run when they fail; the containers themselves are
+        supervised by Docker via their 'restart: unless-stopped' policy.
+        A server crashing more than RESTART_MAX_ATTEMPTS times within
+        RESTART_WINDOW_S is abandoned and reported at exit.
+        """
+        while ((self.processes or self.pending_restarts)
+               and not self.shutdown_event.is_set()
+               and not self.failure_event.is_set()):
             # Check process outputs
             for process_info in self.processes[:]:
                 self._check_process_output(process_info)
-                
+
                 # Remove completed/failed processes
                 if process_info.proc.poll() is not None:
                     failed = self._handle_process_completion(process_info)
                     self.processes.remove(process_info)
-                    
+
                     # If a critical process failed, trigger shutdown
                     if failed and process_info.is_critical:
                         logger.error(f"Critical process {process_info.file_path} failed, initiating shutdown...")
                         self.failure_event.set()
                         break
-            
+
+                    if self._needs_restart(process_info, failed):
+                        self._schedule_restart(process_info.file_path, process_info.port,
+                                               process_info.process_type)
+
+            self._launch_due_restarts()
             time.sleep(check_interval)
-        
+
         # If we exited due to failure, shutdown remaining processes
         if self.failure_event.is_set():
             self.shutdown()
             self._display_failure_summary()
             sys.exit(1)
+
+        if self.abandoned_servers:
+            self._display_abandoned_summary()
+            sys.exit(1)
+
+    def _needs_restart(self, process_info: ProcessInfo, failed: bool) -> bool:
+        """Python servers restart on any exit; docker bootstraps only when they failed"""
+        if self.shutdown_event.is_set():
+            return False
+        if process_info.process_type == 'python':
+            return True
+        return failed
+
+    def _schedule_restart(self, file_path: str, port: Optional[int], process_type: str):
+        """
+        Queue a delayed restart for a crashed server.
+
+        Applies exponential backoff (doubling from RESTART_BASE_DELAY_S, capped at
+        RESTART_MAX_DELAY_S) and abandons the server once it has been restarted
+        RESTART_MAX_ATTEMPTS times within the RESTART_WINDOW_S sliding window.
+        """
+        now = time.time()
+        recent = [t for t in self.restart_history.get(file_path, []) if now - t < RESTART_WINDOW_S]
+
+        if len(recent) >= RESTART_MAX_ATTEMPTS:
+            logger.error(f"Giving up on {file_path}: crashed {RESTART_MAX_ATTEMPTS} times "
+                         f"within {RESTART_WINDOW_S}s. Fix the server, then kill and rerun start.sh.")
+            self.abandoned_servers.append(file_path)
+            return
+
+        recent.append(now)
+        self.restart_history[file_path] = recent
+        delay = min(RESTART_BASE_DELAY_S * 2 ** (len(recent) - 1), RESTART_MAX_DELAY_S)
+        self.pending_restarts.append(PendingRestart(file_path, port, process_type, now + delay))
+        logger.warning(f"Server {file_path} exited unexpectedly. "
+                       f"Restart {len(recent)}/{RESTART_MAX_ATTEMPTS} in {delay:.0f}s.")
+
+    def _launch_due_restarts(self):
+        """Relaunch every queued server whose backoff delay has elapsed"""
+        now = time.time()
+        for restart in [r for r in self.pending_restarts if r.restart_at <= now]:
+            self.pending_restarts.remove(restart)
+            self._execute_restart(restart)
+
+    def _execute_restart(self, restart: PendingRestart):
+        """Relaunch one server; a failed relaunch consumes another restart attempt"""
+        try:
+            if restart.process_type == 'python':
+                self.start_python_server(Path(restart.file_path), restart.port)
+            else:
+                self.start_docker_compose(Path(restart.file_path), restart.port)
+            logger.info(f"Restarted {restart.file_path}"
+                        + (f" on port {restart.port}" if restart.port else ""))
+        except Exception as e:
+            logger.error(f"Restart of {restart.file_path} failed: {e}")
+            self._schedule_restart(restart.file_path, restart.port, restart.process_type)
+
+    def _display_abandoned_summary(self):
+        """Display servers abandoned after exceeding the restart cap"""
+        logger.error("=" * 80)
+        logger.error("SERVERS ABANDONED AFTER REPEATED CRASHES")
+        logger.error("=" * 80)
+        for file_path in self.abandoned_servers:
+            logger.error(f"ABANDONED: {file_path}")
     
     def _check_process_output(self, process_info: ProcessInfo):
         """Check and log process output"""

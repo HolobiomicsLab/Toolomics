@@ -3,6 +3,7 @@ services:
     build:
       context: ../..
       dockerfile: mcp_host/decimer/Dockerfile
+    restart: unless-stopped  # Auto-restart on crash unless manually stopped
     ports:
       - "${MCP_PORT}:${MCP_PORT}"
     environment:
