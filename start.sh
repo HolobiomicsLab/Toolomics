@@ -226,6 +226,7 @@ if [ "$PYTHON_PROCESSES_FOUND" = true ]; then
     info "ℹ️  To reload a Toolomics MCP server (e.g. after modifying it), kill its Python process listed above:"
     detail "if its deployment is still running, the supervisor restarts it automatically with the new code;"
     detail "if not (orphaned process), re-run this script after killing it."
+    detail "note: kills count as crashes — many rapid kills trip the crash-loop guard and abandon the server."
     if [ "$NO_INPUT" = false ]; then
         read -p "$(prompt "Would you like to kill these Python processes? (y/n):")" kill_processes
         if [[ "$kill_processes" =~ ^[Yy]$ ]]; then
@@ -280,6 +281,7 @@ section "Deploying MCP Servers"
 info "Crash monitoring is active: crashed Python MCP servers are restarted automatically"
 info "with backoff (crash-looping servers are abandoned after repeated failures)."
 info "Docker services auto-restart via Docker's 'restart: unless-stopped' policy."
+detail "To stop a Docker MCP permanently: docker ps --filter name=toolomics_ then docker compose -p <project> down"
 if [ "$NO_INPUT" = true ]; then
     $PYTHON deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE --enable-all &
 else

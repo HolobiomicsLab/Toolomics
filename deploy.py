@@ -312,9 +312,8 @@ class ProcessManager:
         recent = [t for t in self.restart_history.get(file_path, []) if now - t < RESTART_WINDOW_S]
 
         if len(recent) >= RESTART_MAX_ATTEMPTS:
-            logger.error(f"Giving up on {file_path}: crashed {RESTART_MAX_ATTEMPTS} times "
-                         f"within {RESTART_WINDOW_S}s. Fix the server, then kill and rerun start.sh.")
             self.abandoned_servers.append(file_path)
+            self._report_abandonment(file_path)
             return
 
         recent.append(now)
@@ -332,7 +331,20 @@ class ProcessManager:
             self._execute_restart(restart)
 
     def _execute_restart(self, restart: PendingRestart):
-        """Relaunch one server; a failed relaunch consumes another restart attempt"""
+        """
+        Relaunch one server.
+
+        A python restart whose port is still busy (TIME_WAIT, lingering worker,
+        or stolen by another process) is deferred instead of launched into a
+        guaranteed bind failure. Deferrals and failed relaunches both consume
+        a restart attempt, so a permanently stolen port ends in abandonment.
+        """
+        port_busy = (restart.process_type == 'python' and restart.port is not None
+                     and is_port_in_use(restart.port))
+        if port_busy:
+            logger.warning(f"Port {restart.port} still busy, deferring restart of {restart.file_path}")
+            self._schedule_restart(restart.file_path, restart.port, restart.process_type)
+            return
         try:
             if restart.process_type == 'python':
                 self.start_python_server(Path(restart.file_path), restart.port)
@@ -343,6 +355,15 @@ class ProcessManager:
         except Exception as e:
             logger.error(f"Restart of {restart.file_path} failed: {e}")
             self._schedule_restart(restart.file_path, restart.port, restart.process_type)
+
+    def _report_abandonment(self, file_path: str):
+        """Loudly report a server given up on, at the moment it happens"""
+        logger.error("=" * 80)
+        logger.error(f"SERVER ABANDONED: {file_path}")
+        logger.error(f"It crashed {RESTART_MAX_ATTEMPTS} times within {RESTART_WINDOW_S}s "
+                     f"and will NOT be restarted again.")
+        logger.error("Fix the server code, then rerun start.sh to bring it back.")
+        logger.error("=" * 80)
 
     def _display_abandoned_summary(self):
         """Display servers abandoned after exceeding the restart cap"""
@@ -814,9 +835,12 @@ class MCPDeploymentManager:
         signal.signal(signal.SIGTERM, self._signal_handler)
     
     def _signal_handler(self, signum, frame):
-        """Handle shutdown signals"""
+        """Handle shutdown signals; exit 1 if any server had been abandoned"""
         logger.info(f"Received signal {signum}, shutting down...")
         self.process_manager.shutdown()
+        if self.process_manager.abandoned_servers:
+            self.process_manager._display_abandoned_summary()
+            sys.exit(1)
         sys.exit(0)
     
     def deploy(self, skip_docker: bool = False, starting_port: int = HOST_PORT_MIN,

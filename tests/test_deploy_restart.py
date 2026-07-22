@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Tests for deploy.py crash-restart supervision (ProcessManager)."""
 
+import socket
 import sys
 import time
 import tempfile
@@ -93,6 +94,58 @@ def test_failed_relaunch_consumes_an_attempt():
 
     assert len(manager.restart_history["srv.py"]) == 1
     assert len(manager.pending_restarts) == 1  # rescheduled with backoff
+
+
+def test_backoff_delay_clamps_at_ceiling():
+    manager = make_manager()
+    saved = (deploy.RESTART_MAX_ATTEMPTS, deploy.RESTART_MAX_DELAY_S)
+    deploy.RESTART_MAX_ATTEMPTS = 6
+    deploy.RESTART_MAX_DELAY_S = 10.0
+    try:
+        for _ in range(6):  # uncapped doubling would reach 64s
+            before = time.time()
+            manager._schedule_restart("srv.py", 5001, 'python')
+        last_delay = manager.pending_restarts[-1].restart_at - before
+        assert abs(last_delay - 10.0) < 0.5, f"expected clamp at 10s, got {last_delay}s"
+    finally:
+        (deploy.RESTART_MAX_ATTEMPTS, deploy.RESTART_MAX_DELAY_S) = saved
+
+
+def test_abandonment_is_reported_immediately():
+    manager = make_manager()
+    reported = []
+    manager._report_abandonment = lambda path: reported.append(path)
+    saved = deploy.RESTART_MAX_ATTEMPTS
+    deploy.RESTART_MAX_ATTEMPTS = 1
+    try:
+        manager._schedule_restart("srv.py", 5001, 'python')
+        assert reported == []
+        manager._schedule_restart("srv.py", 5001, 'python')
+        assert reported == ["srv.py"]
+        assert manager.abandoned_servers == ["srv.py"]
+    finally:
+        deploy.RESTART_MAX_ATTEMPTS = saved
+
+
+def test_busy_port_defers_python_restart():
+    manager = make_manager()
+    launched = []
+    manager.start_python_server = lambda path, port: launched.append(path)
+
+    blocker = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    blocker.bind(("0.0.0.0", 0))
+    blocker.listen(1)
+    busy_port = blocker.getsockname()[1]
+    try:
+        manager.pending_restarts.append(
+            PendingRestart("srv.py", busy_port, 'python', restart_at=time.time() - 1))
+        manager._launch_due_restarts()
+
+        assert launched == []
+        assert len(manager.pending_restarts) == 1  # deferred, not dropped
+        assert len(manager.restart_history["srv.py"]) == 1  # attempt consumed
+    finally:
+        blocker.close()
 
 
 def test_crash_loop_is_restarted_then_abandoned():
