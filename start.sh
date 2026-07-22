@@ -280,8 +280,9 @@ info "Workspace:    $C_BOLD$WORKSPACE$C_RESET"
 section "Deploying MCP Servers"
 info "Crash monitoring is active: crashed Python MCP servers are restarted automatically"
 info "with backoff (crash-looping servers are abandoned after repeated failures)."
-info "Docker services auto-restart via Docker's 'restart: unless-stopped' policy."
-detail "To stop a Docker MCP permanently: docker ps --filter name=toolomics_ then docker compose -p <project> down"
+info "Docker services auto-restart via Docker's 'restart: unless-stopped' policy,"
+info "so they keep running after Ctrl+C. To tear everything down:"
+detail "./stop.sh $WORKSPACE"
 if [ "$NO_INPUT" = true ]; then
     $PYTHON deploy.py --config config.json --mcp-dir mcp_host --host_port_min "$START_PORT" --host_port_max "$END_PORT" --workspace $WORKSPACE --enable-all &
 else
@@ -312,4 +313,6 @@ info "Edit this file to enable/disable MCP services:"
 info "  1. Edit $INSTANCE_CONFIG"
 info "  2. Change 'enabled': false to 'enabled': true for services you want"
 info "  3. Restart the deployment to apply changes"
+echo ""
+info "To stop this instance completely (incl. Docker services): ${C_BOLD}./stop.sh $WORKSPACE${C_RESET}"
 echo ""
