@@ -82,6 +82,16 @@ python3.10 deploy.py --config config.json --mcp-dir mcp_host --workspace <worksp
 
 Passing `--config config.json` is supported, but `deploy.py` will automatically expand it to an instance-specific file such as `config_86517947.json` based on the workspace path.
 
+## Crash Monitoring & Auto-Restart
+
+`start.sh` keeps `deploy.py` running in the foreground as a supervisor for every server it started. This matters for long agent runs, where an individual MCP server may crash mid-session:
+
+- **Python MCP servers** — if a server process exits for any reason, the supervisor restarts it automatically with exponential backoff (2s, 4s, 8s, ... capped at 60s). A server that crashes 5 times within 5 minutes is abandoned and reported at exit, so a broken server cannot crash-loop forever. The limits are the `RESTART_*` constants at the top of `deploy.py`.
+- **Docker MCP services** — containers are supervised by Docker itself through the `restart: unless-stopped` policy declared in each `docker-compose.yml`, so a crashed container comes back even if the deployment script is no longer running. Because of this policy they deliberately keep running after you Ctrl+C `start.sh` — even across Docker daemon restarts and reboots — until you tear them down with `./stop.sh` (see below).
+
+Tip: to reload a Python MCP server after editing its code, just kill its process (`kill <PID>`) — the supervisor relaunches it with the new code within seconds. No need to rerun `./start.sh`. Note that manual kills count toward the crash-loop guard: more than 5 kills of the same server within 5 minutes will get it abandoned (rerun `./start.sh` to bring it back).
+
+
 ## Centralized Workspace
 
 All MCP servers execute against a centralized workspace directory (default: `workspace/`). This means:

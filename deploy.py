@@ -73,6 +73,12 @@ WORKSPACE_FOLDER = "workspace"
 HOST_PORT_MIN = 5000
 HOST_PORT_MAX = 5099
 
+# Crash-restart policy for supervised servers
+RESTART_MAX_ATTEMPTS = 5      # Restarts allowed per server within the window
+RESTART_WINDOW_S = 300        # Sliding window for the restart cap (seconds)
+RESTART_BASE_DELAY_S = 2.0    # Backoff delay before the first restart (seconds)
+RESTART_MAX_DELAY_S = 60.0    # Backoff delay ceiling (seconds)
+
 
 def generate_instance_id(workspace_path: str) -> str:
     """
@@ -109,9 +115,17 @@ class ProcessInfo:
         if self.process_type not in ['python', 'docker']:
             raise ValueError(f"Invalid process type: {self.process_type}")
 
+@dataclass
+class PendingRestart:
+    """A crashed server queued for relaunch once its backoff delay expires"""
+    file_path: str
+    port: Optional[int]
+    process_type: str
+    restart_at: float
+
 class ProcessManager:
     """Manages MCP server processes with proper lifecycle"""
-    
+
     def __init__(self, workspace_dir: Path, instance_id: str = "default"):
         self.processes: List[ProcessInfo] = []
         self.shutdown_event = threading.Event()
@@ -119,6 +133,9 @@ class ProcessManager:
         self.workspace_dir = workspace_dir
         self.failed_processes: List[ProcessInfo] = []  # Track failed processes
         self.instance_id = instance_id  # Unique instance identifier for Docker services
+        self.pending_restarts: List[PendingRestart] = []  # Crashed servers awaiting relaunch
+        self.restart_history: Dict[str, List[float]] = {}  # Restart timestamps per server path
+        self.abandoned_servers: List[str] = []  # Servers given up on after repeated crashes
     
     def start_python_server(self, server_path: Path, port: int) -> ProcessInfo:
         """Start a Python MCP server in the workspace directory"""
@@ -229,30 +246,137 @@ class ProcessManager:
         return process_info
     
     def monitor_processes(self, check_interval: float = 0.1):
-        """Monitor all processes with non-blocking I/O"""
-        while self.processes and not self.shutdown_event.is_set() and not self.failure_event.is_set():
+        """
+        Monitor all processes with non-blocking I/O, restarting crashed servers.
+
+        Python MCP servers are long-running: any exit is treated as a crash and
+        the server is relaunched after an exponential backoff (RESTART_BASE_DELAY_S
+        doubling up to RESTART_MAX_DELAY_S). Docker 'up -d' bootstraps normally
+        exit 0 and are only re-run when they fail; the containers themselves are
+        supervised by Docker via their 'restart: unless-stopped' policy.
+        A server crashing more than RESTART_MAX_ATTEMPTS times within
+        RESTART_WINDOW_S is abandoned and reported at exit.
+        """
+        while ((self.processes or self.pending_restarts)
+               and not self.shutdown_event.is_set()
+               and not self.failure_event.is_set()):
             # Check process outputs
             for process_info in self.processes[:]:
                 self._check_process_output(process_info)
-                
+
                 # Remove completed/failed processes
                 if process_info.proc.poll() is not None:
                     failed = self._handle_process_completion(process_info)
                     self.processes.remove(process_info)
-                    
+
                     # If a critical process failed, trigger shutdown
                     if failed and process_info.is_critical:
                         logger.error(f"Critical process {process_info.file_path} failed, initiating shutdown...")
                         self.failure_event.set()
                         break
-            
+
+                    if self._needs_restart(process_info, failed):
+                        queued = self._schedule_restart(process_info.file_path, process_info.port,
+                                                        process_info.process_type)
+                        # A crash being recovered by restart is not an unrecovered failure
+                        if queued and process_info in self.failed_processes:
+                            self.failed_processes.remove(process_info)
+
+            self._launch_due_restarts()
             time.sleep(check_interval)
-        
+
         # If we exited due to failure, shutdown remaining processes
         if self.failure_event.is_set():
             self.shutdown()
             self._display_failure_summary()
             sys.exit(1)
+
+        if self.abandoned_servers:
+            self.display_abandoned_summary()
+            sys.exit(1)
+
+    def _needs_restart(self, process_info: ProcessInfo, failed: bool) -> bool:
+        """Python servers restart on any exit; docker bootstraps only when they failed"""
+        if self.shutdown_event.is_set():
+            return False
+        if process_info.process_type == 'python':
+            return True
+        return failed
+
+    def _schedule_restart(self, file_path: str, port: Optional[int], process_type: str) -> bool:
+        """
+        Queue a delayed restart for a crashed server.
+
+        Applies exponential backoff (doubling from RESTART_BASE_DELAY_S, capped at
+        RESTART_MAX_DELAY_S) and abandons the server once it has been restarted
+        RESTART_MAX_ATTEMPTS times within the RESTART_WINDOW_S sliding window.
+        Returns True when a restart was queued, False when the server was abandoned.
+        """
+        now = time.time()
+        recent = [t for t in self.restart_history.get(file_path, []) if now - t < RESTART_WINDOW_S]
+
+        if len(recent) >= RESTART_MAX_ATTEMPTS:
+            self.abandoned_servers.append(file_path)
+            self._report_abandonment(file_path)
+            return False
+
+        recent.append(now)
+        self.restart_history[file_path] = recent
+        delay = min(RESTART_BASE_DELAY_S * 2 ** (len(recent) - 1), RESTART_MAX_DELAY_S)
+        self.pending_restarts.append(PendingRestart(file_path, port, process_type, now + delay))
+        logger.warning(f"Server {file_path} exited unexpectedly. "
+                       f"Restart {len(recent)}/{RESTART_MAX_ATTEMPTS} in {delay:.0f}s.")
+        return True
+
+    def _launch_due_restarts(self):
+        """Relaunch every queued server whose backoff delay has elapsed"""
+        now = time.time()
+        for restart in [r for r in self.pending_restarts if r.restart_at <= now]:
+            self.pending_restarts.remove(restart)
+            self._execute_restart(restart)
+
+    def _execute_restart(self, restart: PendingRestart):
+        """
+        Relaunch one server.
+
+        A python restart whose port is still busy (TIME_WAIT, lingering worker,
+        or stolen by another process) is deferred instead of launched into a
+        guaranteed bind failure. Deferrals and failed relaunches both consume
+        a restart attempt, so a permanently stolen port ends in abandonment.
+        """
+        port_busy = (restart.process_type == 'python' and restart.port is not None
+                     and is_port_in_use(restart.port))
+        if port_busy:
+            logger.warning(f"Port {restart.port} still busy, deferring restart of {restart.file_path}")
+            self._schedule_restart(restart.file_path, restart.port, restart.process_type)
+            return
+        try:
+            if restart.process_type == 'python':
+                self.start_python_server(Path(restart.file_path), restart.port)
+            else:
+                self.start_docker_compose(Path(restart.file_path), restart.port)
+            logger.info(f"Restarted {restart.file_path}"
+                        + (f" on port {restart.port}" if restart.port else ""))
+        except Exception as e:
+            logger.error(f"Restart of {restart.file_path} failed: {e}")
+            self._schedule_restart(restart.file_path, restart.port, restart.process_type)
+
+    def _report_abandonment(self, file_path: str):
+        """Loudly report a server given up on, at the moment it happens"""
+        logger.error("=" * 80)
+        logger.error(f"SERVER ABANDONED: {file_path}")
+        logger.error(f"It crashed {RESTART_MAX_ATTEMPTS} times within {RESTART_WINDOW_S}s "
+                     f"and will NOT be restarted again.")
+        logger.error("Fix the server code, then rerun start.sh to bring it back.")
+        logger.error("=" * 80)
+
+    def display_abandoned_summary(self):
+        """Display servers abandoned after exceeding the restart cap"""
+        logger.error("=" * 80)
+        logger.error("SERVERS ABANDONED AFTER REPEATED CRASHES")
+        logger.error("=" * 80)
+        for file_path in self.abandoned_servers:
+            logger.error(f"ABANDONED: {file_path}")
     
     def _check_process_output(self, process_info: ProcessInfo):
         """Check and log process output"""
@@ -387,7 +511,14 @@ class ServerDiscovery:
     
     @staticmethod
     def has_gpu() -> bool:
-        """Detect if GPU (NVIDIA) is available on the system"""
+        """Detect if GPU (NVIDIA) is available on the system AND usable by the Docker daemon.
+
+        nvidia-smi only checks the host. The docker CLI may point at a daemon that
+        cannot honor GPU device requests (e.g. the Docker Desktop VM engine via the
+        desktop-linux context), which then fails with
+        'could not select device driver "nvidia" with capabilities: [[gpu]]'.
+        Verify both sides before selecting a GPU-enabled compose file.
+        """
         try:
             # Check if nvidia-smi command exists and can detect GPU
             result = subprocess.run(
@@ -396,14 +527,46 @@ class ServerDiscovery:
                 stderr=subprocess.PIPE,
                 timeout=5
             )
-            has_nvidia = result.returncode == 0
-            if has_nvidia:
-                logger.info("GPU detected: NVIDIA GPU available")
-            else:
+            if result.returncode != 0:
                 logger.info("No GPU detected: Running in CPU-only mode")
-            return has_nvidia
+                return False
         except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
             logger.info(f"No GPU detected: {e}")
+            return False
+
+        logger.info("GPU detected: NVIDIA GPU available")
+
+        # Host has a GPU, but the daemon selected by the active docker context
+        # must also support it: require an nvidia runtime or nvidia.com/gpu CDI devices.
+        try:
+            result = subprocess.run(
+                ['docker', 'info'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=15,
+                text=True
+            )
+            if result.returncode != 0:
+                logger.warning(f"Could not query docker daemon ('docker info' failed), falling back to CPU compose files: {result.stderr.strip()}")
+                return False
+            info = result.stdout
+            has_nvidia_runtime = any(
+                line.strip().startswith('Runtimes:') and 'nvidia' in line.split()
+                for line in info.splitlines()
+            )
+            has_nvidia_cdi = 'nvidia.com/gpu' in info
+            if has_nvidia_runtime or has_nvidia_cdi:
+                logger.info("Docker daemon supports GPU (nvidia runtime or nvidia.com/gpu CDI devices found)")
+                return True
+            logger.warning(
+                "Docker daemon has no nvidia runtime or nvidia.com/gpu CDI devices. "
+                "The active docker context may point at an engine without GPU support "
+                "(e.g. Docker Desktop). Run 'docker context use default' to fix this. "
+                "Falling back to CPU compose files."
+            )
+            return False
+        except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+            logger.warning(f"Could not verify docker daemon GPU support ({e}), falling back to CPU compose files")
             return False
     
     @staticmethod
@@ -677,9 +840,12 @@ class MCPDeploymentManager:
         signal.signal(signal.SIGTERM, self._signal_handler)
     
     def _signal_handler(self, signum, frame):
-        """Handle shutdown signals"""
+        """Handle shutdown signals; exit 1 if any server had been abandoned"""
         logger.info(f"Received signal {signum}, shutting down...")
         self.process_manager.shutdown()
+        if self.process_manager.abandoned_servers:
+            self.process_manager.display_abandoned_summary()
+            sys.exit(1)
         sys.exit(0)
     
     def deploy(self, skip_docker: bool = False, starting_port: int = HOST_PORT_MIN,
